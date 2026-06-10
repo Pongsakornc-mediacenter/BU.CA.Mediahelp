@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Sophisticated Dark Map: Override standard palettes */
+  --color-slate-50: #050505;          /* Inner/Outer Dark Background */
+  --color-slate-100: rgba(255, 255, 255, 0.08); /* Fine borders */
+  --color-slate-200: rgba(255, 255, 255, 0.15); /* Mid border */
+  --color-slate-300: rgba(255, 255, 255, 0.25);
+  --color-slate-400: #888888;          /* Muted labels */
+  --color-slate-500: #aaaaaa;          /* Medium Text */
+  --color-slate-600: #bcbcbc;
+  --color-slate-700: #d8d8d8;
+  --color-slate-800: #e0e0e0;          /* Main Content High-Contrast Text */
+  --color-slate-900: #ffffff;          /* White Text Titles */
+  --color-slate-950: #ffffff;
+
+  --color-white: #121212;              /* Primary Slate Surface Box */
+
+  /* Orange/Amber Tech Brand Overlay mapped cleanly to Indigo selectors */
+  --color-indigo-50: #1a120c;          /* Muted Amber Tint */
+  --color-indigo-100: #3a2213;         /* Warm Border */
+  --color-indigo-200: #543118;         
+  --color-indigo-500: #F27D26;         /* Brand Orange Accent */
+  --color-indigo-600: #F27D26;         
+  --color-indigo-700: #e06e1b;         
+  --color-indigo-800: #cc5e10;         
+  --color-indigo-900: #180e07;         
+  --color-indigo-950: #0a0603;         
+}
+
+/* Global Reset overrides for standard HTML controls in Dark Theme */
+body {
+  background-color: #050505 !important;
+  color: #e0e0e0 !important;
+  font-family: var(--font-sans);
+}
+
+/* Form input adjustments to prevent styling leak in browsers */
+input, select, textarea {
+  background-color: #1a1a1a !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #F27D26 !important;
+  outline: none;
+}
+
+/* Custom fade scrollbar styling for compact listings */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Custom interactive animation structures */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+.glow-animation {
+  animation: pulseGlow 3s infinite ease-in-out;
+}

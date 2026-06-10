@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net - Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Reuseable Helpers ---
+    
+    // Checks that an ID is correct length, pattern and lacks injection chars
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Require verified email accounts to execute database mutations
+    function isEmailVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.uid == 'localStorageStudent');
+    }
+
+    // Whitelist supervisor email as hardcoded admin, as well as a DB collection lookup lookup
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "pongsakorn.c@bu.ac.th" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // --- Entity Validations ---
+
+    // Validates the shape of a ticket request
+    function isValidTicket(data) {
+      return data.keys().hasAll(['studentId', 'studentName', 'studentEmail', 'category', 'title', 'description', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() >= 9
+        && data.studentId == request.auth.uid
+        && data.studentName is string && data.studentName.size() <= 150
+        && data.studentEmail is string && data.studentEmail.size() <= 150
+        && data.category is string && data.category.size() <= 50
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 150
+        && data.description is string && data.description.size() <= 2000
+        && data.status in ['pending', 'inprogress', 'answered', 'closed'];
+    }
+
+    // Validates visual and semantic consistency of class sign-ins
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['studentId', 'studentName', 'studentEmail', 'classId', 'className', 'checkedInAt', 'status', 'points'])
+        && data.studentId == request.auth.uid
+        && data.studentName is string && data.studentName.size() <= 150
+        && data.studentEmail is string && data.studentEmail.size() <= 150
+        && data.className is string && data.className.size() <= 150
+        && data.classId is string && data.classId.size() <= 100
+        && data.status in ['on_time', 'late', 'excused']
+        && data.points is int && data.points >= 0 && data.points <= 100;
+    }
+
+    // --- Route Match Blocks ---
+
+    // Whitelisted Instructors Directory
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Locked from client-side direct writes
+    }
+
+    // Class definitions
+    match /classes/{classId} {
+      allow read, list: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Helpdesk Tickets Collection
+    match /tickets/{ticketId} {
+      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.studentId == request.auth.uid || isAdmin());
+      
+      allow create: if isEmailVerified() 
+        && isValidId(ticketId) 
+        && isValidTicket(incoming());
+        
+      allow update: if isSignedIn() && (
+        // Action A: Student updates their ticket (or rates it after response)
+        (existing().studentId == request.auth.uid && isValidTicket(incoming()) && incoming().createdAt == existing().createdAt && (
+          // Student can adjust basic descriptors if pending
+          (existing().status == 'pending' && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'imageUrl', 'updatedAt'])) ||
+          // Student can add custom rating after feedback is issued
+          (existing().status == 'answered' && incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'ratingFeedback', 'updatedAt']))
+        )) ||
+        // Action B: Admin / Professor replies and updates statuses
+        (isAdmin() && incoming().studentId == existing().studentId && incoming().createdAt == existing().createdAt && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['replyText', 'repliedBy', 'repliedAt', 'status', 'updatedAt'])
+        ))
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    // Attendance Sign-ins Collection
+    match /attendance/{attendanceId} {
+      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.studentId == request.auth.uid || isAdmin());
+      
+      allow create: if isEmailVerified()
+        && isValidId(attendanceId)
+        && isValidAttendance(incoming());
+        
+      allow update, delete: if isAdmin();
+    }
+  }
+}

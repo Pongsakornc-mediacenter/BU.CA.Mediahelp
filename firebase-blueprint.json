@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role distinction for students and admins",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Google UID of the user" },
+        "name": { "type": "string", "description": "Student or Admin full name" },
+        "email": { "type": "string", "description": "Verified @bumail.net or @bu.ac.th corporate email domain" },
+        "role": { "type": "string", "enum": ["student", "admin"], "description": "Access level identifier" },
+        "joinedAt": { "type": "string", "format": "date-time", "description": "ISO date representing join timestamp" }
+      },
+      "required": ["uid", "name", "email", "role", "joinedAt"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Equipment setup or basic cinematographic assistance ticket",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique auto UUID of the ticket" },
+        "studentId": { "type": "string", "description": "Creator UID reference" },
+        "studentName": { "type": "string", "description": "Display name" },
+        "studentEmail": { "type": "string", "description": "BUMail email" },
+        "category": { "type": "string", "enum": ["camera", "microphone", "lighting", "editing", "other"] },
+        "title": { "type": "string", "description": "Short topic of assistance" },
+        "description": { "type": "string", "description": "Detailed equipment context" },
+        "imageUrl": { "type": "string", "description": "Base64 payload or public media path of camera/error photo" },
+        "status": { "type": "string", "enum": ["pending", "inprogress", "answered", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "replyText": { "type": "string" },
+        "repliedBy": { "type": "string" },
+        "repliedAt": { "type": "string", "format": "date-time" },
+        "rating": { "type": "number" },
+        "ratingFeedback": { "type": "string" }
+      },
+      "required": ["id", "studentId", "studentName", "studentEmail", "category", "title", "description", "status", "createdAt", "updatedAt"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Student check-in history record for class participation scores",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentEmail": { "type": "string" },
+        "classId": { "type": "string" },
+        "className": { "type": "string" },
+        "checkedInAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["on_time", "late", "excused"] },
+        "points": { "type": "integer" },
+        "deviceMeta": { "type": "string" }
+      },
+      "required": ["id", "studentId", "studentName", "studentEmail", "classId", "className", "checkedInAt", "status", "points"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "UserProfile",
+      "description": "Secure list of verified administrators/teachers whitelisted"
+    },
+    "/classes/{classId}": {
+      "schema": { "$ref": "ClassSession" },
+      "description": "Session records of active classroom modules"
+    },
+    "/tickets/{ticketId}": {
+      "schema": "Ticket",
+      "description": "Student support tickets with direct Admin access gates"
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "AttendanceRecord",
+      "description": "Class session check-in scores log"
+    }
+  }
+}

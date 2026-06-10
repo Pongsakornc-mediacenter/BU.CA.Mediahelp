@@ -1,0 +1,6 @@
+{
+  "name": "BU CA Equipment Help Desk",
+  "description": "ระบบขอความช่วยเหลือด้านอุปกรณ์และการตั้งค่ากล้องพื้นฐาน พร้อมการเช็คชื่อเข้าชั้นเรียนสำหรับนักศึกษานิเทศศาสตร์ มหาวิทยาลัยกรุงเทพ",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
