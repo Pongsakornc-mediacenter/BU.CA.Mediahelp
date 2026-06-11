@@ -253,7 +253,7 @@ export default function App() {
 
       {/* 2. Top Navigation Bar */}
       <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm/50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+        <div className="max-w-[1700px] mx-auto px-4 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-to-tr from-violet-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-md">
               <Camera className="w-5 h-5" />
@@ -309,40 +309,62 @@ export default function App() {
       </header>
 
       {/* 3. Central Content Arena */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <main className="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-6 space-y-6 transition-all duration-300">
 
         {/* Auth Required Check screen if not logged in */}
         {!currentUser ? (
-          <div className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-3xl p-8 shadow-sm text-center space-y-6" id="login_block">
-            <div className="bg-indigo-50 text-indigo-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto border border-indigo-100">
-              <GraduationCap className="w-8 h-8" />
+          <div className="max-w-2xl mx-auto my-16 bg-white border border-slate-100 rounded-[32px] p-10 sm:p-14 shadow-xl text-center space-y-9" id="login_block">
+            <div className="relative inline-flex">
+              <div className="absolute inset-0 bg-indigo-200 rounded-3xl blur-xl opacity-35 animate-pulse"></div>
+              <div className="relative bg-gradient-to-tr from-indigo-50 to-violet-50 text-indigo-600 p-5 rounded-3xl w-20 h-20 flex items-center justify-center border border-indigo-100 shadow-sm">
+                <GraduationCap className="w-10 h-10" />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold font-display text-slate-800">นิสิตและนักศึกษา นิเทศศาสตร์ม.กรุงเทพ</h2>
-              <p className="text-slate-500 text-xs">
-                ยินดีต้อนรับเข้าสู่ระบบช่วยเหลืออุปกรณ์ห้องปฏิบัติการและศูนย์สื่อการเรียนรู้ <br />
-                เพื่อความปลอดภัยกรุณาเข้าใช้งานด้วยบัญชีสถาบันจำกัดเฉพาะโดเมน
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3.5xl font-black font-display text-slate-900 tracking-tight leading-normal">
+                นิสิตและนักศึกษา <br className="sm:hidden" />
+                <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">นิเทศศาสตร์ ม.กรุงเทพ</span>
+              </h2>
+              <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto leading-relaxed">
+                ยินดีต้อนรับเข้าสู่ระบบช่วยเหลืออุปกรณ์ห้องปฏิบัติการและศูนย์สื่อการเรียนรู้ <br className="hidden sm:block" />
+                เพื่อความปลอดภัยสูงสุด กรุณาลงชื่อเข้าใช้งานด้วยบัญชีสถาบันของท่าน
               </p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 text-xs text-slate-500 font-semibold space-y-1">
-              <span className="text-slate-700 font-bold block">🔒 ข้อมูลการจำกัดสิทธิ์ผู้ใช้</span>
-              <p className="font-normal text-[11px] text-slate-500 leading-normal">
-                • สำหรับนักศึกษา: เข้าใช้งานขอความช่วยเหลืออุปกรณ์ผ่าน <strong className="text-indigo-600">@bumail.net</strong><br />
-                • สำหรับอาจารย์/เจ้าหน้าที่: วิเคราะห์และจัดการห้องหลังบ้านผ่านระบบ <strong className="text-indigo-600">@bu.ac.th</strong>
-              </p>
+            <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-6 sm:p-8 text-left space-y-4 shadow-sm">
+              <span className="text-slate-800 font-extrabold text-sm sm:text-base flex items-center gap-2">
+                🔑 การเข้าใช้งานระบบ
+              </span>
+              <div className="space-y-3.5 pt-1">
+                <div className="flex items-start gap-3">
+                  <span className="bg-indigo-100 text-indigo-700 text-xs sm:text-[13px] font-black px-3 py-1 rounded-lg shrink-0 mt-0.5">
+                    นักศึกษา
+                  </span>
+                  <p className="text-slate-600 text-sm sm:text-[15px] leading-relaxed">
+                    ใช้บัญชี <strong className="text-indigo-600 font-bold">@bumail.net</strong> เพื่อเข้าสู่ระบบเเละขอความช่วยเหลือ
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="bg-violet-100 text-violet-700 text-xs sm:text-[13px] font-black px-3 py-1 rounded-lg shrink-0 mt-0.5">
+                    อาจารย์ / เจ้าหน้าที่
+                  </span>
+                  <p className="text-slate-600 text-sm sm:text-[15px] leading-relaxed">
+                    ใช้บัญชี <strong className="text-indigo-600 font-bold">@bu.ac.th</strong> เพื่อเข้าสู่ระบบ
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-4 pt-2">
               <button
                 type="button"
                 onClick={() => loginWithGoogle(true)}
                 id="google_signin_btn"
-                className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-xs py-3.5 shadow-md shadow-slate-800/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-slate-900 hover:bg-slate-950 text-white font-extrabold rounded-2xl text-sm sm:text-base py-4 px-6 shadow-lg shadow-indigo-900/10 hover:shadow-indigo-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer"
               >
-                <QrCode className="w-4 h-4" />
-                เข้าสู่ระบบด้วยบัญชีสถาบัน BU Google Account
+                <QrCode className="w-5 h-5" />
+                เข้าสู่ระบบด้วย BU Google Account
               </button>
             </div>
           </div>
@@ -380,7 +402,7 @@ export default function App() {
                 }`}
               >
                 <Sliders className="w-4 h-4" />
-                จำลองฝึกตั้งค่ากล้องพื้นฐาน
+                การตั้งค่า กล้องพื้นฐาน
               </button>
               
               <button
@@ -829,7 +851,7 @@ export default function App() {
 
       {/* 4. Footer */}
       <footer className="bg-white border-t border-slate-100 py-6 mt-12 bg-slate-50/70">
-        <div className="max-w-7xl mx-auto px-4 text-center space-y-1.5">
+        <div className="max-w-[1700px] mx-auto px-4 text-center space-y-1.5">
           <p className="text-slate-500 text-xs leading-normal">
             © 2026 BU CA Media Support Panel. พัฒนาโดยใช้เทคโนโลยี React, Tailwind v4 และ Google Firestore Spark Plan (No-Cost tier)<br />
             สลับโหมดผู้ใช้เพื่อทำการทดสอบฟังก์ชันแลกเปลี่ยนข้อมูลด่วน คำตอบสั่นแจ้งเตือน และรายงานสรุป Excel สำหรับนักจัดสัมมนาได้อิสระ

@@ -243,8 +243,6 @@ export function useData() {
     const shouldUseFirebase = isFirebaseConfigured && db && auth && auth.currentUser && currentUser.uid === auth.currentUser.uid;
 
     if (shouldUseFirebase) {
-      setLoading(true);
-      
       // 1. Subscribe to support tickets (using client-side sorting to eliminate composite index requirements in Firestore)
       let ticketQuery;
       if (currentUser.role === 'admin') {
@@ -381,8 +379,9 @@ export function useData() {
           alert("⚠️ มีป๊อปอัปเข้าสู่ระบบซ้อนกันอยู่ ขอแนะนำให้กดรีเฟรชหน้าเว็บนี้ (F5) แล้วลองลงชื่อเข้าใช้งานอีกครั้ง หรือทดสอบด้วยระบบจำลองด้านล่างได้ทันทีค่ะ");
         } else {
           alert(error.message || 'การยืนยันตัวตนล้มเหลว');
+          throw error;
         }
-        throw error;
+        return false;
       }
     } else {
       alert("ไม่พบการตั้งค่า Firebase: ระบบจะเริ่มต้นในโหมดนักศึกษาจำลอง สามารถสลับบัญชีที่หน้าจอได้ตลอดเวลา");
