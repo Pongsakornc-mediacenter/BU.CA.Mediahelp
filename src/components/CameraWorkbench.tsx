@@ -15,7 +15,7 @@ export default function CameraWorkbench() {
   const [aperture, setAperture] = useState<number>(2.8); // f/number (1.4, 1.8, 2.8, 4, 5.6, 8, 11, 16)
   const [iso, setIso] = useState<number>(400); // 100, 200, 400, 800, 1600, 3200, 6400
   const [shutterSpeed, setShutterSpeed] = useState<string>("1/125"); // 1/1000, 1/500, 1/250, 1/125, 1/60, 1/30, 1/15, 1s
-  const [whiteBalance, setWhiteBalance] = useState<string>("Daylight"); // Tungsten, Daylight, Cloudy, Shade
+  const [whiteBalance, setWhiteBalance] = useState<string>("5,000 - 5,500 K"); // Kelvin scale ranges
 
   // Sync settings when selecting preset
   useEffect(() => {
@@ -26,10 +26,10 @@ export default function CameraWorkbench() {
       }
       setIso(parseInt(preset.iso) || 400);
       setShutterSpeed(preset.shutterSpeed);
-      if (preset.whiteBalance.includes("Daylight")) setWhiteBalance("Daylight");
-      else if (preset.whiteBalance.includes("Tungsten")) setWhiteBalance("Tungsten");
-      else if (preset.whiteBalance.includes("Cloudy")) setWhiteBalance("Cloudy");
-      else setWhiteBalance("Daylight");
+      if (preset.whiteBalance.includes("Daylight")) setWhiteBalance("5,000 - 5,500 K");
+      else if (preset.whiteBalance.includes("Tungsten")) setWhiteBalance("2,500 - 3,000 K");
+      else if (preset.whiteBalance.includes("Cloudy")) setWhiteBalance("7,000 - 10,000 K");
+      else setWhiteBalance("5,000 - 5,500 K");
     }
   }, [selectedPreset]);
 
@@ -79,10 +79,13 @@ export default function CameraWorkbench() {
   // Color temperature tint filter
   const getWBTintClass = () => {
     switch (whiteBalance) {
-      case "Tungsten": return "bg-blue-500/15"; // Cool blue filter
-      case "Cloudy": return "bg-orange-500/15"; // Warm amber filter
-      case "Shade": return "bg-orange-600/20"; // Dark warm tint
-      default: return ""; // Neutral daylight
+      case "2,500 - 3,000 K": 
+        return "bg-blue-500/15"; // Cool blue filter for tungsten setting
+      case "7,000 - 10,000 K": 
+        return "bg-orange-500/15"; // Warm amber filter for cloudy/overcast setting
+      case "5,000 - 5,500 K":
+      default: 
+        return ""; // Neutral daylight
     }
   };
 
@@ -326,12 +329,12 @@ export default function CameraWorkbench() {
                 <span className="font-mono text-indigo-600 font-black text-xs">{whiteBalance}</span>
               </div>
               <div className="flex gap-1">
-                {["Tungsten", "Daylight", "Cloudy"].map((wbVal) => (
+                {["2,500 - 3,000 K", "5,000 - 5,500 K", "7,000 - 10,000 K"].map((wbVal) => (
                   <button
                     key={wbVal}
                     type="button"
                     onClick={() => setWhiteBalance(wbVal)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs border font-extrabold cursor-pointer transition-all ${
+                    className={`flex-1 py-1.5 rounded-lg text-[10px] sm:text-xs border font-extrabold cursor-pointer transition-all ${
                       whiteBalance === wbVal
                         ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                         : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
