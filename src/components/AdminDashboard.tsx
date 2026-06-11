@@ -122,7 +122,7 @@ export default function AdminDashboard({
 
   // Statistics calculation for help categories
   const categoriesMap: Record<HelpCategory, { name: string; value: number; color: string }> = {
-    camera: { name: 'กล้อง/เลนส์ (Camera)', value: 0, color: '#F27D26' },
+    camera: { name: 'กล้อง/เลนส์ (Camera)', value: 0, color: '#ef8840' },
     microphone: { name: 'เสียง/ไมค์ (Audio)', value: 0, color: '#52b788' },
     lighting: { name: 'การจัดแสง (Lighting)', value: 0, color: '#ffd166' },
     editing: { name: 'เทคนิคตัดต่อ (Editing)', value: 0, color: '#e053a1' },

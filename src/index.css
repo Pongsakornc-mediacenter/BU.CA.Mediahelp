@@ -6,6 +6,16 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
+  /* Typographic Hierarchy Optimization (User's Specs) */
+  --font-size-xs: 14px;               /* Caption >= 14px */
+  --font-size-sm: 15px;               /* General Content 15-16px */
+  --font-size-base: 16px;             /* Menu & General Content 15-16px */
+  --font-size-lg: 18px;               /* Menu & Section 18-22px / 16-18px */
+  --font-size-xl: 20px;               /* Section 18-22px */
+  --font-size-2xl: 24px;              /* Title หลัก 24-32px */
+  --font-size-3xl: 30px;              /* Title หลัก 24-32px */
+  --font-size-4xl: 32px;              /* Title หลัก 24-32px */
+
   /* Sophisticated Dark Map: Override standard palettes */
   --color-slate-50: #050505;          /* Inner/Outer Dark Background */
   --color-slate-100: rgba(255, 255, 255, 0.08); /* Fine borders */
@@ -22,15 +32,27 @@
   --color-white: #121212;              /* Primary Slate Surface Box */
 
   /* Orange/Amber Tech Brand Overlay mapped cleanly to Indigo selectors */
-  --color-indigo-50: #1a120c;          /* Muted Amber Tint */
-  --color-indigo-100: #3a2213;         /* Warm Border */
-  --color-indigo-200: #543118;         
-  --color-indigo-500: #F27D26;         /* Brand Orange Accent */
-  --color-indigo-600: #F27D26;         
-  --color-indigo-700: #e06e1b;         
-  --color-indigo-800: #cc5e10;         
-  --color-indigo-900: #180e07;         
-  --color-indigo-950: #0a0603;         
+  --color-indigo-50: #1c1510;          /* Muted Amber Tint */
+  --color-indigo-100: #3f2516;         /* Warm Border */
+  --color-indigo-200: #59341d;         
+  --color-indigo-500: #ef8840;         /* Brand Orange Accent */
+  --color-indigo-600: #ef8840;         
+  --color-indigo-700: #dc762e;         
+  --color-indigo-800: #c4631d;         
+  --color-indigo-900: #221209;         
+  --color-indigo-950: #0f0703;         
+
+  /* Native Tailwind Orange Overrides for consistent branding */
+  --color-orange-50: #faf1eb;
+  --color-orange-100: #f7e1d2;
+  --color-orange-200: #efc4a6;
+  --color-orange-300: #e7a374;
+  --color-orange-400: #f19a58;
+  --color-orange-500: #ef8840;
+  --color-orange-600: #dc762e;
+  --color-orange-700: #c4631d;
+  --color-orange-800: #9e4e13;
+  --color-orange-900: #7b3b0d;
 }
 
 /* Global Reset overrides for standard HTML controls in Dark Theme */
@@ -48,7 +70,7 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: #F27D26 !important;
+  border-color: #ef8840 !important;
   outline: none;
 }
 
@@ -76,4 +98,9 @@ input:focus, select:focus, textarea:focus {
 
 .glow-animation {
   animation: pulseGlow 3s infinite ease-in-out;
+}
+
+/* Force minimum font-size for captions and labels to comply with the "Caption ไม่ต่ำกว่า 14px" limit */
+.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\], .text-\[12px\], .text-\[13px\] {
+  font-size: 14px !important;
 }
