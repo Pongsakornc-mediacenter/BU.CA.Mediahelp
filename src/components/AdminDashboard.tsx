@@ -685,10 +685,10 @@ export default function AdminDashboard({
             <div>
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 font-display">
                 <BookOpen className="w-5 h-5 text-indigo-600" />
-                คำขอจองห้องสตูดิโอจากนักศึกษา (Studio Room Bookings Queue)
+                รายการรออนุมัติ การจองห้องจัดรายการ
               </h3>
               <p className="text-slate-500 text-xs mt-1">
-                ตรวจสอบ ตรวจพิจารณาอนุมัติ หรือปฏิเสธคำขอจองห้องจัดรายการและสตูดิโอโทรทัศน์ CA-BU ของนักเรียน
+                ระบบจัดการและควบคุมคำเเนะนำพร้อมตรวจพิจารณาอนุมัติคำขอเข้าใช้งานพื้นที่จอง
               </p>
             </div>
             <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-xs text-slate-700">
@@ -706,13 +706,12 @@ export default function AdminDashboard({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-550 font-bold bg-slate-50/50">
-                    <th className="py-3 px-4 font-display">นักศึกษาผู้ขอ</th>
-                    <th className="py-3 px-4 font-display">ห้องสตูดิโอ</th>
-                    <th className="py-3 px-4 font-display">วันทำการจอง</th>
-                    <th className="py-3 px-4 font-display">ช่วงเวลากริด (Timeslot)</th>
-                    <th className="py-3 px-4 font-display">วัตถุประสงค์ (Purpose)</th>
-                    <th className="py-3 px-4 font-display text-center">สถานะคำขอ (Status)</th>
-                    <th className="py-3 px-4 font-display text-right">ดำเนินการ (Actions)</th>
+                    <th className="py-3 px-4 font-display">ชื่อ-นักศึกษา</th>
+                    <th className="py-3 px-4 font-display">ห้อง</th>
+                    <th className="py-3 px-4 font-display">ช่วงเวลา</th>
+                    <th className="py-3 px-4 font-display">วิชา</th>
+                    <th className="py-3 px-4 font-display text-center">รออนุมัติ</th>
+                    <th className="py-3 px-4 font-display text-right w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -732,57 +731,73 @@ export default function AdminDashboard({
                           {booking.roomName}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-mono text-slate-650">{booking.date}</td>
-                      <td className="py-3 px-4 font-mono font-medium text-slate-700">{booking.timeSlot}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-700">{booking.timeSlot}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{booking.date}</div>
+                      </td>
                       <td className="py-3 px-4 max-w-[180px] truncate" title={booking.purpose}>
                         <span className="font-medium text-slate-600">{booking.purpose}</span>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          booking.status === 'approved' 
-                            ? 'bg-emerald-100 text-emerald-850'
-                            : booking.status === 'rejected'
-                            ? 'bg-rose-100 text-rose-850'
-                            : 'bg-amber-100 text-amber-850 border border-amber-200'
-                        }`}>
-                          {booking.status === 'approved' && '✓ อนุมัติ'}
-                          {booking.status === 'rejected' && '✕ ปฏิเสธ'}
-                          {booking.status === 'pending' && '⏳ รอตรวจ'}
-                        </span>
+                        <div className="flex items-center justify-center gap-4">
+                          <label className="flex items-center gap-1.5 cursor-pointer group select-none">
+                            <input
+                              type="radio"
+                              name={`status-${booking.id}`}
+                              checked={booking.status === 'approved'}
+                              onChange={() => onUpdateBookingStatus(booking.id, 'approved')}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                              booking.status === 'approved'
+                                ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-105'
+                                : 'border-slate-300 group-hover:border-emerald-500 text-transparent hover:text-emerald-500/50'
+                            }`}>
+                              <span className="text-[11px] font-bold leading-none">✓</span>
+                            </div>
+                            <span className={`text-[12px] font-bold transition-colors ${
+                              booking.status === 'approved' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
+                            }`}>
+                              อนุมัติ
+                            </span>
+                          </label>
+
+                          <label className="flex items-center gap-1.5 cursor-pointer group select-none">
+                            <input
+                              type="radio"
+                              name={`status-${booking.id}`}
+                              checked={booking.status === 'rejected'}
+                              onChange={() => onUpdateBookingStatus(booking.id, 'rejected')}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                              booking.status === 'rejected'
+                                ? 'bg-rose-500 border-rose-500 text-white shadow-sm shadow-rose-500/20 scale-105'
+                                : 'border-slate-300 group-hover:border-rose-500 text-transparent hover:text-rose-500/50'
+                            }`}>
+                              <span className="text-[11px] font-bold leading-none">✕</span>
+                            </div>
+                            <span className={`text-[12px] font-bold transition-colors ${
+                              booking.status === 'rejected' ? 'text-rose-600' : 'text-slate-500 hover:text-slate-700'
+                            }`}>
+                              ไม่อนุมัติ
+                            </span>
+                          </label>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex gap-1.5 justify-end">
-                          {booking.status === 'pending' && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => onUpdateBookingStatus(booking.id, 'approved')}
-                                className="bg-emerald-50 text-emerald-600 hover:bg-emerald-550 hover:text-white px-2 py-1 rounded-md text-[10px] font-bold border border-emerald-200 transition-colors"
-                              >
-                                อนุมัติ
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onUpdateBookingStatus(booking.id, 'rejected')}
-                                className="bg-rose-50 text-rose-600 hover:bg-rose-550 hover:text-white px-2 py-1 rounded-md text-[10px] font-bold border border-rose-200 transition-colors"
-                              >
-                                ปฏิเสธ
-                              </button>
-                            </>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("ลบคำจองห้องวิทยานี้ออกไปถาวร?")) {
-                                onDeleteBooking(booking.id);
-                              }
-                            }}
-                            className="bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 p-1 rounded-md border border-slate-200 transition-colors"
-                            title="ลบคำขอจอง"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("ลบคำจองห้องวิทยานี้ออกไปถาวร?")) {
+                              onDeleteBooking(booking.id);
+                            }
+                          }}
+                          className="bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 p-1 rounded-md border border-slate-200 transition-colors"
+                          title="ลบคำขอจอง"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))}
