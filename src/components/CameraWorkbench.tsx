@@ -224,10 +224,19 @@ export default function CameraWorkbench() {
               ))}
             </div>
             {cameraPresets[selectedPreset] && (
-              <div className="mt-4 p-4 bg-indigo-50/40 border border-indigo-100/50 rounded-xl">
-                <span className="text-xs sm:text-sm font-bold text-indigo-800 block">🎯 สถานการณ์:</span>
-                <p className="text-xs sm:text-sm text-indigo-950 mt-1.5 pl-0.5 leading-relaxed">{cameraPresets[selectedPreset].situation}</p>
-                <span className="text-xs sm:text-[13px] text-indigo-600 block mt-2 pl-0.5 leading-relaxed font-semibold">{cameraPresets[selectedPreset].tip}</span>
+              <div className="mt-4 p-4 bg-slate-950/95 border border-slate-800 rounded-xl shadow-inner shadow-black/20">
+                <span className="text-xs sm:text-sm font-bold text-orange-400 block flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
+                  🎯 สถานการณ์:
+                </span>
+                <p className="text-xs sm:text-sm text-white mt-1.5 pl-0.5 leading-relaxed font-semibold">
+                  {cameraPresets[selectedPreset].situation}
+                </p>
+                <div className="mt-2.5 pt-2 border-t border-slate-800/60">
+                  <span className="text-xs sm:text-[13px] text-orange-400 block pl-0.5 leading-relaxed font-bold">
+                    💡 คำแนะนำ: {cameraPresets[selectedPreset].tip}
+                  </span>
+                </div>
               </div>
             )}
           </div>
