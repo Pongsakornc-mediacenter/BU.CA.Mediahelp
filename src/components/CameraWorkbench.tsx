@@ -94,25 +94,25 @@ export default function CameraWorkbench() {
     <div 
       className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col mx-auto w-full" 
       id="camera_workbench_main"
-      style={{ maxWidth: '1700px', height: '687px' }}
+      style={{ maxWidth: '1700px' }}
     >
-      <div className="p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
+      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
         <div>
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg sm:text-2xl">
-            <Sliders className="w-5.5 h-5.5 text-indigo-600" />
+          <h3 className="font-bold text-slate-800 flex items-center gap-1.5 text-base sm:text-lg">
+            <Sliders className="w-5 h-5 text-indigo-600" />
             ตู้การตั้งค่ากล้องพื้นฐาน (Virtual Camera Viewfinder)
           </h3>
-          <p className="text-slate-600 text-sm mt-1 font-medium">
+          <p className="text-slate-500 text-xs mt-0.5 font-medium">
             เครื่องมือช่วยฝึกปรับแต่งค่า ISO, Shutter, F-Stop, WB สำหรับการบันทึกวิดีโอและถ่ายภาพนิเทศศาสตร์
           </p>
         </div>
-        <div className="flex items-center gap-1.5 text-sm text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-1.5 font-bold shrink-0">
-          <ShieldCheck className="w-4 h-4" />
+        <div className="flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-3 py-1 font-bold shrink-0">
+          <ShieldCheck className="w-3.5 h-3.5" />
           สื่อการสอนแนะนำ
         </div>
       </div>
 
-      <div className="p-5 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-y-auto">
+      <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
         {/* Viewfinder Preview Stage - 7 Cols */}
         <div className="col-span-1 lg:col-span-7 flex flex-col gap-3">
           <div className="relative aspect-video rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col items-center justify-center">
@@ -164,7 +164,7 @@ export default function CameraWorkbench() {
             </div>
 
             {/* Technical HUD Overlay */}
-            <div className="absolute bottom-3 inset-x-3 flex justify-between items-center text-xs sm:text-sm font-mono font-bold text-white bg-black/80 backdrop-blur-md rounded-xl px-4 py-2.5 pointer-events-none shadow-lg">
+            <div className="absolute bottom-3 inset-x-3 flex justify-between items-center text-xs font-mono font-bold text-white bg-black/80 backdrop-blur-md rounded-xl px-4 py-2 pointer-events-none shadow-lg">
               <span className="text-yellow-400">ISO {iso}</span>
               <span>{shutterSpeed}</span>
               <span className="text-emerald-400">f/{aperture}</span>
@@ -176,36 +176,36 @@ export default function CameraWorkbench() {
 
             {/* Over/Under Exposure Alerts */}
             {isOverExposed && (
-              <div className="absolute top-4 right-4 bg-red-600/95 text-white text-xs font-mono font-bold px-3 py-1.5 rounded-lg shadow-md animate-pulse">
+              <div className="absolute top-3 right-3 bg-red-600/95 text-white text-[10px] font-mono font-bold px-2 py-1 rounded shadow-md animate-pulse">
                 ☀️ OVEREXPOSED (สว่างเกินไป)
               </div>
             )}
             {isUnderExposed && (
-              <div className="absolute top-4 right-4 bg-slate-950/95 text-white text-xs font-mono font-bold px-3 py-1.5 rounded-lg shadow-md animate-pulse">
+              <div className="absolute top-3 right-3 bg-slate-950/95 text-white text-[10px] font-mono font-bold px-2 py-1 rounded shadow-md animate-pulse">
                 🌙 UNDEREXPOSED (มืดเกินไป)
               </div>
             )}
             {isTripodWarningNeeded() && (
-              <div className="absolute top-4 left-4 bg-yellow-500/95 text-black text-xs font-bold px-3 py-1.5 rounded-lg shadow-md">
+              <div className="absolute top-3 left-3 bg-yellow-500/95 text-black text-[10px] font-bold px-2 py-1 rounded shadow-md">
                 ⚠️ ระวังภาพเบลอ! ควรใช้ขาตั้งกล้อง
               </div>
             )}
           </div>
 
-          <div className="bg-indigo-50/45 rounded-xl p-4 border border-indigo-100/50 text-sm">
-            <span className="font-bold text-slate-800 block text-[15px] mb-1.5">สัมผัสภาพผลลัพธ์:</span>
-            <p className="text-slate-700 text-[13px] sm:text-sm space-y-1.5 leading-relaxed">
+          <div className="bg-indigo-50/45 rounded-xl p-3 border border-indigo-100/50 text-xs">
+            <span className="font-bold text-slate-800 block text-xs mb-1">สัมผัสภาพผลลัพธ์:</span>
+            <p className="text-slate-700 text-xs space-y-1 leading-relaxed">
               • รูรับแสง <strong className="text-indigo-600 font-bold">f/{aperture}</strong>: {aperture <= 2.8 ? 'เกิดโบเก้หน้าชัดหลังละลายได้อย่างยอดเยี่ยม' : 'ภาพคมชัดลึกเก็บระนาบฉากหลังได้ชัดถ้วน'} <br />
               • ความเร็วชัตเตอร์ <strong className="text-indigo-600 font-bold">{shutterSpeed}</strong>: {isTripodWarningNeeded() ? 'สปีดต่ำระวังอาการเบลอเมื่อขยับกล้อง' : 'สปีดสูงพอสำหรับจัดถ่ายความเร็วปกติโดยไม่ต้องใช้ขาตั้ง'} <br />
-              • ความไวแสง <strong className="text-indigo-600 font-bold">ISO {iso}</strong>: {iso >= 1600 ? 'แสงสว่างในที่มืดดีขึ้น แต่ระวังมลภาวะสัญญาณรบกวน (Noise/Grain)' : 'ภาพเคลียร์ใส สัญญาวนรบกวนต่ำมาก'}
+              • ความไวแสง <strong className="text-indigo-600 font-bold">ISO {iso}</strong>: {iso >= 1600 ? 'แสงสว่างในที่มืดดีขึ้น แต่ระวังมลภาวะสัญญาณรบกวน (Noise/Grain)' : 'ภาพเคลียร์ใส สัญญาณรบกวนต่ำมาก'}
             </p>
           </div>
         </div>
 
         {/* Configurations Side - 5 Cols */}
-        <div className="col-span-1 lg:col-span-5 flex flex-col gap-4">
+        <div className="col-span-1 lg:col-span-5 flex flex-col gap-3 min-h-0">
           <div>
-            <label className="text-sm font-bold text-slate-800 block mb-2.5">เลือกสถานการณ์จำลอง (Presets):</label>
+            <label className="text-xs font-bold text-slate-800 block mb-1.5">เลือกสถานการณ์จำลอง (Presets):</label>
             <div className="grid grid-cols-2 gap-1.5">
               {cameraPresets.map((preset, index) => (
                 <button
@@ -213,7 +213,7 @@ export default function CameraWorkbench() {
                   type="button"
                   id={`preset_btn_${index}`}
                   onClick={() => setSelectedPreset(index)}
-                  className={`text-xs sm:text-[13px] text-left p-2.5 sm:p-3 rounded-xl border transition-all font-semibold ${
+                  className={`text-[11px] sm:text-xs text-left p-2 rounded-lg border transition-all font-semibold ${
                     selectedPreset === index
                       ? 'border-indigo-600 bg-indigo-50/50 text-indigo-800 font-bold shadow-sm'
                       : 'border-slate-100 hover:bg-slate-50 text-slate-600 hover:text-slate-800'
@@ -224,16 +224,16 @@ export default function CameraWorkbench() {
               ))}
             </div>
             {cameraPresets[selectedPreset] && (
-              <div className="mt-4 p-4 bg-indigo-50/45 border border-indigo-100/50 rounded-xl text-sm">
-                <span className="text-xs sm:text-sm font-extrabold text-orange-600 block flex items-center gap-1.5">
+              <div className="mt-2.5 p-3 bg-indigo-50/45 border border-indigo-100/40 rounded-xl text-xs">
+                <span className="text-[11px] font-extrabold text-orange-600 block flex items-center gap-1.5">
                   <span className="inline-block w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
                   🎯 สถานการณ์:
                 </span>
-                <p className="text-xs sm:text-sm text-slate-800 mt-1.5 pl-0.5 leading-relaxed font-semibold">
+                <p className="text-[11px] sm:text-xs text-slate-800 mt-1 pl-0.5 leading-relaxed font-semibold">
                   {cameraPresets[selectedPreset].situation}
                 </p>
-                <div className="mt-2.5 pt-2 border-t border-indigo-100/50">
-                  <span className="text-xs sm:text-[13px] text-orange-600 block pl-0.5 leading-relaxed font-bold animate-pulse-subtle">
+                <div className="mt-1.5 pt-1.5 border-t border-indigo-100/40">
+                  <span className="text-[11px] text-orange-600 block pl-0.5 leading-normal font-bold">
                     💡 คำแนะนำ: {cameraPresets[selectedPreset].tip}
                   </span>
                 </div>
@@ -241,25 +241,25 @@ export default function CameraWorkbench() {
             )}
           </div>
  
-          <div className="space-y-4.5 border-t border-slate-100 pt-4">
-            <h4 className="text-sm sm:text-base font-extrabold text-slate-800 flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-slate-600" />
+          <div className="space-y-3.5 border-t border-slate-100 pt-2.5">
+            <h4 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-slate-600" />
               การปรับแต่งด้วยมือ (Manual override)
             </h4>
  
             {/* Aperture */}
             <div>
-              <div className="flex justify-between items-center text-xs sm:text-sm mb-2">
-                <span className="text-slate-700 font-semibold">Aperture (รูรับแสง - F stop)</span>
-                <span className="font-mono text-indigo-600 font-black text-sm sm:text-base">f/{aperture}</span>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="text-slate-600 font-medium text-[11px]">Aperture (รูรับแสง - F stop)</span>
+                <span className="font-mono text-indigo-600 font-black text-xs">f/{aperture}</span>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {[1.4, 2.8, 5.6, 11, 16].map((fVal) => (
                   <button
                     key={fVal}
                     type="button"
                     onClick={() => setAperture(fVal)}
-                    className={`flex-1 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border font-extrabold cursor-pointer transition-all ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs border font-extrabold cursor-pointer transition-all ${
                       aperture === fVal
                         ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                         : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
@@ -273,17 +273,17 @@ export default function CameraWorkbench() {
  
             {/* shutter speed */}
             <div>
-              <div className="flex justify-between items-center text-xs sm:text-sm mb-2">
-                <span className="text-slate-700 font-semibold">Shutter Speed (ความยาวชัตเตอร์)</span>
-                <span className="font-mono text-indigo-600 font-black text-sm sm:text-base">{shutterSpeed}</span>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="text-slate-600 font-medium text-[11px]">Shutter Speed (ความยาวชัตเตอร์)</span>
+                <span className="font-mono text-indigo-600 font-black text-xs">{shutterSpeed}</span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex gap-1">
                 {["1/1000", "1/250", "1/125", "1/30", "1s"].map((speedVal) => (
                   <button
                     key={speedVal}
                     type="button"
                     onClick={() => setShutterSpeed(speedVal)}
-                    className={`px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border font-extrabold cursor-pointer transition-all ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs border font-extrabold cursor-pointer transition-all ${
                       shutterSpeed === speedVal
                         ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                         : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
@@ -297,17 +297,17 @@ export default function CameraWorkbench() {
  
             {/* ISO */}
             <div>
-              <div className="flex justify-between items-center text-xs sm:text-sm mb-2">
-                <span className="text-slate-700 font-semibold">ISO (ความไวแสงเซนเซอร์)</span>
-                <span className="font-mono text-indigo-600 font-black text-sm sm:text-base">ISO {iso}</span>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="text-slate-600 font-medium text-[11px]">ISO (ความไวแสงเซนเซอร์)</span>
+                <span className="font-mono text-indigo-600 font-black text-xs">ISO {iso}</span>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {[100, 400, 1600, 3200, 6400].map((isoVal) => (
                   <button
                     key={isoVal}
                     type="button"
                     onClick={() => setIso(isoVal)}
-                    className={`flex-1 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border font-extrabold cursor-pointer transition-all ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs border font-extrabold cursor-pointer transition-all ${
                       iso === isoVal
                         ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                         : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
@@ -321,17 +321,17 @@ export default function CameraWorkbench() {
  
             {/* WB */}
             <div>
-              <div className="flex justify-between items-center text-xs sm:text-sm mb-2">
-                <span className="text-slate-700 font-semibold">White Balance (สมดุลแสงสีขาว)</span>
-                <span className="font-mono text-indigo-600 font-black text-sm sm:text-base">{whiteBalance}</span>
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="text-slate-600 font-medium text-[11px]">White Balance (สมดุลแสงสีขาว)</span>
+                <span className="font-mono text-indigo-600 font-black text-xs">{whiteBalance}</span>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {["Tungsten", "Daylight", "Cloudy"].map((wbVal) => (
                   <button
                     key={wbVal}
                     type="button"
                     onClick={() => setWhiteBalance(wbVal)}
-                    className={`flex-1 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border font-extrabold cursor-pointer transition-all ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs border font-extrabold cursor-pointer transition-all ${
                       whiteBalance === wbVal
                         ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                         : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
