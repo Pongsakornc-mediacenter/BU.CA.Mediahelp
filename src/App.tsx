@@ -436,6 +436,7 @@ export default function App() {
             onCreateProgram={createProgram}
             onUpdateProgramStatus={updateProgramStatus}
             onDeleteProgram={deleteProgram}
+            onCreateBooking={createBooking}
           />
         ) : (
           /* =======================================================

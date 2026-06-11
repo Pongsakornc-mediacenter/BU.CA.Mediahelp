@@ -56,6 +56,7 @@ interface AdminDashboardProps {
   onCreateProgram: (programName: string, hosts: string, category: 'radio' | 'tv' | 'podcast' | 'other', roomName: string, date: string, timeSlot: string) => Promise<void>;
   onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
   onDeleteProgram: (id: string) => Promise<void>;
+  onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string) => Promise<void>;
 }
 
 export default function AdminDashboard({
@@ -70,7 +71,8 @@ export default function AdminDashboard({
   onDeleteBooking,
   onCreateProgram,
   onUpdateProgramStatus,
-  onDeleteProgram
+  onDeleteProgram,
+  onCreateBooking
 }: AdminDashboardProps) {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -78,6 +80,7 @@ export default function AdminDashboard({
   const [activeTab, setActiveTab] = useState<'tickets' | 'bookings'>('tickets');
   const [categoryFilter, setCategoryFilter] = useState<HelpCategory | 'all'>('all');
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>('all');
+  const [draftStatus, setDraftStatus] = useState<Record<string, 'approved' | 'rejected'>>({});
 
   // Program Scheduling Admin Form States
   const [isAddingProgram, setIsAddingProgram] = useState(false);
@@ -117,6 +120,27 @@ export default function AdminDashboard({
       alert("ไม่สามารถละเลงตารางรายการได้");
     } finally {
       setSubmittingProg(false);
+    }
+  };
+
+  const handleCreateSampleBooking = async () => {
+    if (onCreateBooking) {
+      try {
+        await onCreateBooking(
+          "ห้องจัดรายการ 2",
+          "2026-06-13",
+          "13:00 - 15:00",
+          "CA102 อัดประเด็นบันทึกหัวข้อวิทยาศาสตร์เสียง",
+          "1661234567",
+          "089-876-5432"
+        );
+        alert("🎉 เพิ่มตัวอย่างคำขอจองห้องจัดรายการ 2 เรียบร้อยแล้วค่ะ!");
+      } catch (err) {
+        console.error(err);
+        alert("ไม่สามารถเพิ่มรายการตัวอย่างได้");
+      }
+    } else {
+      alert("ไม่พบฟังก์ชันส่งคำขอจอง โปรดติดตั้งในหน้าจอหลัก");
     }
   };
 
@@ -691,8 +715,17 @@ export default function AdminDashboard({
                 ระบบจัดการและควบคุมคำเเนะนำพร้อมตรวจพิจารณาอนุมัติคำขอเข้าใช้งานพื้นที่จอง
               </p>
             </div>
-            <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-xs text-slate-700">
-              <span>อนุมัติสะสม: {bookings.filter(b => b.status === 'approved').length} คำขอ</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCreateSampleBooking}
+                className="bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 hover:text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-indigo-200 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                📥 ขอตัวอย่าง จองห้องจัดรายการ 2 (1 รายการ)
+              </button>
+              <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-xs text-slate-700">
+                <span>อนุมัติสะสม: {bookings.filter(b => b.status === 'approved').length} คำขอ</span>
+              </div>
             </div>
           </div>
 
@@ -744,19 +777,19 @@ export default function AdminDashboard({
                             <input
                               type="radio"
                               name={`status-${booking.id}`}
-                              checked={booking.status === 'approved'}
-                              onChange={() => onUpdateBookingStatus(booking.id, 'approved')}
+                              checked={(draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'approved'}
+                              onChange={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'approved' }))}
                               className="sr-only"
                             />
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                              booking.status === 'approved'
+                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'approved'
                                 ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-105'
                                 : 'border-slate-300 group-hover:border-emerald-500 text-transparent hover:text-emerald-500/50'
                             }`}>
                               <span className="text-[11px] font-bold leading-none">✓</span>
                             </div>
                             <span className={`text-[12px] font-bold transition-colors ${
-                              booking.status === 'approved' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
+                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'approved' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
                             }`}>
                               อนุมัติ
                             </span>
@@ -766,23 +799,44 @@ export default function AdminDashboard({
                             <input
                               type="radio"
                               name={`status-${booking.id}`}
-                              checked={booking.status === 'rejected'}
-                              onChange={() => onUpdateBookingStatus(booking.id, 'rejected')}
+                              checked={(draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'rejected'}
+                              onChange={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'rejected' }))}
                               className="sr-only"
                             />
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                              booking.status === 'rejected'
+                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'rejected'
                                 ? 'bg-rose-500 border-rose-500 text-white shadow-sm shadow-rose-500/20 scale-105'
                                 : 'border-slate-300 group-hover:border-rose-500 text-transparent hover:text-rose-500/50'
                             }`}>
                               <span className="text-[11px] font-bold leading-none">✕</span>
                             </div>
                             <span className={`text-[12px] font-bold transition-colors ${
-                              booking.status === 'rejected' ? 'text-rose-600' : 'text-slate-500 hover:text-slate-700'
+                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'rejected' ? 'text-rose-600' : 'text-slate-500 hover:text-slate-700'
                             }`}>
                               ไม่อนุมัติ
                             </span>
                           </label>
+
+                          {draftStatus[booking.id] !== undefined && draftStatus[booking.id] !== booking.status && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const target = draftStatus[booking.id];
+                                if (confirm(`คุณต้องการยืนยันการตั้งค่าสถานะเป็น "${target === 'approved' ? 'อนุมัติ' : 'ไม่อนุมัติ'}" ใช่หรือไม่?`)) {
+                                  await onUpdateBookingStatus(booking.id, target);
+                                  setDraftStatus(prev => {
+                                    const next = { ...prev };
+                                    delete next[booking.id];
+                                    return next;
+                                  });
+                                }
+                              }}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0 animate-pulse"
+                              title="คลิกเพื่อยืนยันคำขอ"
+                            >
+                              <span>ยืนยัน</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right">
