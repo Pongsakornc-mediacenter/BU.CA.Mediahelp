@@ -49,10 +49,12 @@ export const DEFAULT_BOOKINGS: RoomBooking[] = [
     studentId: "somchai_bumail_net",
     studentName: "สมชาย บุญช่วย (นักศึกษาจำลอง)",
     studentEmail: "somchai@bumail.net",
-    roomName: "Studio B: ห้องบันทึกรายการพอดแคสต์ (Podcast Creative Room)",
+    roomName: "ห้องจัดรายการ 1",
     date: "2026-06-12",
-    timeSlot: "ช่วงเช้า (09:00 - 12:00 น.)",
-    purpose: "อัดพอดแคสต์วิชาพรีเมียร์ สัมภาษณ์ศิษย์เก่าวงการภาพยนตร์",
+    timeSlot: "09:00 - 11:00",
+    purpose: "CA101 ฝึกจัดรายการสดยามเช้า",
+    studentIdInput: "1660123456",
+    phone: "081-234-5678",
     status: "approved",
     createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
     updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
@@ -62,10 +64,12 @@ export const DEFAULT_BOOKINGS: RoomBooking[] = [
     studentId: "wilai_bumail_net",
     studentName: "วิไลลักษณ์ เนตรตา (นักศึกษาจำลอง)",
     studentEmail: "wilai.n@bumail.net",
-    roomName: "Studio A: สตูดิโอโทรทัศน์เสมือนจริง (Virtual TV Studio)",
+    roomName: "ห้องจัดรายการ 2",
     date: "2026-06-13",
-    timeSlot: "ช่วงบ่าย (13:00 - 16:00 น.)",
-    purpose: "ซ้อมจัดระเบียบส่งเทปวิชาศิลปะการก้าวสตูดิโอ",
+    timeSlot: "13:00 - 15:00",
+    purpose: "CA102 อัดประเด็นบันทึกหัวข้อวิทยาศาสตร์เสียง",
+    studentIdInput: "1661234567",
+    phone: "089-876-5432",
     status: "pending",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -843,7 +847,7 @@ export function useData() {
   };
 
   // --- Room Booking CRUD Operations ---
-  const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string) => {
+  const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string) => {
     if (!currentUser) return;
     const bookingPayload: Omit<RoomBooking, 'id'> = {
       studentId: currentUser.uid,
@@ -853,6 +857,8 @@ export function useData() {
       date,
       timeSlot,
       purpose,
+      studentIdInput,
+      phone,
       status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

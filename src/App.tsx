@@ -71,10 +71,12 @@ export default function App() {
   const [studentTab, setStudentTab] = useState<'workbench' | 'helpdesk' | 'booking'>('workbench');
   
   // Student Booking states
-  const [bookingRoom, setBookingRoom] = useState("Studio A (Radio & Podcast)");
+  const [bookingRoom, setBookingRoom] = useState("ห้องจัดรายการ 1");
   const [bookingDate, setBookingDate] = useState("");
   const [bookingSlot, setBookingSlot] = useState("09:00 - 11:00");
   const [bookingPurpose, setBookingPurpose] = useState("");
+  const [bookingStudentId, setBookingStudentId] = useState("");
+  const [bookingPhone, setBookingPhone] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
   
   // Submit Ticket Form States
@@ -204,14 +206,31 @@ export default function App() {
       return;
     }
     if (!bookingPurpose.trim()) {
-      alert("กรุณาระบุวัตถุประสงค์ในการจองสตูดิโอ");
+      alert("กรุณาระบุรายละเอียดวิชา");
+      return;
+    }
+    if (!bookingStudentId.trim()) {
+      alert("กรุณาระบุรหัสนักศึกษา");
+      return;
+    }
+    if (!bookingPhone.trim()) {
+      alert("กรุณาระบุเบอร์โทร");
       return;
     }
 
     try {
-      await createBooking(bookingRoom, bookingDate, bookingSlot, bookingPurpose.trim());
+      await createBooking(
+        bookingRoom, 
+        bookingDate, 
+        bookingSlot, 
+        bookingPurpose.trim(), 
+        bookingStudentId.trim(), 
+        bookingPhone.trim()
+      );
       setBookingPurpose("");
-      setBookingSuccessMsg("🎉 ส่งคำขอจองห้องสตูดิโอเรียบร้อยแล้วค่ะ! กรุณารออาจารย์เข้าคิวอนุมัติผ่านระบบแผงควบคุม");
+      setBookingStudentId("");
+      setBookingPhone("");
+      setBookingSuccessMsg("🎉 ส่งคำขอจองห้องจัดรายการเรียบร้อยแล้วค่ะ! กรุณารออาจารย์เข้าคิวอนุมัติผ่านระบบแผงควบคุม");
       setTimeout(() => setBookingSuccessMsg(""), 6000);
     } catch (err) {
       console.error("Booking error details:", err);
@@ -785,21 +804,18 @@ export default function App() {
                     <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                       <h4 className="font-bold text-slate-800 text-sm border-b border-slate-50 pb-2 flex items-center gap-1.5">
                         <Plus className="w-4 h-4 text-indigo-600" />
-                        ยื่นวิทยานิเวศน์ขอใช้ห้องสตูดิโอ
+                        จองห้องจัดรายการ MEDIA CENTER
                       </h4>
 
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">1. สตูดิโอที่ต้องการเข้าใช้ (Studio Room)</label>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">1. เลือกห้องจัดรายการ</label>
                         <select
                           value={bookingRoom}
                           onChange={(e) => setBookingRoom(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-850 focus:bg-white focus:outline-none transition-all font-bold"
                         >
-                          <option value="Studio A (Radio & Podcast)">Studio A (Radio & Podcast)</option>
-                          <option value="Studio B (Main Television)">Studio B (Main Television)</option>
-                          <option value="Studio C (Virtual Green Screen)">Studio C (Virtual Green Screen)</option>
-                          <option value="Editing Suite A">Editing Suite A</option>
-                          <option value="Editing Suite B">Editing Suite B</option>
+                          <option value="ห้องจัดรายการ 1">1. ห้องจัดรายการ 1</option>
+                          <option value="ห้องจัดรายการ 2">2. ห้องจัดรายการ 2</option>
                         </select>
                       </div>
 
@@ -830,21 +846,46 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">4. รายละเอียดวิชา / วัตถุประสงค์ (Purpose)</label>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">4. รายละเอียดวิชา</label>
                         <textarea
-                          rows={3}
+                          rows={2}
                           value={bookingPurpose}
                           onChange={(e) => setBookingPurpose(e.target.value)}
-                          placeholder="เช่น จัดรายการสดวิทยุ CA101 คาบเช้า, อัดบทสัมภาษณ์พอดแคสต์..."
+                          placeholder="ระบุวิชาเรียนและวัตถุประสงค์ในการจัด เช่น อัดวิทยุ CA101..."
                           className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
                         />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">5. รหัสนักศึกษา</label>
+                          <input
+                            type="text"
+                            maxLength={15}
+                            value={bookingStudentId}
+                            onChange={(e) => setBookingStudentId(e.target.value)}
+                            placeholder="รหัสนักศึกษา 10 หลัก"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">6. เบอร์โทร</label>
+                          <input
+                            type="tel"
+                            maxLength={12}
+                            value={bookingPhone}
+                            onChange={(e) => setBookingPhone(e.target.value)}
+                            placeholder="เช่น 089XXXXXXX"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
+                          />
+                        </div>
                       </div>
 
                       <button
                         type="submit"
                         className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold rounded-xl py-3 text-xs transition-colors shadow-md shadow-indigo-600/15"
                       >
-                        ⚡ ส่งคำขอจองห้องห้องจัดรายการ
+                        ⚡ ส่งคำขอจองห้องจัดรายการ
                       </button>
                     </form>
                   </div>
@@ -883,6 +924,11 @@ export default function App() {
                                 <p className="text-[10px] text-indigo-980/70 font-medium">
                                   โดย {b.studentName} ใน {b.date}
                                 </p>
+                                {b.studentIdInput && b.phone && (
+                                  <p className="text-[9px] text-slate-400 font-mono">
+                                    รหัสนักศึกษา: {b.studentIdInput} • เบอร์โทร: {b.phone}
+                                  </p>
+                                )}
                                 <p className="text-[11px] text-slate-500 font-medium italic mt-0.5">
                                   "{b.purpose}"
                                 </p>

@@ -721,6 +721,11 @@ export default function AdminDashboard({
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-800">{booking.studentName}</div>
                         <div className="text-[10px] text-slate-400 font-mono">{booking.studentEmail}</div>
+                        {booking.studentIdInput && booking.phone && (
+                          <div className="text-[10px] text-indigo-500 font-bold mt-0.5 font-mono">
+                            ID: {booking.studentIdInput} • โทร: {booking.phone}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <span className="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px]">

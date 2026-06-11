@@ -86,6 +86,8 @@ export interface RoomBooking {
   date: string; // YYYY-MM-DD
   timeSlot: string; // e.g. "09:00 - 12:00"
   purpose: string;
+  studentIdInput?: string;
+  phone?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string; // ISO String
   updatedAt: string; // ISO String
