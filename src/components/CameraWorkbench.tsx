@@ -68,11 +68,10 @@ export default function CameraWorkbench() {
 
   // Background Blur Amount (Bokeh simulation based on aperture)
   const getBlurValue = () => {
-    if (aperture <= 1.4) return "8px";
-    if (aperture <= 1.8) return "6px";
-    if (aperture <= 2.8) return "4px";
-    if (aperture <= 4.0) return "2px";
-    if (aperture <= 5.6) return "1px";
+    if (aperture <= 1.4) return "14px";
+    if (aperture <= 2.8) return "8px";
+    if (aperture <= 5.6) return "4px";
+    if (aperture <= 11) return "1.5px";
     return "0px";
   };
 
@@ -119,31 +118,40 @@ export default function CameraWorkbench() {
         {/* Viewfinder Preview Stage - 7 Cols */}
         <div className="col-span-1 lg:col-span-7 flex flex-col gap-3">
           <div className="relative aspect-video rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex flex-col items-center justify-center">
-            {/* Background Mountains (Bokeh subject simulation) */}
-            <div 
-              className="absolute inset-0 transition-all duration-300 transform scale-105"
-              style={{
-                backgroundImage: 'url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: `blur(${getBlurValue()}) brightness(${brightnessPercent}%)`
-              }}
-            />
 
-            {/* Foreground Focused Subject (Subject is always in focus, F-stop blurs back) */}
+            {/* Main Visual Wrapper with exposure, ISO grain contrast adjustments */}
             <div 
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-48 transition-all duration-300"
+              className="absolute inset-0 transition-all duration-300"
               style={{
-                backgroundImage: 'url("https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=400&q=80")',
-                backgroundSize: 'contain',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'bottom center',
-                filter: `brightness(${brightnessPercent}%) ${iso > 1600 ? 'contrast(95%) saturate(85%) drop-shadow(0 2px 8px rgba(0,0,0,0.3))' : ''}`
+                filter: `brightness(${brightnessPercent}%) ${iso > 1600 ? 'contrast(95%) saturate(85%)' : ''}`
               }}
-            />
+            >
+              {/* Background Layer (Bokeh blur applied dynamically) */}
+              <div 
+                className="absolute inset-0 transition-all duration-300 transform scale-105"
+                style={{
+                  backgroundImage: 'url("https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80")',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: `blur(${getBlurValue()})`
+                }}
+              />
+
+              {/* Foreground Layer (Always Sharp, masked to keep the foreground stairs and handrails perfectly in focus) */}
+              <div 
+                className="absolute inset-0 transition-all duration-300 transform scale-105"
+                style={{
+                  backgroundImage: 'url("https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80")',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)',
+                  WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)'
+                }}
+              />
+            </div>
 
             {/* WB overlay filter tint */}
-            <div className={`absolute inset-0 pointer-events-none mix-blend-color transition-colors duration-500 ${getWBTintClass()}`} />
+            <div className={`absolute inset-0 pointer-events-none mix-blend-color transition-colors duration-500 z-20 ${getWBTintClass()}`} />
 
             {/* Simulated Digital Noise grain overlays if ISO is very high */}
             {iso >= 1600 && (
@@ -169,7 +177,7 @@ export default function CameraWorkbench() {
             {/* Technical HUD Overlay */}
             <div className="absolute bottom-3 inset-x-3 flex justify-between items-center text-xs font-mono font-bold text-white bg-black/80 backdrop-blur-md rounded-xl px-4 py-2 pointer-events-none shadow-lg">
               <span className="text-yellow-400">ISO {iso}</span>
-              <span>{shutterSpeed}</span>
+              <span className="text-white" style={{ color: '#ffffff' }}>{shutterSpeed}</span>
               <span className="text-emerald-400">f/{aperture}</span>
               <span className="text-teal-300">{whiteBalance}</span>
               <span className={exposureStops > 0 ? "text-amber-400" : exposureStops < 0 ? "text-cyan-400" : "text-emerald-400"}>

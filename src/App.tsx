@@ -26,7 +26,8 @@ import {
   RefreshCw,
   Mic,
   Lightbulb,
-  PenTool
+  PenTool,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData } from './hooks/useData';
@@ -53,19 +54,28 @@ export default function App() {
     downloadAttendanceReportCSV,
     seedDemoData,
     isFirebaseConfigured,
-    cabinets,
-    createCabinet,
-    updateCabinet,
-    deleteCabinet
+    bookings,
+    programs,
+    createBooking,
+    updateBookingStatus,
+    deleteBooking,
+    createProgram,
+    updateProgramStatus,
+    deleteProgram
   } = useData();
 
   // Admin view toggle for student simulation view switcher (Requested Feature)
   const [isAdminViewingAsStudent, setIsAdminViewingAsStudent] = useState(false);
 
   // Active view states for Student
-  const [studentTab, setStudentTab] = useState<'workbench' | 'helpdesk' | 'knowledge'>('workbench');
-  const [knowledgeSearch, setKnowledgeSearch] = useState("");
-  const [activeCabinetId, setActiveCabinetId] = useState<string | null>(null);
+  const [studentTab, setStudentTab] = useState<'workbench' | 'helpdesk' | 'booking'>('workbench');
+  
+  // Student Booking states
+  const [bookingRoom, setBookingRoom] = useState("Studio A (Radio & Podcast)");
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingSlot, setBookingSlot] = useState("09:00 - 11:00");
+  const [bookingPurpose, setBookingPurpose] = useState("");
+  const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
   
   // Submit Ticket Form States
   const [ticketCategory, setTicketCategory] = useState<HelpCategory>('camera');
@@ -184,6 +194,28 @@ export default function App() {
       setStudentMsgText("");
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleRoomBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingDate) {
+      alert("กรุณาเลือกวันที่ต้องการจอง");
+      return;
+    }
+    if (!bookingPurpose.trim()) {
+      alert("กรุณาระบุวัตถุประสงค์ในการจองสตูดิโอ");
+      return;
+    }
+
+    try {
+      await createBooking(bookingRoom, bookingDate, bookingSlot, bookingPurpose.trim());
+      setBookingPurpose("");
+      setBookingSuccessMsg("🎉 ส่งคำขอจองห้องสตูดิโอเรียบร้อยแล้วค่ะ! กรุณารออาจารย์เข้าคิวอนุมัติผ่านระบบแผงควบคุม");
+      setTimeout(() => setBookingSuccessMsg(""), 6000);
+    } catch (err) {
+      console.error("Booking error details:", err);
+      alert("เกิดข้อผิดพลาดในการยื่นระบบคำจอง");
     }
   };
 
@@ -375,13 +407,16 @@ export default function App() {
           <AdminDashboard
             tickets={tickets}
             attendance={attendance}
+            bookings={bookings}
+            programs={programs}
             onSubmitReply={submitTicketReply}
             onDownloadReport={downloadAttendanceReportCSV}
             currentUserEmail={currentUser.email}
-            cabinets={cabinets}
-            onCreateCabinet={createCabinet}
-            onUpdateCabinet={updateCabinet}
-            onDeleteCabinet={deleteCabinet}
+            onUpdateBookingStatus={updateBookingStatus}
+            onDeleteBooking={deleteBooking}
+            onCreateProgram={createProgram}
+            onUpdateProgramStatus={updateProgramStatus}
+            onDeleteProgram={deleteProgram}
           />
         ) : (
           /* =======================================================
@@ -421,16 +456,16 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={() => setStudentTab('knowledge')}
-                id="tab_knowledge_btn"
+                onClick={() => setStudentTab('booking')}
+                id="tab_booking_btn"
                 className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  studentTab === 'knowledge'
+                  studentTab === 'booking'
                     ? 'bg-slate-800 text-white shadow-sm'
                     : 'text-slate-500 hover:bg-slate-50'
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
-                ตู้ความรู้และคู่มืออุปกรณ์
+                จองห้องสตูดิโอ & ตารางออกอากาศ
               </button>
             </div>
 
@@ -715,134 +750,221 @@ export default function App() {
               </motion.div>
             )}
 
-            {/* TAB 3: DYNAMIC KNOWLEDGE BASE & EQUIPMENT MANUAL CABINETS */}
-            {studentTab === 'knowledge' && (
+            {/* TAB 3: DYNAMIC ROOMS BOOKING & SHOWS PROGRAMMING PORTAL */}
+            {studentTab === 'booking' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
-                id="knowledge_cabinets_root"
+                id="booking_tab_root"
               >
-                {/* Search Bar / Filter Panel */}
-                <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <div>
-                      <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2 font-display">
-                        <BookOpen className="w-5 h-5 text-indigo-600" />
-                        ตู้ความรู้อุปกรณ์สื่อพรีเมียม (BU CA Premium Knowledge Cabinets)
-                      </h3>
-                      <p className="text-slate-500 text-xs mt-1">
-                        คลังข้อมูลดิจิทัล เทคนิคแก้ปัญหาเฉพาะหน้า และเช็คลิสต์ตรวจสอบกล้อง เลนส์ คลื่นเสียง และสตูดิโอถ่ายทำ
-                      </p>
-                    </div>
-                    
-                    {/* Search input */}
-                    <div className="relative w-full sm:w-80">
-                      <input
-                        type="text"
-                        value={knowledgeSearch}
-                        id="knowledge_search_input"
-                        onChange={(e) => setKnowledgeSearch(e.target.value)}
-                        placeholder="🔎 ค้นหาหัวข้อ เช่น แสง, รูรับแสง, ไมค์, คลื่น..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium"
-                      />
-                      {knowledgeSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setKnowledgeSearch('')}
-                          className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                
+                {/* Header Welcome banner */}
+                <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm">
+                  <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2 font-display">
+                    <BookOpen className="w-5 h-5 text-indigo-600" />
+                    ระบบจองห้องสตูดิโอนิเทศศาสตร์ (CA Studio Room Bookings Portal)
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-1">
+                    จองเวลาใช้อุปกรณ์กลุ่ม ห้องทำพอดแคสต์ สตูดิโอโทรทัศน์เสมือนจริง และประเด็นออกอากาศวิทยุแบบสอดประสานกันเรียลไทม์
+                  </p>
                 </div>
 
-                {/* Grid of Cabinets */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {cabinets.filter(cabin => {
-                    if (!knowledgeSearch.trim()) return true;
-                    const query = knowledgeSearch.toLowerCase();
-                    return cabin.title.toLowerCase().includes(query) ||
-                           cabin.summary.toLowerCase().includes(query) ||
-                           cabin.tag.toLowerCase().includes(query) ||
-                           (cabin.tips && cabin.tips.some(t => t.q.toLowerCase().includes(query) || t.a.toLowerCase().includes(query)));
-                  }).map(cabin => {
-                    const isOpen = activeCabinetId === cabin.id;
-                    const getCabinetIcon = (iconName?: string) => {
-                      switch(iconName) {
-                        case 'camera': return <Camera className="w-5 h-5 text-orange-500" />;
-                        case 'mic': return <Mic className="w-5 h-5 text-emerald-500" />;
-                        case 'lighting': return <Lightbulb className="w-5 h-5 text-amber-500" />;
-                        case 'editing': return <PenTool className="w-5 h-5 text-pink-500" />;
-                        default: return <BookOpen className="w-5 h-5 text-indigo-500" />;
-                      }
-                    };
-                    return (
-                      <div
-                        key={cabin.id}
-                        id={`knowledge_cabin_${cabin.id}`}
-                        className={`bg-white border rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between ${
-                          isOpen ? 'border-indigo-200 ring-2 ring-indigo-600/5' : 'border-slate-100 hover:border-indigo-100'
-                        }`}
+                {/* Submitting Success feedback banner */}
+                {bookingSuccessMsg && (
+                  <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-4 rounded-xl border border-emerald-200 animate-pulse">
+                    {bookingSuccessMsg}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  
+                  {/* LEFT COLUMN: Booking submission form (5-cols) */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                      <h4 className="font-bold text-slate-800 text-sm border-b border-slate-50 pb-2 flex items-center gap-1.5">
+                        <Plus className="w-4 h-4 text-indigo-600" />
+                        ยื่นวิทยานิเวศน์ขอใช้ห้องสตูดิโอ
+                      </h4>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">1. สตูดิโอที่ต้องการเข้าใช้ (Studio Room)</label>
+                        <select
+                          value={bookingRoom}
+                          onChange={(e) => setBookingRoom(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-850 focus:bg-white focus:outline-none transition-all font-bold"
+                        >
+                          <option value="Studio A (Radio & Podcast)">Studio A (Radio & Podcast)</option>
+                          <option value="Studio B (Main Television)">Studio B (Main Television)</option>
+                          <option value="Studio C (Virtual Green Screen)">Studio C (Virtual Green Screen)</option>
+                          <option value="Editing Suite A">Editing Suite A</option>
+                          <option value="Editing Suite B">Editing Suite B</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">2. วันที่ต้องการจอง</label>
+                          <input
+                            type="date"
+                            value={bookingDate}
+                            onChange={(e) => setBookingDate(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">3. ช่วงเวลา (Timeslot)</label>
+                          <select
+                            value={bookingSlot}
+                            onChange={(e) => setBookingSlot(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none transition-all font-mono font-medium text-slate-750"
+                          >
+                            <option value="09:00 - 11:00">09:00 - 11:00</option>
+                            <option value="11:00 - 13:00">11:05 - 13:00</option>
+                            <option value="13:00 - 15:00">13:00 - 15:00</option>
+                            <option value="15:00 - 17:00">15:00 - 17:00</option>
+                            <option value="17:00 - 19:00">17:00 - 19:00</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">4. รายละเอียดวิชา / วัตถุประสงค์ (Purpose)</label>
+                        <textarea
+                          rows={3}
+                          value={bookingPurpose}
+                          onChange={(e) => setBookingPurpose(e.target.value)}
+                          placeholder="เช่น จัดรายการสดวิทยุ CA101 คาบเช้า, อัดบทสัมภาษณ์พอดแคสต์..."
+                          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold rounded-xl py-3 text-xs transition-colors shadow-md shadow-indigo-600/15"
                       >
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cabin.badgeBg}`}>
-                              {cabin.tag}
-                            </span>
-                            <div className="p-2 bg-slate-50 rounded-xl shrink-0">
-                              {getCabinetIcon(cabin.icon)}
+                        ⚡ ส่งคำขอจองห้องห้องจัดรายการ
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* RIGHT COLUMN: Active Room Bookings tracking & scheduling view (7-cols) */}
+                  <div className="lg:col-span-7 space-y-6">
+                    
+                    {/* Active bookings list board */}
+                    <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                      <h4 className="font-bold text-slate-800 text-xs border-b border-slate-50 pb-2 flex items-center gap-1.5 justify-between">
+                        <span className="flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4 text-emerald-600" />
+                          กระดานคิวและสถานะยืนยันการจองสตูดิโอ (Room Booking Queue)
+                        </span>
+                        <span className="bg-slate-100 font-mono text-[9px] text-slate-500 px-2 py-0.5 rounded-full">
+                          ทั้งหมด {bookings.length} คำขอ
+                        </span>
+                      </h4>
+
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                        {bookings.length === 0 ? (
+                          <div className="text-center py-10 text-slate-400 text-xs flex flex-col items-center justify-center space-y-2">
+                            <Clock className="w-8 h-8 text-slate-200" />
+                            <p className="font-medium text-slate-500">ยังไม่มีผู้ใดยื่นจองสตูดิโอในระบบ</p>
+                          </div>
+                        ) : (
+                          bookings.map((b) => (
+                            <div key={b.id} className="border border-slate-50 rounded-xl p-3 bg-slate-50/15 hover:bg-slate-50/40 transition-colors flex justify-between items-center gap-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-xs text-slate-800">{b.roomName}</span>
+                                  <span className="bg-indigo-50 text-indigo-700 text-[9px] font-bold px-1.5 py-0.2 rounded">
+                                    {b.timeSlot}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-indigo-980/70 font-medium">
+                                  โดย {b.studentName} ใน {b.date}
+                                </p>
+                                <p className="text-[11px] text-slate-500 font-medium italic mt-0.5">
+                                  "{b.purpose}"
+                                </p>
+                              </div>
+
+                              <div className="shrink-0">
+                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                  b.status === 'approved' 
+                                    ? 'bg-emerald-100 text-emerald-850'
+                                    : b.status === 'rejected'
+                                    ? 'bg-rose-100 text-rose-850'
+                                    : 'bg-amber-100 text-amber-850'
+                                }`}>
+                                  {b.status === 'approved' && '✓ อนุมัติแล้ว'}
+                                  {b.status === 'rejected' && '✕ ปฏิเสธแล้ว'}
+                                  {b.status === 'pending' && '⏳ รออนุมัติ'}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Broadcasting schedule schedule for students to inspect */}
+                    <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                      <h4 className="font-bold text-slate-800 text-xs border-b border-slate-50 pb-2 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Layers className="w-4 h-4 text-pink-600 animate-pulse" />
+                          ผังรายการสดสถานีสื่อโทรทัศน์/วิทยุ (Broadcasting Schedules)
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded">
+                            🔴 LIVE {programs.filter(p => p.status === 'active').length}
+                          </span>
+                        </div>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[280px] overflow-y-auto pr-1">
+                        {programs.map((prog) => (
+                          <div key={prog.id} className="border border-slate-50 hover:bg-slate-50/20 p-3.5 rounded-xl space-y-2 flex flex-col justify-between">
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between items-center">
+                                <span className="bg-slate-100 text-[9px] font-mono font-bold text-slate-500 px-1.5 py-0.2 rounded uppercase">
+                                  {prog.category}
+                                </span>
+                                <span className={`text-[10px] font-extrabold ${
+                                  prog.status === 'active'
+                                    ? 'text-rose-600 animate-pulse font-black'
+                                    : prog.status === 'completed'
+                                    ? 'text-slate-400'
+                                    : 'text-sky-600'
+                                }`}>
+                                  {prog.status === 'active' && '🔴 LIVE NOW'}
+                                  {prog.status === 'completed' && 'เสร็จสิ้น'}
+                                  {prog.status === 'upcoming' && 'เตรียมพร้อม'}
+                                </span>
+                              </div>
+                              <h5 className="font-bold text-xs text-slate-850 font-display line-clamp-1">
+                                {prog.programName}
+                              </h5>
+                              <p className="text-[10px] text-slate-500">ดีเจ: <span className="font-bold text-slate-700">{prog.hosts}</span></p>
+                            </div>
+                            <div className="pt-2 border-t border-slate-50 flex justify-between items-center text-[9px] text-slate-400 font-mono">
+                              <span>{prog.roomName}</span>
+                              <span>{prog.timeSlot}</span>
                             </div>
                           </div>
-                          
-                          <div>
-                            <h4 className="font-bold text-slate-800 text-sm leading-snug font-display">{cabin.title}</h4>
-                            <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">{cabin.summary}</p>
+                        ))}
+
+                        {programs.length === 0 && (
+                          <div className="col-span-1 sm:col-span-2 text-center py-6 text-slate-400 text-xs">
+                            ยังไม่ได้จัดผังรายการการออกอากาศในระบบ
                           </div>
-
-                          {isOpen && cabin.tips && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              transition={{ duration: 0.2 }}
-                              className="mt-4 border-t border-slate-100 pt-4 space-y-4"
-                            >
-                              <h5 className="font-bold text-xs text-indigo-700">📌 เจาะลึกเทคนิคแก้ปัญหาพบบ่อย:</h5>
-                              <div className="space-y-3 divide-y divide-slate-100">
-                                {cabin.tips.map((tip, idx) => (
-                                  <div key={idx} className={`text-xs space-y-1 ${idx > 0 ? 'pt-3' : ''}`}>
-                                    <div className="font-bold text-slate-800 flex items-start gap-1">
-                                      <span className="text-indigo-600 shrink-0">Q:</span>
-                                      <span>{tip.q}</span>
-                                    </div>
-                                    <div className="bg-slate-50 text-slate-600 p-2.5 rounded-lg border border-slate-100 leading-relaxed whitespace-pre-wrap ml-4 font-medium">
-                                      {tip.a}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setActiveCabinetId(isOpen ? null : cabin.id)}
-                          className={`mt-4 w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-                            isOpen 
-                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-705' 
-                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
-                          }`}
-                        >
-                          {isOpen ? '✕ ปิดตู้ความรู้นี้' : '📖 เปิดตู้เพื่ออ่านคำอธิบายแบบละเอียด'}
-                        </button>
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+
+                  </div>
+
                 </div>
+
               </motion.div>
             )}
           </div>

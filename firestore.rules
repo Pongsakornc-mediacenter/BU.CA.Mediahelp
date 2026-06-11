@@ -66,6 +66,30 @@ service cloud.firestore {
         && data.points is int && data.points >= 0 && data.points <= 100;
     }
 
+    // Validates shape of a room booking
+    function isValidBooking(data) {
+      return data.keys().hasAll(['studentId', 'studentName', 'studentEmail', 'roomName', 'date', 'timeSlot', 'purpose', 'status', 'createdAt', 'updatedAt'])
+        && data.studentId == request.auth.uid
+        && data.roomName is string && data.roomName.size() <= 100
+        && data.date is string && data.date.size() <= 20
+        && data.timeSlot is string && data.timeSlot.size() <= 100
+        && data.purpose is string && data.purpose.size() <= 1000
+        && data.status in ['pending', 'approved', 'rejected'];
+    }
+
+    // Validates shape of a broadcast program
+    function isValidProgram(data) {
+      return data.keys().hasAll(['studentId', 'studentName', 'studentEmail', 'programName', 'hosts', 'category', 'roomName', 'date', 'timeSlot', 'status', 'createdAt', 'updatedAt'])
+        && data.studentId == request.auth.uid
+        && data.programName is string && data.programName.size() <= 150
+        && data.hosts is string && data.hosts.size() <= 200
+        && data.category in ['radio', 'tv', 'podcast', 'other']
+        && data.roomName is string && data.roomName.size() <= 100
+        && data.date is string && data.date.size() <= 20
+        && data.timeSlot is string && data.timeSlot.size() <= 100
+        && data.status in ['upcoming', 'active', 'completed'];
+    }
+
     // --- Route Match Blocks ---
 
     // Whitelisted Instructors Directory
@@ -116,6 +140,28 @@ service cloud.firestore {
         && isValidAttendance(incoming());
         
       allow update, delete: if isAdmin();
+    }
+
+    // Room Bookings Collection
+    match /bookings/{bookingId} {
+      allow read, list: if isSignedIn();
+      allow create: if isEmailVerified() && isValidId(bookingId) && isValidBooking(incoming());
+      allow update: if isSignedIn() && (
+        (existing().studentId == request.auth.uid && incoming().studentId == request.auth.uid && incoming().status == existing().status) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Broadcast Programs Collection
+    match /programs/{programId} {
+      allow read, list: if isSignedIn();
+      allow create: if isEmailVerified() && isValidId(programId) && isValidProgram(incoming());
+      allow update: if isSignedIn() && (
+        (existing().studentId == request.auth.uid && incoming().studentId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
     }
   }
 }

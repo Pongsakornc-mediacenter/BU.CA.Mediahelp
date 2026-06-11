@@ -54,6 +54,46 @@
         "deviceMeta": { "type": "string" }
       },
       "required": ["id", "studentId", "studentName", "studentEmail", "classId", "className", "checkedInAt", "status", "points"]
+    },
+    "RoomBooking": {
+      "title": "RoomBooking",
+      "description": "Studio room reservation request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentEmail": { "type": "string" },
+        "roomName": { "type": "string" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "purpose": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "studentId", "studentName", "studentEmail", "roomName", "date", "timeSlot", "purpose", "status", "createdAt", "updatedAt"]
+    },
+    "BroadcastProgram": {
+      "title": "BroadcastProgram",
+      "description": "Scheduled live broadcast, show, or podcast program",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentEmail": { "type": "string" },
+        "programName": { "type": "string" },
+        "hosts": { "type": "string" },
+        "category": { "type": "string", "enum": ["radio", "tv", "podcast", "other"] },
+        "roomName": { "type": "string" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "status": { "type": "string", "enum": ["upcoming", "active", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "studentId", "studentName", "studentEmail", "programName", "hosts", "category", "roomName", "date", "timeSlot", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -72,6 +112,14 @@
     "/attendance/{attendanceId}": {
       "schema": "AttendanceRecord",
       "description": "Class session check-in scores log"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "RoomBooking",
+      "description": "Studio room reservation logs"
+    },
+    "/programs/{programId}": {
+      "schema": "BroadcastProgram",
+      "description": "Broadcast scheduling listing"
     }
   }
 }

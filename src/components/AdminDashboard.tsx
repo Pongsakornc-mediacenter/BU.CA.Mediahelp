@@ -40,8 +40,8 @@ import {
   Edit2,
   Image as ImageIcon
 } from 'lucide-react';
-import { Ticket, AttendanceRecord, HelpCategory, ClassSession, KnowledgeCabinet, KnowledgeTip } from '../types';
-import { AVAILABLE_CLASSES } from '../hooks/useData';
+import { Ticket, AttendanceRecord, HelpCategory, ClassSession, RoomBooking, BroadcastProgram } from '../types';
+import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS } from '../hooks/useData';
 
 interface AdminDashboardProps {
   tickets: Ticket[];
@@ -49,10 +49,13 @@ interface AdminDashboardProps {
   onSubmitReply: (ticketId: string, replyText: string) => Promise<void>;
   onDownloadReport: () => void;
   currentUserEmail: string;
-  cabinets: KnowledgeCabinet[];
-  onCreateCabinet: (cabinet: Omit<KnowledgeCabinet, 'id'>) => Promise<void>;
-  onUpdateCabinet: (id: string, cabinet: Partial<KnowledgeCabinet>) => Promise<void>;
-  onDeleteCabinet: (id: string) => Promise<void>;
+  bookings: RoomBooking[];
+  programs: BroadcastProgram[];
+  onUpdateBookingStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
+  onDeleteBooking: (id: string) => Promise<void>;
+  onCreateProgram: (programName: string, hosts: string, category: 'radio' | 'tv' | 'podcast' | 'other', roomName: string, date: string, timeSlot: string) => Promise<void>;
+  onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
+  onDeleteProgram: (id: string) => Promise<void>;
 }
 
 export default function AdminDashboard({
@@ -61,175 +64,59 @@ export default function AdminDashboard({
   onSubmitReply,
   onDownloadReport,
   currentUserEmail,
-  cabinets = [],
-  onCreateCabinet,
-  onUpdateCabinet,
-  onDeleteCabinet
+  bookings = [],
+  programs = [],
+  onUpdateBookingStatus,
+  onDeleteBooking,
+  onCreateProgram,
+  onUpdateProgramStatus,
+  onDeleteProgram
 }: AdminDashboardProps) {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tickets' | 'cabinets'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'bookings'>('tickets');
   const [categoryFilter, setCategoryFilter] = useState<HelpCategory | 'all'>('all');
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>('all');
 
-  // Cabinets Admin UI State
-  const [editingCabinetId, setEditingCabinetId] = useState<string | null>(null);
-  const [isAddingNewCabinet, setIsAddingNewCabinet] = useState(false);
-  const [cabinetFormTitle, setCabinetFormTitle] = useState("");
-  const [cabinetFormSummary, setCabinetFormSummary] = useState("");
-  const [cabinetFormTag, setCabinetFormTag] = useState("");
-  const [cabinetFormIcon, setCabinetFormIcon] = useState("camera");
-  const [cabinetFormImage, setCabinetFormImage] = useState<string | null>(null);
-  const [cabinetFormTips, setCabinetFormTips] = useState<{ q: string; a: string }[]>([]);
-  const [formLoading, setFormLoading] = useState(false);
+  // Program Scheduling Admin Form States
+  const [isAddingProgram, setIsAddingProgram] = useState(false);
+  const [newProgName, setNewProgName] = useState("");
+  const [newProgHosts, setNewProgHosts] = useState("");
+  const [newProgCategory, setNewProgCategory] = useState<'radio' | 'tv' | 'podcast' | 'other'>("radio");
+  const [newProgRoom, setNewProgRoom] = useState(AVAILABLE_STUDIO_ROOMS[0]);
+  const [newProgDate, setNewProgDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newProgTime, setNewProgTime] = useState(AVAILABLE_TIMESLOTS[0]);
+  const [submittingProg, setSubmittingProg] = useState(false);
 
   // Find currently opened ticket
   const activeTicket = tickets.find(t => t.id === selectedTicketId);
 
-  // File upload compression helper for cabinet image
-  const handleCabinetImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 450;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
-        setCabinetFormImage(compressedBase64);
-      };
-    };
-  };
-
-  const handleAddTip = () => {
-    setCabinetFormTips([...cabinetFormTips, { q: "", a: "" }]);
-  };
-
-  const handleRemoveTip = (index: number) => {
-    const updated = [...cabinetFormTips];
-    updated.splice(index, 1);
-    setCabinetFormTips(updated);
-  };
-
-  const handleTipChange = (index: number, field: 'q' | 'a', value: string) => {
-    const updated = [...cabinetFormTips];
-    updated[index] = { ...updated[index], [field]: value };
-    setCabinetFormTips(updated);
-  };
-
-  const handleCabinetFormSubmit = async (e: React.FormEvent) => {
+  const handleProgramFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cabinetFormTitle.trim() || !cabinetFormSummary.trim() || !cabinetFormTag.trim()) {
-      alert("กรุณากรอกหัวข้อตู้อธิบายย่อ และหมวดหมู่ป้ายด้วยค่ะ");
+    if (!newProgName.trim() || !newProgHosts.trim()) {
+      alert("กรุณากรอกชื่อรายการและนามแฝงดีเจ/พิธีกรด้วยค่ะ");
       return;
     }
-
-    setFormLoading(true);
-    const cabinetPayload = {
-      title: cabinetFormTitle.trim(),
-      summary: cabinetFormSummary.trim(),
-      tag: cabinetFormTag.trim(),
-      icon: cabinetFormIcon,
-      imageUrl: cabinetFormImage || undefined,
-      tips: cabinetFormTips.filter(t => t.q.trim() !== "" && t.a.trim() !== "").map(t => ({
-        q: t.q.trim(),
-        a: t.a.trim()
-      })),
-      accent: getAccentClasses(cabinetFormIcon),
-      badgeBg: getBadgeClasses(cabinetFormIcon),
-    };
-
+    setSubmittingProg(true);
     try {
-      if (editingCabinetId) {
-        await onUpdateCabinet(editingCabinetId, cabinetPayload);
-        alert("💾 อัปเดตตู้ความรู้สำเร็จ!");
-      } else {
-        await onCreateCabinet(cabinetPayload);
-        alert("➕ เพิ่มตู้ความรู้ใหม่สำเร็จ!");
-      }
-      resetCabinetForm();
+      await onCreateProgram(
+        newProgName.trim(),
+        newProgHosts.trim(),
+        newProgCategory,
+        newProgRoom,
+        newProgDate,
+        newProgTime
+      );
+      setNewProgName("");
+      setNewProgHosts("");
+      setIsAddingProgram(false);
+      alert("➕ เพิ่มตารางจัดรายการใหม่เข้าระบบสำเร็จ!");
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการดำเนินการตู้ความรู้");
+      alert("ไม่สามารถละเลงตารางรายการได้");
     } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const startEditCabinet = (cab: KnowledgeCabinet) => {
-    setEditingCabinetId(cab.id);
-    setCabinetFormTitle(cab.title);
-    setCabinetFormSummary(cab.summary);
-    setCabinetFormTag(cab.tag);
-    setCabinetFormIcon(cab.icon || "camera");
-    setCabinetFormImage(cab.imageUrl || null);
-    setCabinetFormTips(cab.tips || [{ q: "", a: "" }]);
-    setIsAddingNewCabinet(true);
-  };
-
-  const startAddNewCabinet = () => {
-    resetCabinetForm();
-    setIsAddingNewCabinet(true);
-  };
-
-  const resetCabinetForm = () => {
-    setEditingCabinetId(null);
-    setIsAddingNewCabinet(false);
-    setCabinetFormTitle("");
-    setCabinetFormSummary("");
-    setCabinetFormTag("");
-    setCabinetFormIcon("camera");
-    setCabinetFormImage(null);
-    setCabinetFormTips([{ q: "", a: "" }]);
-  };
-
-  const handleDeleteCabinetClick = async (id: string, name: string) => {
-    if (confirm(`คุณแน่ใจหรือไม่ว่าจะลบ "${name}" ออกจากสารระบบ? การลบนี้จะไม่สามารถกู้คืนกลับมาได้`)) {
-      try {
-        await onDeleteCabinet(id);
-        alert("🗑️ ลบตู้ความรู้สำเร็จเรียบร้อยแล้วค่ะ");
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  };
-
-  const getAccentClasses = (icon: string) => {
-    switch (icon) {
-      case 'camera': return 'border-orange-100 bg-orange-50/20 text-orange-950';
-      case 'mic': return 'border-emerald-100 bg-emerald-50/20 text-emerald-950';
-      case 'lighting': return 'border-amber-100 bg-amber-50/20 text-amber-955';
-      case 'editing': return 'border-pink-100 bg-pink-50/20 text-pink-950';
-      default: return 'border-indigo-100 bg-indigo-50/20 text-indigo-950';
-    }
-  };
-
-  const getBadgeClasses = (icon: string) => {
-    switch (icon) {
-      case 'camera': return 'bg-orange-100 text-orange-850';
-      case 'mic': return 'bg-emerald-100 text-emerald-800';
-      case 'lighting': return 'bg-amber-100 text-amber-850';
-      case 'editing': return 'bg-pink-100 text-pink-850';
-      default: return 'bg-indigo-100 text-indigo-850';
+      setSubmittingProg(false);
     }
   };
 
@@ -362,15 +249,15 @@ export default function AdminDashboard({
 
         <button
           type="button"
-          onClick={() => setActiveTab('cabinets')}
+          onClick={() => setActiveTab('bookings')}
           className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-            activeTab === 'cabinets'
+            activeTab === 'bookings'
               ? 'bg-slate-800 text-white shadow-sm'
               : 'text-slate-500 hover:bg-slate-50'
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          ระบบตั้งค่าหน้าเว็บ & จัดการตู้ความรู้ ({cabinets.length})
+          ระบบอนุมัติจองห้อง & ตารางจัดรายการ ({bookings.length} จอง / {programs.length} รายการ)
         </button>
       </div>
 
@@ -756,25 +643,17 @@ export default function AdminDashboard({
                   <form onSubmit={handleSendReply} className="flex gap-2">
                     <input
                       type="text"
+                      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none"
+                      placeholder="พิมพ์ข้อความตอบกลับเพื่อส่งถึงนักศึกษา..."
                       value={replyText}
-                      id="reply_input_field"
                       onChange={(e) => setReplyText(e.target.value)}
-                      placeholder={activeTicket.replyText ? "พิมพ์คำอธิบายเพิ่มเติมเพื่อส่งข้อความแก้ไขคำตอบเดิม..." : "พิมพ์คำตอบและข้อแนะนำส่งด่วนให้นักศึกษา..."}
-                      className="flex-1 bg-white border border-slate-200 focus:outline-none focus:border-indigo-600 rounded-xl px-4 py-2 text-xs"
-                      disabled={replyLoading}
                     />
                     <button
                       type="submit"
-                      disabled={replyLoading || !replyText.trim()}
-                      id="send_reply_btn"
-                      className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-slate-300 text-white rounded-xl px-4 flex items-center justify-center text-xs font-semibold transition-colors gap-1.5 shrink-0"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 text-xs font-semibold transition-all flex items-center gap-1.5"
                     >
-                      {replyLoading ? 'กำลังส่ง...' : (
-                        <>
-                          <span>ส่งคำตอบ</span>
-                          <Send className="w-3.5 h-3.5" />
-                        </>
-                      )}
+                      <span>ส่งคำตอบ</span>
+                      <Send className="w-3.5 h-3.5" />
                     </button>
                   </form>
                 )}
@@ -787,8 +666,8 @@ export default function AdminDashboard({
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
               <MessageSquareOff className="w-16 h-16 text-slate-300 mb-2" />
               <h4 className="font-bold text-slate-700 text-sm">ยังไม่ได้เลือกหัวข้อ</h4>
-              <p className="text-[11px] text-center mt-1 text-slate-500 max-w-xs">
-                กรุณาคลิกเลือกหัวข้อขวาความช่วยเหลือจากรายการซ้ายมือ เพื่อตรวจสอบปัญหา ภาพของกล้อง และตอบคำถามนักศึกษารายบุคคลแบบเรียลไทม์
+              <p className="text-[11px] text-center mt-1 text-slate-500 max-w-xs font-medium">
+                กรุณาคลิกเลือกหัวข้อคำถามจากรายการซ้ายมือเพื่อตรวจสอบภาพกล้องเเละให้ความช่วยเหลือแบบเรียลไทม์
               </p>
             </div>
           )}
@@ -797,307 +676,349 @@ export default function AdminDashboard({
       </>
     )}
 
-    {activeTab === 'cabinets' && (
-      <div className="space-y-6" id="cabinets_admin_tab">
-        {/* Action and Title Bar */}
-        <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <div>
-            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 font-display">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
-              ระบบตั้งค่าเนื้อหาและรูปภาพตู้ความรู้ (Knowledge Cabinets Configuration)
-            </h3>
-            <p className="text-slate-505 text-xs mt-1">
-              แก้ไขข้อมูล ตัวหนังสือ หัวข้อ หรืออัปโหลดรูปภาพใหม่ลงตู้ความรู้โดยตรง ข้อมูลนี้จะสอดประสานแสดงผลไปยังมุมมองของนักศึกษาทันที
-            </p>
+    {activeTab === 'bookings' && (
+      <div className="space-y-6 animate-fade-in" id="bookings_broadcasts_admin_tabs">
+        
+        {/* UPPER: Studio Rooms Bookings Approval Board */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-50 pb-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 font-display">
+                <BookOpen className="w-5 h-5 text-indigo-600" />
+                คำขอจองห้องสตูดิโอจากนักศึกษา (Studio Room Bookings Queue)
+              </h3>
+              <p className="text-slate-500 text-xs mt-1">
+                ตรวจสอบ ตรวจพิจารณาอนุมัติ หรือปฏิเสธคำขอจองห้องจัดรายการและสตูดิโอโทรทัศน์ CA-BU ของนักเรียน
+              </p>
+            </div>
+            <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-xs text-slate-700">
+              <span>อนุมัติสะสม: {bookings.filter(b => b.status === 'approved').length} คำขอ</span>
+            </div>
           </div>
-          {!isAddingNewCabinet && (
-            <button
-              type="button"
-              onClick={startAddNewCabinet}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shrink-0 self-start sm:self-auto shadow-md shadow-indigo-600/10"
-            >
-              <Plus className="w-4 h-4" />
-              สร้างตู้ความรู้ใหม่ (Add Cabinet)
-            </button>
-          )}
+
+          <div className="overflow-x-auto">
+            {bookings.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs flex flex-col items-center justify-center space-y-2">
+                <BookOpen className="w-10 h-10 text-slate-200" />
+                <p className="font-bold text-slate-700">ไม่มีสถิติคำขอจองห้องในขณะนี้</p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-550 font-bold bg-slate-50/50">
+                    <th className="py-3 px-4 font-display">นักศึกษาผู้ขอ</th>
+                    <th className="py-3 px-4 font-display">ห้องสตูดิโอ</th>
+                    <th className="py-3 px-4 font-display">วันทำการจอง</th>
+                    <th className="py-3 px-4 font-display">ช่วงเวลากริด (Timeslot)</th>
+                    <th className="py-3 px-4 font-display">วัตถุประสงค์ (Purpose)</th>
+                    <th className="py-3 px-4 font-display text-center">สถานะคำขอ (Status)</th>
+                    <th className="py-3 px-4 font-display text-right">ดำเนินการ (Actions)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {bookings.map((booking) => (
+                    <tr key={booking.id} className="hover:bg-slate-50/40 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-800">{booking.studentName}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{booking.studentEmail}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px]">
+                          {booking.roomName}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-650">{booking.date}</td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-700">{booking.timeSlot}</td>
+                      <td className="py-3 px-4 max-w-[180px] truncate" title={booking.purpose}>
+                        <span className="font-medium text-slate-600">{booking.purpose}</span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          booking.status === 'approved' 
+                            ? 'bg-emerald-100 text-emerald-850'
+                            : booking.status === 'rejected'
+                            ? 'bg-rose-100 text-rose-850'
+                            : 'bg-amber-100 text-amber-850 border border-amber-200'
+                        }`}>
+                          {booking.status === 'approved' && '✓ อนุมัติ'}
+                          {booking.status === 'rejected' && '✕ ปฏิเสธ'}
+                          {booking.status === 'pending' && '⏳ รอตรวจ'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex gap-1.5 justify-end">
+                          {booking.status === 'pending' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => onUpdateBookingStatus(booking.id, 'approved')}
+                                className="bg-emerald-50 text-emerald-600 hover:bg-emerald-550 hover:text-white px-2 py-1 rounded-md text-[10px] font-bold border border-emerald-200 transition-colors"
+                              >
+                                อนุมัติ
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onUpdateBookingStatus(booking.id, 'rejected')}
+                                className="bg-rose-50 text-rose-600 hover:bg-rose-550 hover:text-white px-2 py-1 rounded-md text-[10px] font-bold border border-rose-200 transition-colors"
+                              >
+                                ปฏิเสธ
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("ลบคำจองห้องวิทยานี้ออกไปถาวร?")) {
+                                onDeleteBooking(booking.id);
+                              }
+                            }}
+                            className="bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 p-1 rounded-md border border-slate-200 transition-colors"
+                            title="ลบคำขอจอง"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
 
-        {isAddingNewCabinet ? (
-          /* Cabinet Editorial Form */
-          <form onSubmit={handleCabinetFormSubmit} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-              <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <span className="p-1 px-2.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-mono">
-                  {editingCabinetId ? "EDIT MODE" : "CREATE MODE"}
-                </span>
-                {editingCabinetId ? "แก้ไขข้อมูลตู้องค์ความรู้" : "เพิ่มตู้องค์ความรู้ใหม่เข้าสู่หน้าเว็บ"}
+        {/* LOWER: Station Broadcast Programming Board */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-50 pb-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 font-display">
+                <Users className="w-5 h-5 text-emerald-600" />
+                ตารางจัดรายการโทรทัศน์-วิทยุสถานี CO-CA FM/TV
+              </h3>
+              <p className="text-slate-500 text-xs mt-1">
+                กำกับกำหนดปฏิทินแสดงรายการ ควบคุมจังหวะออกอากาศแบบสดๆ ในรูปอัพเดตสถานะ (เตรียมตัว - ออนแอร์พรีวิว - เสร็จรายการ)
+              </p>
+            </div>
+            {!isAddingProgram ? (
+              <button
+                type="button"
+                onClick={() => setIsAddingProgram(true)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                เพิ่มตารางจัดรายการ (Add Schedule)
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsAddingProgram(false)}
+                className="text-slate-500 hover:text-slate-700 text-xs font-bold"
+              >
+                ✕ ปิดฟอร์มร่าง
+              </button>
+            )}
+          </div>
+
+          {isAddingProgram && (
+            <form onSubmit={handleProgramFormSubmit} className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+              <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                📌 กรอกข้อมูลลงทะเบียนรายการดีเจ/พิธีกน
               </h4>
-              <button
-                type="button"
-                onClick={resetCabinetForm}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold"
-              >
-                ✕ ยกเลิก
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              {/* Visual Settings - 4 Cols */}
-              <div className="md:col-span-4 space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">1. เลือกไอคอนตู้ (Cabinet Icon):</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { id: 'camera', label: 'กล้อง', icon: <Camera className="w-4 h-4" /> },
-                      { id: 'mic', label: 'ไมค์', icon: <Mic className="w-4 h-4" /> },
-                      { id: 'lighting', label: 'จัดแสง', icon: <Lightbulb className="w-4 h-4" /> },
-                      { id: 'editing', label: 'ตัดต่อ', icon: <PenTool className="w-4 h-4" /> }
-                    ].map(item => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setCabinetFormIcon(item.id)}
-                        className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-1.5 ${
-                          cabinetFormIcon === item.id
-                            ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700 font-bold ring-2 ring-indigo-600/5'
-                            : 'border-slate-100 hover:border-slate-200 text-slate-500'
-                        }`}
-                      >
-                        {item.icon}
-                        <span className="text-[9px]">{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">2. ชื่อป้ายสถานะตู้ (Badge Tag):</label>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">ชื่อรายการจัดรายการ (Program Name)</label>
                   <input
                     type="text"
-                    value={cabinetFormTag}
-                    onChange={(e) => setCabinetFormTag(e.target.value)}
-                    placeholder="เช่น ขาตั้งกล้อง, ความแรงคลื่น, เคล็ดลับพรีเมียร์"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
+                    value={newProgName}
+                    onChange={(e) => setNewProgName(e.target.value)}
+                    placeholder="เช่น BU Morning News, CA Space Talk"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
                   />
                 </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">3. อัปโหลดรูปภาพตู้ (Cabinet Photo):</label>
-                  <div className="space-y-3">
-                    {cabinetFormImage ? (
-                      <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-                        <img
-                          src={cabinetFormImage}
-                          alt="Cabinet preview"
-                          referrerPolicy="no-referrer"
-                          className="max-h-40 w-full object-contain mx-auto"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setCabinetFormImage(null)}
-                          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg text-[10px] font-bold shadow-md"
-                        >
-                          ✕ ลบรูปนี้
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50">
-                        <ImageIcon className="w-6 h-6 text-slate-400 mb-1" />
-                        <span className="text-[10px] font-semibold text-slate-600">อัปโหลดรูปภาพประจำตู้</span>
-                        <span className="text-[8px] text-slate-400 mt-0.5">ไฟล์ภาพ (jpg/png) จะถูกย่อลงขนาดอัตโนมัติ</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleCabinetImageUpload}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
-                  </div>
+                <div className="md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">ดีเจ / พิธีกรผู้จัด (Hosts)</label>
+                  <input
+                    type="text"
+                    value={newProgHosts}
+                    onChange={(e) => setNewProgHosts(e.target.value)}
+                    placeholder="เช่น นศ.อนุพงศ์ & อลินดา"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
+                  />
+                </div>
+                <div className="md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">ประเภทรายการ (Media Category)</label>
+                  <select
+                    value={newProgCategory}
+                    onChange={(e: any) => setNewProgCategory(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                  >
+                    <option value="radio">📻 สถานีวิทยุออนไลน์ (Radio)</option>
+                    <option value="tv">📺 โทรทัศน์กระแสหลัก (Television)</option>
+                    <option value="podcast">🎙️ พอดแคสต์เสียงใส (Podcast)</option>
+                    <option value="other">🎬 สื่ออื่นๆ (Other media)</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Text Content & Tips - 8 Cols */}
-              <div className="md:col-span-8 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">4. หัวข้อหลักของตู้ (Cabinet Title):</label>
-                  <input
-                    type="text"
-                    value={cabinetFormTitle}
-                    onChange={(e) => setCabinetFormTitle(e.target.value)}
-                    placeholder="เช่น ตู้ความรู้ขาตั้งกล้องและฟิสิกส์เกลียวล๊อค"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">5. คำอธิบายย่อ (Short Summary):</label>
-                  <textarea
-                    value={cabinetFormSummary}
-                    onChange={(e) => setCabinetFormSummary(e.target.value)}
-                    placeholder="อธิบายย่อๆ เกี่ยวกับสิ่งที่นักศึกษาจะได้อ่านในตู้องค์ความรู้นี้..."
-                    rows={2}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 resize-none font-medium"
-                  />
-                </div>
-
-                {/* Tips Dynamic Group */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center border-t border-slate-100 pt-4">
-                    <label className="text-xs font-bold text-indigo-700 flex items-center gap-1.5">
-                      📌 รายการประเด็นตอบคำถาม Q&A ภายในตู้นี้ (Tips & Checklist)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleAddTip}
-                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" />
-                      เพิ่มประเด็น Q&A
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                    {cabinetFormTips.map((tip, idx) => (
-                      <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 relative space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTip(idx)}
-                          className="absolute top-2 right-2 text-slate-400 hover:text-red-650 transition-colors text-[10px] font-bold"
-                          title="ลบหัวข้อ Q&A"
-                        >
-                          ✕ ลบ
-                        </button>
-                        <span className="text-[9px] font-bold bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">
-                          ประเด็นชุดที่ {idx + 1}
-                        </span>
-
-                        <div className="grid grid-cols-1 gap-2">
-                          <div>
-                            <input
-                              type="text"
-                              value={tip.q}
-                              onChange={(e) => handleTipChange(idx, 'q', e.target.value)}
-                              placeholder="ตั้งคำถาม (Question)"
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500"
-                            />
-                          </div>
-                          <div>
-                            <textarea
-                              value={tip.a}
-                              onChange={(e) => handleTipChange(idx, 'a', e.target.value)}
-                              placeholder="รายละเอียดแนวทางแก้ไข (Answer)"
-                              rows={2}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500 resize-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">สตูดิโดที่ใช้จัด (Studio Room)</label>
+                  <select
+                    value={newProgRoom}
+                    onChange={(e) => setNewProgRoom(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                  >
+                    {AVAILABLE_STUDIO_ROOMS.map(r => (
+                      <option key={r} value={r}>{r}</option>
                     ))}
-
-                    {cabinetFormTips.length === 0 && (
-                      <div className="text-center py-6 bg-slate-50 rounded-xl border border-slate-100 text-slate-400 text-xs">
-                        ยังไม่มีเนื้อหา Q&A แนะนำให้อย่างน้อย 1 ชุดเพื่อส่งมอบคุณค่าให้นักศึกษาค่ะ
-                      </div>
-                    )}
-                  </div>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">วันที่จัด (Date)</label>
+                  <input
+                    type="date"
+                    value={newProgDate}
+                    onChange={(e) => setNewProgDate(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">กริดคาบจัด (Timeslot Grid)</label>
+                  <select
+                    value={newProgTime}
+                    onChange={(e) => setNewProgTime(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
+                  >
+                    {AVAILABLE_TIMESLOTS.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            </div>
 
-            {/* Form submit handlers */}
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button
-                type="button"
-                onClick={resetCabinetForm}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-5 py-2.5 rounded-xl transition-colors"
+              <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingProgram(false)}
+                  className="bg-white border border-slate-200 text-slate-600 text-xs px-4 py-2 rounded-xl"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingProg}
+                  className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-sm"
+                >
+                  {submittingProg ? 'กำลังเพิ่มบันทึก...' : '💾 บันทึกเวลาจัดรายการ'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Programs Admin Console List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {programs.map((program) => (
+              <div 
+                key={program.id}
+                className="border border-slate-100 rounded-xl p-4 hover:border-slate-200 bg-slate-50/20 transition-all flex flex-col justify-between"
               >
-                ยกเลิก
-              </button>
-              <button
-                type="submit"
-                disabled={formLoading}
-                className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-650/10 flex items-center gap-1.5"
-              >
-                {formLoading ? "กำลังประมวลผล..." : "💾 บันทึกและเผยแพร่บนหน้าพรีวิว"}
-              </button>
-            </div>
-          </form>
-        ) : (
-          /* Cabinets Cards Grid List */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {cabinets.map(cab => (
-              <div
-                key={cab.id}
-                className="bg-white border border-slate-105 rounded-2xl p-5 shadow-sm hover:border-indigo-150 transition-all flex flex-col justify-between"
-              >
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex justify-between items-start">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cab.badgeBg || 'bg-indigo-100 text-indigo-850'}`}>
-                      {cab.tag}
+                    <span className={`px-2.5 py-0.5 rounded font-mono font-bold text-[9px] ${
+                      program.category === 'radio'
+                        ? 'bg-amber-100 text-amber-800'
+                        : program.category === 'tv'
+                        ? 'bg-indigo-100 text-indigo-800'
+                        : program.category === 'podcast'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-100 text-slate-800'
+                    }`}>
+                      {program.category.toUpperCase()}
                     </span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => startEditCabinet(cab)}
-                        className="bg-slate-50 hover:bg-indigo-50 border border-slate-100 text-slate-600 hover:text-indigo-700 p-1.5 rounded-lg transition-colors"
-                        title="แก้ไขรูป/ข้อมูลตู้"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteCabinetClick(cab.id, cab.title)}
-                        className="bg-slate-50 hover:bg-red-50 border border-slate-100 text-slate-600 hover:text-red-750 p-1.5 rounded-lg transition-colors"
-                        title="ลบตู้ความรู้"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                      program.status === 'active' 
+                        ? 'bg-rose-500 text-white font-bold animate-pulse'
+                        : program.status === 'completed'
+                        ? 'bg-slate-150 text-slate-500'
+                        : 'bg-sky-100 text-sky-850'
+                    }`}>
+                      {program.status === 'active' && '🔴 LIVE / ON-AIR!'}
+                      {program.status === 'completed' && '✓ เสร็จรายการ'}
+                      {program.status === 'upcoming' && '⏳ เตรียมตัว'}
+                    </span>
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-slate-800 text-sm font-display leading-snug">{cab.title}</h4>
-                    <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">{cab.summary}</p>
-                  </div>
-
-                  {/* Image display */}
-                  {cab.imageUrl && (
-                    <div className="rounded-lg overflow-hidden border border-slate-100 bg-slate-50 max-h-36 w-full flex items-center justify-center">
-                      <img
-                        src={cab.imageUrl}
-                        alt="Cabinet media"
-                        referrerPolicy="no-referrer"
-                        className="object-contain max-h-36 w-full"
-                      />
+                    <h4 className="font-bold text-slate-850 text-xs font-display">{program.programName}</h4>
+                    <p className="text-slate-500 text-[11px] mt-0.5">พิธีกร: <span className="font-semibold text-slate-800">{program.hosts}</span></p>
+                    <div className="text-[10px] text-slate-400 font-mono mt-1">
+                      {program.roomName} / {program.date} ({program.timeSlot})
                     </div>
-                  )}
-
-                  {/* Q&A counter */}
-                  <div className="text-[10px] font-semibold text-indigo-700 bg-indigo-50/50 p-2 rounded-xl border border-indigo-100/30 flex items-center gap-1.5">
-                    <span>💡 รวมหัวข้อที่แนะนำ: {cab.tips?.length || 0} ประเด็นพบบ่อย</span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => startEditCabinet(cab)}
-                  className="mt-4 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-750 text-xs font-bold py-2 rounded-xl transition-all"
-                >
-                  📖 จัดการคำแนะนำ & รายละเอียด Q&A
-                </button>
+                <div className="mt-4 pt-3 border-t border-slate-50 flex items-center justify-between gap-2">
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateProgramStatus(program.id, 'upcoming')}
+                      className={`px-2 py-1 rounded text-[10px] font-semibold border ${
+                        program.status === 'upcoming'
+                          ? 'bg-slate-800 text-white border-slate-800'
+                          : 'bg-white hover:bg-slate-50 text-slate-650 border-slate-200'
+                      }`}
+                    >
+                      เตรียมตัว
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateProgramStatus(program.id, 'active')}
+                      className={`px-2 py-1 rounded text-[10px] font-semibold border ${
+                        program.status === 'active'
+                          ? 'bg-rose-600 text-white border-rose-605'
+                          : 'bg-white hover:bg-rose-50 text-rose-650 border-rose-200'
+                      }`}
+                    >
+                      LIVE ON-AIR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateProgramStatus(program.id, 'completed')}
+                      className={`px-2 py-1 rounded text-[10px] font-semibold border ${
+                        program.status === 'completed'
+                          ? 'bg-slate-400 text-white border-slate-400'
+                          : 'bg-white hover:bg-slate-50 text-slate-650 border-slate-200'
+                      }`}
+                    >
+                      เสร็จสิ้น
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("คุณแน่ใจว่าต้องการลบกำหนดรายการออกอากาศนี้ทิ้ง?")) {
+                        onDeleteProgram(program.id);
+                      }
+                    }}
+                    className="p-1 hover:bg-rose-50 text-slate-400 hover:text-red-650 rounded-lg border border-slate-100 transition-colors"
+                    title="ลบตารางออกอากาศ"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
 
-            {cabinets.length === 0 && (
-              <div className="col-span-1 md:col-span-2 text-center py-16 bg-white border border-slate-150 rounded-2xl p-6 text-slate-400 text-sm flex flex-col items-center justify-center space-y-2">
-                <BookOpen className="w-12 h-12 text-slate-200" />
-                <p className="font-bold text-slate-700">ไม่มีตู้ความรู้เผยแพร่อยู่ในขณะนี้</p>
-                <p className="text-xs text-slate-500 max-w-sm">แนะนำให้คลิกปุ่ม "สร้างตู้ความรู้ใหม่" ที่มุมขวาบนเพื่อป้อนข้อมูลและหัวข้อแนะนำนักศึกษาค่ะ</p>
+            {programs.length === 0 && (
+              <div className="col-span-1 md:col-span-2 text-center py-10 bg-slate-50 border border-dashed rounded-xl border-slate-200 text-slate-450 text-xs">
+                ไม่มีกำหนดการออกอากาศทางสื่อโทรทัศน์หรือวิทยุในส่วนนี้ขณะนี้
               </div>
             )}
           </div>
-        )}
+        </div>
+
       </div>
     )}
 

@@ -25,65 +25,84 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 import { db, auth, isFirebaseConfigured, googleProvider, handleFirestoreError, OperationType } from '../firebase';
-import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, KnowledgeCabinet, KnowledgeTip } from '../types';
+import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, RoomBooking, BroadcastProgram } from '../types';
 
-// Default Knowledge Cabinets for initial seeding and fallback
-export const DEFAULT_CABINETS: KnowledgeCabinet[] = [
+export const AVAILABLE_STUDIO_ROOMS = [
+  "Studio A: สตูดิโอโทรทัศน์เสมือนจริง (Virtual TV Studio)",
+  "Studio B: ห้องบันทึกรายการพอดแคสต์ (Podcast Creative Room)",
+  "Studio C: สตูถ่ายภาพแฟชั่นเเละนิ่ง (Production Photo Studio)",
+  "Studio D: ห้องจัดรายการวิทยุเเละดีเจ (FM Broadcast Radio Booth)",
+  "Studio E: ห้องตัดต่อระดับสีระดับเสียง (Pre-Post Mastering Suite)"
+];
+
+export const AVAILABLE_TIMESLOTS = [
+  "ช่วงเช้า (09:00 - 12:00 น.)",
+  "ช่วงบ่าย (13:00 - 16:00 น.)",
+  "ช่วงเย็น (16:00 - 19:00 น.)",
+  "ช่วงค่ำ (19:00 - 22:00 น.)"
+];
+
+// Default bookings for starting/demo purposes
+export const DEFAULT_BOOKINGS: RoomBooking[] = [
   {
-    id: 'cabin-camera',
-    icon: 'camera',
-    title: 'ตู้ความรู้ฟิสิกส์ภาพและรูรับแสง (Camera & Exposure Cabin)',
-    accent: 'border-orange-100 bg-orange-50/20 text-orange-950',
-    badgeBg: 'bg-orange-100 text-orange-850',
-    tag: 'กล้อง & เลนส์',
-    summary: 'เจาะลึก 3 เสาหลักของการวัดแสง (Aperture, Shutter Speed, ISO) พร้อมระบบกลศาสตร์ตากล้อง',
-    tips: [
-      { q: 'อยากถ่ายคนหน้าชัดหลังละลายสุดๆ ต้องใช้ค่าอะไร?', a: 'ปรับรูรับแสง (Aperture) ให้กว้างที่สุด เช่น f/1.4, f/1.8 หรือ f/2.0 ยืนใกล้แบบและทิ้งฉากหลังให้ห่างระบบซูมเลนส์จะช่วยหนุนทัศนมิติละลายได้ดีที่สุดค่ะ' },
-      { q: 'ภาพมืดเกินไปแก้ด้วยค่าไหนไม่พัง?', a: '1. ลด Shutter Speed ลง (ห้ามต่ำกว่า 1/125 ถ้าไม่ได้ใช้ขาตั้งกล้อง)\n2. เปิดรูรับแสงกว้างขึ้น F-stop น้อยลง\n3. ค่อยๆ ปรับเพิ่ม ISO (ควรคุมไม่เกิน 1600-3200 เพื่อเลี่ยงสัญาณรบกวน Noise)' },
-      { q: 'ภาพสั่นไหวและเบลอเวลาวัตถุเคลื่อนที่เร็วแก้ฟิสิกส์อย่างไร?', a: 'เพิ่ม Shutter speed ให้เร็วขึ้นเป็นอย่างน้อย 1/500 วินาที หรือ 1/1000 วินาที คุมให้สัมพันธ์กับการก้าวเดินของวัตถุค่ะ' }
-    ]
+    id: "book-1",
+    studentId: "somchai_bumail_net",
+    studentName: "สมชาย บุญช่วย (นักศึกษาจำลอง)",
+    studentEmail: "somchai@bumail.net",
+    roomName: "Studio B: ห้องบันทึกรายการพอดแคสต์ (Podcast Creative Room)",
+    date: "2026-06-12",
+    timeSlot: "ช่วงเช้า (09:00 - 12:00 น.)",
+    purpose: "อัดพอดแคสต์วิชาพรีเมียร์ สัมภาษณ์ศิษย์เก่าวงการภาพยนตร์",
+    status: "approved",
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
   },
   {
-    id: 'cabin-mic',
-    icon: 'mic',
-    title: 'ตู้ความรู้คลื่นไมค์และการบันทึกเสียง (Audio & Signal Calibration)',
-    accent: 'border-emerald-100 bg-emerald-50/20 text-emerald-950',
-    badgeBg: 'bg-emerald-100 text-emerald-800',
-    tag: 'คลื่นไมโครโฟน',
-    summary: 'คู่มือแก้ไขปัญหาสัญญาณคลื่นไมโครโฟนไร้สาย (Wireless Mics) และขั้นตอนการปรับ Gain ไม่ให้เสียงแตก/ฟู่',
-    tips: [
-      { q: 'สัญญาณไมค์คลื่นขาดหายหรือมีคลื่นแทรกระหว่างการทำงาน?', a: 'เปลี่ยนความถี่ไปช่องสำรอง (Group/Channel) ทันที หลีกเลี่ยงตำแหน่งอับสัญญาณใกล้เสาดาวเทียม โทรศัพท์เคลื่อนที่ หรือเสาไฟฟ้ารัศมีสูง' },
-      { q: 'เสียงแตก (Clip/Peak) บันทึกเข้าไปแล้วดังสะท้านซ่ากระด้าง?', a: 'ปรับลดคลื่น Input Gain ที่ตัวส่ง (Transmitter) หรือลดค่า dB ที่หลังกล้องให้วิ่งไม่เกินแถบส้ม (-12 dB) ห้ามแตะแถบแดงเด็ดขาด' },
-      { q: 'เสียงเบาแผ่วมากและมีเสียงลมฟู่ซ่าพัดตลอดเวลาทำงานกลางแจ้ง?', a: 'สวมใส่อุปกรณ์กันลม (Deadcat / Wind Muff) ป้องกันรูไมค์ และปรับเปิดโหมด Low-Cut Filter ที่ตัวรับสัญญาณเพื่อตัดเสียงความถี่ต่ำ' }
-    ]
+    id: "book-2",
+    studentId: "wilai_bumail_net",
+    studentName: "วิไลลักษณ์ เนตรตา (นักศึกษาจำลอง)",
+    studentEmail: "wilai.n@bumail.net",
+    roomName: "Studio A: สตูดิโอโทรทัศน์เสมือนจริง (Virtual TV Studio)",
+    date: "2026-06-13",
+    timeSlot: "ช่วงบ่าย (13:00 - 16:00 น.)",
+    purpose: "ซ้อมจัดระเบียบส่งเทปวิชาศิลปะการก้าวสตูดิโอ",
+    status: "pending",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// Default broadcast programs for starting/demo purposes
+export const DEFAULT_PROGRAMS: BroadcastProgram[] = [
+  {
+    id: "prog-1",
+    studentId: "somchai_bumail_net",
+    studentName: "สมชาย บุญช่วย",
+    studentEmail: "somchai@bumail.net",
+    programName: "BU CA Morning Wave 📻",
+    hosts: "ดีเจสมชาย & เพื่อนๆ คณะนิเทศศาสตร์",
+    category: "radio",
+    roomName: "Studio D: ห้องจัดรายการวิทยุเเละดีเจ (FM Broadcast Radio Booth)",
+    date: "2026-06-12",
+    timeSlot: "ช่วงเช้า (09:00 - 12:00 น.)",
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
-    id: 'cabin-lighting',
-    icon: 'lighting',
-    title: 'ตู้ความรู้จัดแสงหลัก 3 จุดในสตูดิโอ (3-Point Studio Lighting Cabin)',
-    accent: 'border-amber-100 bg-amber-50/20 text-amber-955',
-    badgeBg: 'bg-amber-100 text-amber-800',
-    tag: 'จัดแสง & เงา',
-    summary: 'มาตรฐานการวางทิศทางแสงด้วย Key Light, Fill Light และ Back Light เพื่อมิติใบหน้าคมชัดอย่างมืออาชีพ',
-    tips: [
-      { q: 'เสาหลักที่ 1: Key Light วางตำแหน่งทิศทางไหน?', a: 'เป็นแสงหลักที่แรงสุด วางทำมุม 45 องศาทั้งแนวนอนและแนวตั้งเฉียงหน้าผู้พูด เพื่อความมีมิติและเงาที่นิ่มนวลตกกระทบ' },
-      { q: 'เสาหลักที่ 2: Fill Light แก้ไขเงาฝั่งไหน?', a: 'วางทิศตรงข้ามกับ Key Light แสงนุ่มเบากว่าครึ่งหนึ่งเพื่อถมเงาดำฝั่งมืดไม่ให้หน้าดูลึกหลืบจนแข็งกระด้างเกินเกณฑ์' },
-      { q: 'เสาหลักที่ 3: Back Light / Hair Light สำคัญอย่างไร?', a: 'ยิงย้อนมาจากข้างหลังแบบเบาๆ เพื่อวาดเส้นแสง (Rim Light) รอบเส้นผมและหัวไหล่นักแสดง ช่วยแยกตัวแบบหลุดขาดฉายมิติออกมาจากพรมฉากหลัง' }
-    ]
-  },
-  {
-    id: 'cabin-editing',
-    icon: 'editing',
-    title: 'ตู้ความรู้ไฟล์และการเตรียมงานตัดต่อ (Editing Specs & Post-Process)',
-    accent: 'border-pink-100 bg-pink-50/20 text-pink-950',
-    badgeBg: 'bg-pink-100 text-pink-850',
-    tag: 'ซอฟต์แวร์ตัดต่อ',
-    summary: 'วิธีเลือกชนิดไฟล์วิดีโอ (Bitrate, Codec, Frame rate) และฟังก์ชันการกู้คืนงานหายเมื่อคอมค้าง',
-    tips: [
-      { q: 'ทำไมสีวิดีโอบนจอตัดต่อกับเวลาส่งเข้ามือถือถึงจืดจางไม่เหมือนกัน?', a: 'ปัญหานี้เกี่ยวโยงกับ Color Space ผิดเพี้ยน แนะนำให้ตั้งขอบเขตส่งออก (Export profile) เป็น Rec.709 sRGB แทนนอกเสียจากเป็นงานเกรดภาพสีพิเศษ' },
-      { q: 'เครื่องหน่วงเรนเดอร์กระตุกแก้สเปกตรงไหน?', a: 'เลือกเปิดฟังก์ชัน "Proxy Media" ในแอปตัดต่อ เพื่อลดความละเอียดไฟล์หลอกเวลาตัด แล้วเครื่องจะเรนเดอร์สบายขึ้นเมื่อดึงผลงานสุดท้าย' },
-      { q: 'ค่าเฟรมเรต 24fps, 30fps, 60fps ต่างกันอย่างไร?', a: '• 24fps: มิติฟิล์มโรงภาพยนตร์แบบคลาสสิก\n• 30fps: วิดีโอบล็อกรายการโทรทัศน์ทั่วไป\n• 60fps: ภาพสไลด์ลื่นเคลื่อนไหวเร็วและนิยมใช้เพื่อดึงภาพช้า (Slow-Mo)' }
-    ]
+    id: "prog-2",
+    studentId: "wilai_bumail_net",
+    studentName: "วิไลลักษณ์ เนตรตา",
+    studentEmail: "wilai.n@bumail.net",
+    programName: "Creative Talk Podcast 🎙️",
+    hosts: "วิไลลักษณ์ & ดีเจอติกันต์",
+    category: "podcast",
+    roomName: "Studio B: ห้องบันทึกรายการพอดแคสต์ (Podcast Creative Room)",
+    date: "2026-06-12",
+    timeSlot: "ช่วงบ่าย (13:00 - 16:00 น.)",
+    status: "upcoming",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
 
@@ -127,7 +146,8 @@ export function useData() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastNotification, setLastNotification] = useState<string | null>(null);
-  const [cabinets, setCabinets] = useState<KnowledgeCabinet[]>([]);
+  const [bookings, setBookings] = useState<RoomBooking[]>([]);
+  const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
 
 
   // Load sandbox presets if firebase is active or fallback
@@ -148,54 +168,96 @@ export function useData() {
     }
   };
 
-  // Sync Knowledge Cabinets
+  // Sync Bookings
   useEffect(() => {
     const shouldUseFirebase = isFirebaseConfigured && db;
     if (shouldUseFirebase) {
-      const unsubscribe = onSnapshot(collection(db, 'cabinets'), async (snapshot) => {
+      const unsubscribe = onSnapshot(collection(db, 'bookings'), async (snapshot) => {
         if (snapshot.empty) {
-          // Empty in Firestore - let's seed DEFAULT_CABINETS sequentially
-          for (const cab of DEFAULT_CABINETS) {
-            const { id, ...data } = cab;
+          for (const book of DEFAULT_BOOKINGS) {
+            const { id, ...data } = book;
             try {
-              // We preserve original doc ID
-              await setDoc(doc(db, 'cabinets', id), {
+              await setDoc(doc(db, 'bookings', id), {
                 ...data,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
               });
             } catch (e) {
-              console.warn("Could not write default cabinet to Firestore (expected if current user is non-admin):", e);
+              console.warn("Could not write default booking to Firestore:", e);
             }
           }
-          // Fallback immediately to state
-          setCabinets(DEFAULT_CABINETS);
+          setBookings(DEFAULT_BOOKINGS);
         } else {
-          const loadedCabinets: KnowledgeCabinet[] = [];
+          const loaded: RoomBooking[] = [];
           snapshot.forEach((doc) => {
-            loadedCabinets.push({ id: doc.id, ...doc.data() } as KnowledgeCabinet);
+            loaded.push({ id: doc.id, ...doc.data() } as RoomBooking);
           });
-          // Sort cabinets by id or title so order stays consistent
-          loadedCabinets.sort((a, b) => a.id.localeCompare(b.id));
-          setCabinets(loadedCabinets);
+          loaded.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          setBookings(loaded);
         }
       }, (error) => {
         try {
-          handleFirestoreError(error, OperationType.GET, 'cabinets');
+          handleFirestoreError(error, OperationType.GET, 'bookings');
         } catch (e) {
-          console.error("Cabinets sync failed, falling back to defaults:", e);
-          setCabinets(DEFAULT_CABINETS);
+          console.error("Bookings sync failed, falling back to defaults:", e);
+          setBookings(DEFAULT_BOOKINGS);
         }
       });
       return unsubscribe;
     } else {
-      // Local storage sandbox
-      const local = getLocalStorageItem('bu_ca_cabinets', null);
+      const local = getLocalStorageItem('bu_ca_bookings', null);
       if (!local) {
-        saveLocalStorageItem('bu_ca_cabinets', DEFAULT_CABINETS);
-        setCabinets(DEFAULT_CABINETS);
+        saveLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+        setBookings(DEFAULT_BOOKINGS);
       } else {
-        setCabinets(local);
+        setBookings(local);
+      }
+    }
+  }, []);
+
+  // Sync Programs
+  useEffect(() => {
+    const shouldUseFirebase = isFirebaseConfigured && db;
+    if (shouldUseFirebase) {
+      const unsubscribe = onSnapshot(collection(db, 'programs'), async (snapshot) => {
+        if (snapshot.empty) {
+          for (const prog of DEFAULT_PROGRAMS) {
+            const { id, ...data } = prog;
+            try {
+              await setDoc(doc(db, 'programs', id), {
+                ...data,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              });
+            } catch (e) {
+              console.warn("Could not write default program to Firestore:", e);
+            }
+          }
+          setPrograms(DEFAULT_PROGRAMS);
+        } else {
+          const loaded: BroadcastProgram[] = [];
+          snapshot.forEach((doc) => {
+            loaded.push({ id: doc.id, ...doc.data() } as BroadcastProgram);
+          });
+          loaded.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          setPrograms(loaded);
+        }
+      }, (error) => {
+        try {
+          handleFirestoreError(error, OperationType.GET, 'programs');
+        } catch (e) {
+          console.error("Programs sync failed, falling back to defaults:", e);
+          setPrograms(DEFAULT_PROGRAMS);
+        }
+      });
+      return unsubscribe;
+    } else {
+      const local = getLocalStorageItem('bu_ca_programs', null);
+      if (!local) {
+        saveLocalStorageItem('bu_ca_programs', DEFAULT_PROGRAMS);
+        setPrograms(DEFAULT_PROGRAMS);
+      } else {
+        setPrograms(local);
       }
     }
   }, []);
@@ -347,6 +409,12 @@ export function useData() {
           ? localAttendance
           : localAttendance.filter((a: AttendanceRecord) => a.studentId === currentUser.uid);
         setAttendance(filteredAttendance);
+
+        const localBookings = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+        setBookings(localBookings);
+
+        const localPrograms = getLocalStorageItem('bu_ca_programs', DEFAULT_PROGRAMS);
+        setPrograms(localPrograms);
       }, 800);
 
       return () => clearInterval(interval);
@@ -774,71 +842,159 @@ export function useData() {
     alert("ระบบจำลองได้จำลองข้อมูลตั๋วสถิติและคะแนนเข้าเรียนระดับเบื้องต้นเรียบร้อย!");
   };
 
-  // Cabinets CRUD Operations
-  const createCabinet = async (cabinetData: Omit<KnowledgeCabinet, 'id'>) => {
-    const newCabinet: Omit<KnowledgeCabinet, 'id'> = {
-      ...cabinetData,
+  // --- Room Booking CRUD Operations ---
+  const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string) => {
+    if (!currentUser) return;
+    const bookingPayload: Omit<RoomBooking, 'id'> = {
+      studentId: currentUser.uid,
+      studentName: currentUser.name,
+      studentEmail: currentUser.email,
+      roomName,
+      date,
+      timeSlot,
+      purpose,
+      status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
     const shouldUseFirebase = isFirebaseConfigured && db;
     if (shouldUseFirebase) {
       try {
-        await addDoc(collection(db, 'cabinets'), newCabinet);
+        await addDoc(collection(db, 'bookings'), bookingPayload);
       } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, 'cabinets');
+        handleFirestoreError(error, OperationType.WRITE, 'bookings');
       }
     } else {
-      const current = getLocalStorageItem('bu_ca_cabinets', DEFAULT_CABINETS);
-      const cabinetWithId: KnowledgeCabinet = {
-        id: 'cabin_' + Math.floor(Math.random() * 100000),
-        ...newCabinet
+      const current = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+      const bookingWithId: RoomBooking = {
+        id: 'book_' + Math.floor(Math.random() * 1000000),
+        ...bookingPayload
       };
-      const updated = [...current, cabinetWithId];
-      saveLocalStorageItem('bu_ca_cabinets', updated);
-      setCabinets(updated);
+      const updated = [bookingWithId, ...current];
+      saveLocalStorageItem('bu_ca_bookings', updated);
+      setBookings(updated);
     }
   };
 
-  const updateCabinet = async (id: string, cabinetData: Partial<KnowledgeCabinet>) => {
+  const updateBookingStatus = async (id: string, status: 'approved' | 'rejected') => {
     const updates = {
-      ...cabinetData,
+      status,
       updatedAt: new Date().toISOString()
     };
     const shouldUseFirebase = isFirebaseConfigured && db;
     if (shouldUseFirebase) {
       try {
-        const cabinetDoc = doc(db, 'cabinets', id);
-        await updateDoc(cabinetDoc, updates);
+        const docRef = doc(db, 'bookings', id);
+        await updateDoc(docRef, updates);
       } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `cabinets/${id}`);
+        handleFirestoreError(error, OperationType.UPDATE, `bookings/${id}`);
       }
     } else {
-      const current = getLocalStorageItem('bu_ca_cabinets', DEFAULT_CABINETS);
-      const index = current.findIndex((c: KnowledgeCabinet) => c.id === id);
+      const current = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+      const index = current.findIndex((b: RoomBooking) => b.id === id);
       if (index !== -1) {
         const updated = [...current];
         updated[index] = { ...updated[index], ...updates };
-        saveLocalStorageItem('bu_ca_cabinets', updated);
-        setCabinets(updated);
+        saveLocalStorageItem('bu_ca_bookings', updated);
+        setBookings(updated);
       }
     }
   };
 
-  const deleteCabinet = async (id: string) => {
+  const deleteBooking = async (id: string) => {
     const shouldUseFirebase = isFirebaseConfigured && db;
     if (shouldUseFirebase) {
       try {
-        const cabinetDoc = doc(db, 'cabinets', id);
-        await deleteDoc(cabinetDoc);
+        const docRef = doc(db, 'bookings', id);
+        await deleteDoc(docRef);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `cabinets/${id}`);
+        handleFirestoreError(error, OperationType.DELETE, `bookings/${id}`);
       }
     } else {
-      const current = getLocalStorageItem('bu_ca_cabinets', DEFAULT_CABINETS);
-      const updated = current.filter((c: KnowledgeCabinet) => c.id !== id);
-      saveLocalStorageItem('bu_ca_cabinets', updated);
-      setCabinets(updated);
+      const current = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+      const updated = current.filter((b: RoomBooking) => b.id !== id);
+      saveLocalStorageItem('bu_ca_bookings', updated);
+      setBookings(updated);
+    }
+  };
+
+  // --- Broadcast Program CRUD Operations ---
+  const createProgram = async (programName: string, hosts: string, category: 'radio' | 'tv' | 'podcast' | 'other', roomName: string, date: string, timeSlot: string) => {
+    if (!currentUser) return;
+    const programPayload: Omit<BroadcastProgram, 'id'> = {
+      studentId: currentUser.uid,
+      studentName: currentUser.name,
+      studentEmail: currentUser.email,
+      programName,
+      hosts,
+      category,
+      roomName,
+      date,
+      timeSlot,
+      status: 'upcoming',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const shouldUseFirebase = isFirebaseConfigured && db;
+    if (shouldUseFirebase) {
+      try {
+        await addDoc(collection(db, 'programs'), programPayload);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'programs');
+      }
+    } else {
+      const current = getLocalStorageItem('bu_ca_programs', DEFAULT_PROGRAMS);
+      const programWithId: BroadcastProgram = {
+        id: 'prog_' + Math.floor(Math.random() * 1000000),
+        ...programPayload
+      };
+      const updated = [programWithId, ...current];
+      saveLocalStorageItem('bu_ca_programs', updated);
+      setPrograms(updated);
+    }
+  };
+
+  const updateProgramStatus = async (id: string, status: 'upcoming' | 'active' | 'completed') => {
+    const updates = {
+      status,
+      updatedAt: new Date().toISOString()
+    };
+    const shouldUseFirebase = isFirebaseConfigured && db;
+    if (shouldUseFirebase) {
+      try {
+        const docRef = doc(db, 'programs', id);
+        await updateDoc(docRef, updates);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `programs/${id}`);
+      }
+    } else {
+      const current = getLocalStorageItem('bu_ca_programs', DEFAULT_PROGRAMS);
+      const index = current.findIndex((p: BroadcastProgram) => p.id === id);
+      if (index !== -1) {
+        const updated = [...current];
+        updated[index] = { ...updated[index], ...updates };
+        saveLocalStorageItem('bu_ca_programs', updated);
+        setPrograms(updated);
+      }
+    }
+  };
+
+  const deleteProgram = async (id: string) => {
+    const shouldUseFirebase = isFirebaseConfigured && db;
+    if (shouldUseFirebase) {
+      try {
+        const docRef = doc(db, 'programs', id);
+        await deleteDoc(docRef);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `programs/${id}`);
+      }
+    } else {
+      const current = getLocalStorageItem('bu_ca_programs', DEFAULT_PROGRAMS);
+      const updated = current.filter((p: BroadcastProgram) => p.id !== id);
+      saveLocalStorageItem('bu_ca_programs', updated);
+      setPrograms(updated);
     }
   };
 
@@ -860,9 +1016,13 @@ export function useData() {
     downloadAttendanceReportCSV: downloadTicketsReportCSV,
     seedDemoData,
     isFirebaseConfigured,
-    cabinets,
-    createCabinet,
-    updateCabinet,
-    deleteCabinet
+    bookings,
+    programs,
+    createBooking,
+    updateBookingStatus,
+    deleteBooking,
+    createProgram,
+    updateProgramStatus,
+    deleteProgram
   };
 }

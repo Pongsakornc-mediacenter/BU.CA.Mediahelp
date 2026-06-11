@@ -77,22 +77,33 @@ export interface CameraPreset {
   situation: string;
 }
 
-export interface KnowledgeTip {
-  q: string;
-  a: string;
+export interface RoomBooking {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  roomName: string;
+  date: string; // YYYY-MM-DD
+  timeSlot: string; // e.g. "09:00 - 12:00"
+  purpose: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string; // ISO String
+  updatedAt: string; // ISO String
 }
 
-export interface KnowledgeCabinet {
+export interface BroadcastProgram {
   id: string;
-  icon: string;
-  title: string;
-  accent: string;
-  badgeBg: string;
-  tag: string;
-  summary: string;
-  imageUrl?: string;
-  tips: KnowledgeTip[];
-  createdAt?: string;
-  updatedAt?: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  programName: string;
+  hosts: string;
+  category: 'radio' | 'tv' | 'podcast' | 'other';
+  roomName: string;
+  date: string; // YYYY-MM-DD
+  timeSlot: string; // e.g. "10:00 - 11:30"
+  status: 'upcoming' | 'active' | 'completed';
+  createdAt: string; // ISO String
+  updatedAt: string; // ISO String
 }
 
