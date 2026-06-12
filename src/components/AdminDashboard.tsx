@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -53,7 +53,18 @@ interface AdminDashboardProps {
   programs: BroadcastProgram[];
   onUpdateBookingStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   onDeleteBooking: (id: string) => Promise<void>;
-  onCreateProgram: (programName: string, hosts: string, category: 'radio' | 'tv' | 'podcast' | 'other', roomName: string, date: string, timeSlot: string) => Promise<void>;
+  onCreateProgram: (
+    programName: string, 
+    hosts: string, 
+    category: 'radio' | 'tv' | 'podcast' | 'other', 
+    roomName: string, 
+    date: string, 
+    timeSlot: string,
+    subject?: string,
+    purpose?: string,
+    studentIdInput?: string,
+    phone?: string
+  ) => Promise<void>;
   onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
   onDeleteProgram: (id: string) => Promise<void>;
   onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string) => Promise<void>;
@@ -81,15 +92,33 @@ export default function AdminDashboard({
   const [categoryFilter, setCategoryFilter] = useState<HelpCategory | 'all'>('all');
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>('all');
   const [draftStatus, setDraftStatus] = useState<Record<string, 'approved' | 'rejected'>>({});
+  const [optimisticStatus, setOptimisticStatus] = useState<Record<string, 'approved' | 'rejected'>>({});
+
+  useEffect(() => {
+    setOptimisticStatus(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const id of Object.keys(next)) {
+        const b = bookings.find(x => x.id === id);
+        if (b && b.status === next[id]) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [bookings]);
 
   // Program Scheduling Admin Form States
   const [isAddingProgram, setIsAddingProgram] = useState(false);
-  const [newProgName, setNewProgName] = useState("");
-  const [newProgHosts, setNewProgHosts] = useState("");
-  const [newProgCategory, setNewProgCategory] = useState<'radio' | 'tv' | 'podcast' | 'other'>("radio");
-  const [newProgRoom, setNewProgRoom] = useState(AVAILABLE_STUDIO_ROOMS[0]);
+  const [newProgRoom, setNewProgRoom] = useState("ห้องจัดรายการ 1");
   const [newProgDate, setNewProgDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newProgTime, setNewProgTime] = useState(AVAILABLE_TIMESLOTS[0]);
+  const [newProgSlot, setNewProgSlot] = useState("09:00 - 10:00");
+  const [newProgSubject, setNewProgSubject] = useState("");
+  const [newProgPurpose, setNewProgPurpose] = useState("");
+  const [newProgStudentId, setNewProgStudentId] = useState("");
+  const [newProgPhone, setNewProgPhone] = useState("");
+  const [newProgCategory, setNewProgCategory] = useState<'radio' | 'tv' | 'podcast' | 'other'>("radio");
   const [submittingProg, setSubmittingProg] = useState(false);
 
   // Find currently opened ticket
@@ -97,27 +126,50 @@ export default function AdminDashboard({
 
   const handleProgramFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProgName.trim() || !newProgHosts.trim()) {
-      alert("กรุณากรอกชื่อรายการและนามแฝงดีเจ/พิธีกรด้วยค่ะ");
+    if (!newProgDate) {
+      alert("กรุณาเลือกวันที่ต้องการจัดรายการ");
       return;
     }
+    if (!newProgSubject.trim()) {
+      alert("กรุณาระบุรายวิชา");
+      return;
+    }
+    if (!newProgPurpose.trim()) {
+      alert("กรุณาระบุวัตถุประสงค์");
+      return;
+    }
+    if (!newProgStudentId.trim()) {
+      alert("กรุณาระบุรหัสนักศึกษา");
+      return;
+    }
+    if (!newProgPhone.trim()) {
+      alert("กรุณาระบุเบอร์โทร");
+      return;
+    }
+
     setSubmittingProg(true);
     try {
       await onCreateProgram(
-        newProgName.trim(),
-        newProgHosts.trim(),
-        newProgCategory,
-        newProgRoom,
-        newProgDate,
-        newProgTime
+        newProgSubject.trim(), 
+        "ผู้จอง (รหัส: " + newProgStudentId.trim() + ")", 
+        newProgCategory, 
+        newProgRoom, 
+        newProgDate, 
+        newProgSlot,
+        newProgSubject.trim(),
+        newProgPurpose.trim(),
+        newProgStudentId.trim(),
+        newProgPhone.trim()
       );
-      setNewProgName("");
-      setNewProgHosts("");
+      setNewProgSubject("");
+      setNewProgPurpose("");
+      setNewProgStudentId("");
+      setNewProgPhone("");
       setIsAddingProgram(false);
       alert("➕ เพิ่มตารางจัดรายการใหม่เข้าระบบสำเร็จ!");
     } catch (err) {
       console.error(err);
-      alert("ไม่สามารถละเลงตารางรายการได้");
+      alert("ไม่สามารถบันทึกตารางรายการได้");
     } finally {
       setSubmittingProg(false);
     }
@@ -129,7 +181,7 @@ export default function AdminDashboard({
         await onCreateBooking(
           "ห้องจัดรายการ 2",
           "2026-06-13",
-          "13:00 - 15:00",
+          "13:00 - 14:00",
           "CA102 อัดประเด็นบันทึกหัวข้อวิทยาศาสตร์เสียง",
           "1661234567",
           "089-876-5432"
@@ -744,117 +796,148 @@ export default function AdminDashboard({
                     <th className="py-3 px-4 font-display">ช่วงเวลา</th>
                     <th className="py-3 px-4 font-display">วิชา</th>
                     <th className="py-3 px-4 font-display text-center">รออนุมัติ</th>
-                    <th className="py-3 px-4 font-display text-right w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {bookings.map((booking) => (
-                    <tr key={booking.id} className="hover:bg-slate-50/40 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-800">{booking.studentName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{booking.studentEmail}</div>
-                        {booking.studentIdInput && booking.phone && (
-                          <div className="text-[10px] text-indigo-500 font-bold mt-0.5 font-mono">
-                            ID: {booking.studentIdInput} • โทร: {booking.phone}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px]">
-                          {booking.roomName}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-700">{booking.timeSlot}</div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{booking.date}</div>
-                      </td>
-                      <td className="py-3 px-4 max-w-[180px] truncate" title={booking.purpose}>
-                        <span className="font-medium text-slate-600">{booking.purpose}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-4">
-                          <label className="flex items-center gap-1.5 cursor-pointer group select-none">
-                            <input
-                              type="radio"
-                              name={`status-${booking.id}`}
-                              checked={(draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'approved'}
-                              onChange={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'approved' }))}
-                              className="sr-only"
-                            />
-                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'approved'
-                                ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-105'
-                                : 'border-slate-300 group-hover:border-emerald-500 text-transparent hover:text-emerald-500/50'
-                            }`}>
-                              <span className="text-[11px] font-bold leading-none">✓</span>
+                  {bookings.map((booking) => {
+                    const displayStatus = optimisticStatus[booking.id] || booking.status;
+                    return (
+                      <tr key={booking.id} className="hover:bg-slate-50/40 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-800">{booking.studentName}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{booking.studentEmail}</div>
+                          {booking.studentIdInput && booking.phone && (
+                            <div className="text-[10px] text-indigo-500 font-bold mt-0.5 font-mono">
+                              ID: {booking.studentIdInput} • โทร: {booking.phone}
                             </div>
-                            <span className={`text-[12px] font-bold transition-colors ${
-                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'approved' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'
-                            }`}>
-                              อนุมัติ
-                            </span>
-                          </label>
-
-                          <label className="flex items-center gap-1.5 cursor-pointer group select-none">
-                            <input
-                              type="radio"
-                              name={`status-${booking.id}`}
-                              checked={(draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'rejected'}
-                              onChange={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'rejected' }))}
-                              className="sr-only"
-                            />
-                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'rejected'
-                                ? 'bg-rose-500 border-rose-500 text-white shadow-sm shadow-rose-500/20 scale-105'
-                                : 'border-slate-300 group-hover:border-rose-500 text-transparent hover:text-rose-500/50'
-                            }`}>
-                              <span className="text-[11px] font-bold leading-none">✕</span>
-                            </div>
-                            <span className={`text-[12px] font-bold transition-colors ${
-                              (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : booking.status) === 'rejected' ? 'text-rose-600' : 'text-slate-500 hover:text-slate-700'
-                            }`}>
-                              ไม่อนุมัติ
-                            </span>
-                          </label>
-
-                          {draftStatus[booking.id] !== undefined && draftStatus[booking.id] !== booking.status && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const target = draftStatus[booking.id];
-                                if (confirm(`คุณต้องการยืนยันการตั้งค่าสถานะเป็น "${target === 'approved' ? 'อนุมัติ' : 'ไม่อนุมัติ'}" ใช่หรือไม่?`)) {
-                                  await onUpdateBookingStatus(booking.id, target);
-                                  setDraftStatus(prev => {
-                                    const next = { ...prev };
-                                    delete next[booking.id];
-                                    return next;
-                                  });
-                                }
-                              }}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0 animate-pulse"
-                              title="คลิกเพื่อยืนยันคำขอ"
-                            >
-                              <span>ยืนยัน</span>
-                            </button>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm("ลบคำจองห้องวิทยานี้ออกไปถาวร?")) {
-                              onDeleteBooking(booking.id);
-                            }
-                          }}
-                          className="bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 p-1 rounded-md border border-slate-200 transition-colors"
-                          title="ลบคำขอจอง"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px]">
+                            {booking.roomName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-700">{booking.timeSlot}</div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{booking.date}</div>
+                        </td>
+                        <td className="py-3 px-4 max-w-[180px] truncate" title={booking.purpose}>
+                          <span className="font-medium text-slate-600">{booking.purpose}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {displayStatus === 'pending' || draftStatus[booking.id] !== undefined ? (
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Approved Button */}
+                              <button
+                                type="button"
+                                onClick={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'approved' }))}
+                                className={`px-5 py-2 rounded-xl text-xs font-extrabold border transition-all select-none ${
+                                  (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : displayStatus) === 'approved'
+                                    ? 'bg-[#00c58d] border-[#00a877] text-black shadow-sm scale-105'
+                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-250'
+                                }`}
+                              >
+                                อนุมัติ
+                              </button>
+
+                              {/* Rejected Button */}
+                              <button
+                                type="button"
+                                onClick={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'rejected' }))}
+                                className={`px-5 py-2 rounded-xl text-xs font-extrabold border transition-all select-none ${
+                                  (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : displayStatus) === 'rejected'
+                                    ? 'bg-[#ff2d55] border-[#df183e] text-black shadow-sm scale-105'
+                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-250'
+                                }`}
+                              >
+                                ไม่อนุมัติ
+                              </button>
+
+                              {/* Confirm Button */}
+                              {draftStatus[booking.id] !== undefined ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const target = draftStatus[booking.id];
+                                    // Set optimistic status instantly to trigger UI transition immediately
+                                    setOptimisticStatus(prev => ({ ...prev, [booking.id]: target }));
+                                    // Clear draft status instantly to switch layout
+                                    setDraftStatus(prev => {
+                                      const next = { ...prev };
+                                      delete next[booking.id];
+                                      return next;
+                                    });
+                                    
+                                    try {
+                                      await onUpdateBookingStatus(booking.id, target);
+                                    } catch (error) {
+                                      console.error("Failed to update status on server", error);
+                                      // Revert optimistic state on failure
+                                      setOptimisticStatus(prev => {
+                                        const next = { ...prev };
+                                        delete next[booking.id];
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                  className="bg-[#f59e0b] hover:bg-[#d97706] border border-[#b45309] text-black font-extrabold px-5 py-2 rounded-xl text-xs transition-all shadow-md shrink-0"
+                                  title="คลิกเพื่อยืนยันคำขอ"
+                                >
+                                  ยืนยัน
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="bg-slate-50 text-slate-350 border border-slate-100 px-5 py-2 rounded-xl text-xs font-bold opacity-35 cursor-not-allowed select-none"
+                                >
+                                  ยืนยัน
+                                </button>
+                              )}
+
+                              {draftStatus[booking.id] !== undefined && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDraftStatus(prev => {
+                                      const next = { ...prev };
+                                      delete next[booking.id];
+                                      return next;
+                                    });
+                                  }}
+                                  className="bg-[#2d3748] hover:bg-[#1a202c] text-white font-extrabold px-5 py-2 rounded-xl text-xs transition-all shrink-0"
+                                >
+                                  ยกเลิก
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-3">
+                              {displayStatus === 'approved' ? (
+                                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#00c58d]/10 border border-[#00c58d]/30 text-[#00a877]">
+                                  <span className="w-2 h-2 rounded-full bg-[#00c58d] animate-pulse"></span>
+                                  อนุมัติแล้ว
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#ff2d55]/10 border border-[#ff2d55]/30 text-[#df183e]">
+                                  <span className="w-2 h-2 rounded-full bg-[#ff2d55]"></span>
+                                  ไม่อนุมัติ
+                                </span>
+                              )}
+                              
+                              <button
+                                type="button"
+                                onClick={() => setDraftStatus(prev => ({ ...prev, [booking.id]: displayStatus }))}
+                                className="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 hover:border-slate-300 border border-slate-200 transition-colors text-[11px] px-3 py-1.5 rounded-lg font-bold select-none"
+                              >
+                                แก้ไขสถานะ
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -895,78 +978,99 @@ export default function AdminDashboard({
 
           {isAddingProgram && (
             <form onSubmit={handleProgramFormSubmit} className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-              <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                📌 กรอกข้อมูลลงทะเบียนรายการดีเจ/พิธีกน
+              <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-200/50 pb-2">
+                📌 แบบร่างลงทะเบียนจัดรายการ (ข้อมูลเทียบเท่าแบบฟอร์มจองของนักศึกษา)
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div className="md:col-span-4">
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1">ชื่อรายการจัดรายการ (Program Name)</label>
-                  <input
-                    type="text"
-                    value={newProgName}
-                    onChange={(e) => setNewProgName(e.target.value)}
-                    placeholder="เช่น BU Morning News, CA Space Talk"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
-                  />
-                </div>
-                <div className="md:col-span-4">
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1">ดีเจ / พิธีกรผู้จัด (Hosts)</label>
-                  <input
-                    type="text"
-                    value={newProgHosts}
-                    onChange={(e) => setNewProgHosts(e.target.value)}
-                    placeholder="เช่น นศ.อนุพงศ์ & อลินดา"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
-                  />
-                </div>
-                <div className="md:col-span-4">
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1">ประเภทรายการ (Media Category)</label>
-                  <select
-                    value={newProgCategory}
-                    onChange={(e: any) => setNewProgCategory(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none"
-                  >
-                    <option value="radio">📻 สถานีวิทยุออนไลน์ (Radio)</option>
-                    <option value="tv">📺 โทรทัศน์กระแสหลัก (Television)</option>
-                    <option value="podcast">🎙️ พอดแคสต์เสียงใส (Podcast)</option>
-                    <option value="other">🎬 สื่ออื่นๆ (Other media)</option>
-                  </select>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1">สตูดิโดที่ใช้จัด (Studio Room)</label>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">1. เลือกห้องจัดรายการ</label>
                   <select
                     value={newProgRoom}
                     onChange={(e) => setNewProgRoom(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
                   >
+                    <option value="ห้องจัดรายการ 1">ห้องจัดรายการ 1</option>
+                    <option value="ห้องจัดรายการ 2">ห้องจัดรายการ 2</option>
                     {AVAILABLE_STUDIO_ROOMS.map(r => (
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1">วันที่จัด (Date)</label>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">2. วันที่จัดรายการ (Date)</label>
                   <input
                     type="date"
                     value={newProgDate}
                     onChange={(e) => setNewProgDate(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 block mb-1">กริดคาบจัด (Timeslot Grid)</label>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">3. ช่วงเวลา (Timeslot Grid)</label>
                   <select
-                    value={newProgTime}
-                    onChange={(e) => setNewProgTime(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
+                    value={newProgSlot}
+                    onChange={(e) => setNewProgSlot(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-mono"
                   >
+                    <option value="09:00 - 10:00">09:00 - 10:00</option>
+                    <option value="10:00 - 11:00">10:00 - 11:00</option>
+                    <option value="11:00 - 12:00">11:00 - 12:00</option>
+                    <option value="13:00 - 14:00">13:00 - 14:00</option>
+                    <option value="14:00 - 15:00">14:00 - 15:00</option>
+                    <option value="15:00 - 16:00">15:00 - 16:00</option>
+                    <option value="16:00 - 17:00">16:00 - 17:00</option>
                     {AVAILABLE_TIMESLOTS.map(t => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-5">
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">4. รายวิชา (Subject / Program Theme)</label>
+                  <input
+                    type="text"
+                    value={newProgSubject}
+                    onChange={(e) => setNewProgSubject(e.target.value)}
+                    placeholder="เช่น CA102 การผลิตรายการวิทยุ"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
+                  />
+                </div>
+                <div className="md:col-span-7">
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">วัตถุประสงค์ (Purpose)</label>
+                  <input
+                    type="text"
+                    value={newProgPurpose}
+                    onChange={(e) => setNewProgPurpose(e.target.value)}
+                    placeholder="ระบุวัตถุประสงค์การใช้ห้อง เช่น ฝึกหัดจัดรายการสด / อัดผลงานวิชาเรียน"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">5. รหัสนักศึกษา (Student ID)</label>
+                  <input
+                    type="text"
+                    maxLength={15}
+                    value={newProgStudentId}
+                    onChange={(e) => setNewProgStudentId(e.target.value)}
+                    placeholder="ระบุรหัสนักศึกษา 10 หลัก"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">6. เบอร์โทรติดต่อ (Phone)</label>
+                  <input
+                    type="tel"
+                    maxLength={12}
+                    value={newProgPhone}
+                    onChange={(e) => setNewProgPhone(e.target.value)}
+                    placeholder="เบอร์โทรศัพท์ติดต่อ เช่น 089xxxxxxx"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
+                  />
                 </div>
               </div>
 
@@ -1010,24 +1114,42 @@ export default function AdminDashboard({
                       {program.category.toUpperCase()}
                     </span>
                     
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                      program.status === 'active' 
-                        ? 'bg-rose-500 text-white font-bold animate-pulse'
-                        : program.status === 'completed'
-                        ? 'bg-slate-150 text-slate-500'
-                        : 'bg-sky-100 text-sky-850'
-                    }`}>
-                      {program.status === 'active' && '🔴 LIVE / ON-AIR!'}
-                      {program.status === 'completed' && '✓ เสร็จรายการ'}
-                      {program.status === 'upcoming' && '⏳ เตรียมตัว'}
-                    </span>
+                    {program.status === 'active' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold bg-[#ef4444]/15 border border-[#ef4444]/30 text-[#ef4444] shadow-sm animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-ping"></span>
+                        🔴 LIVE / ON-AIR!
+                      </span>
+                    ) : program.status === 'completed' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold bg-slate-100 border border-slate-200 text-slate-500 shadow-sm">
+                        ✓ เสร็จรายการ
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold bg-[#f59e0b]/15 border border-[#f59e0b]/30 text-[#f59e0b] shadow-sm">
+                        ⏳ เตรียมตัว
+                      </span>
+                    )}
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-slate-850 text-xs font-display">{program.programName}</h4>
-                    <p className="text-slate-500 text-[11px] mt-0.5">พิธีกร: <span className="font-semibold text-slate-800">{program.hosts}</span></p>
-                    <div className="text-[10px] text-slate-400 font-mono mt-1">
-                      {program.roomName} / {program.date} ({program.timeSlot})
+                    <h4 className="font-bold text-slate-850 text-xs font-display">
+                      {program.subject ? program.subject : program.programName}
+                    </h4>
+                    {program.purpose && (
+                      <p className="text-slate-500 text-[11px] mt-0.5">
+                        วัตถุประสงค์: <span className="font-semibold text-slate-700">{program.purpose}</span>
+                      </p>
+                    )}
+                    <p className="text-slate-400 text-[10px] mt-0.5">
+                      ผู้จัด/พิธีกร: <span className="font-semibold text-slate-800">{program.hosts}</span>
+                      {program.studentIdInput && ` • รหัสนักศึกษา: ${program.studentIdInput}`}
+                    </p>
+                    {program.phone && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        เบอร์โทร: <span className="font-semibold text-slate-600">{program.phone}</span>
+                      </p>
+                    )}
+                    <div className="text-[10px] text-slate-400 font-mono mt-1.5">
+                      📍 {program.roomName} • 📅 {program.date} ({program.timeSlot})
                     </div>
                   </div>
                 </div>

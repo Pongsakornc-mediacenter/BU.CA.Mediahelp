@@ -73,7 +73,8 @@ export default function App() {
   // Student Booking states
   const [bookingRoom, setBookingRoom] = useState("ห้องจัดรายการ 1");
   const [bookingDate, setBookingDate] = useState("");
-  const [bookingSlot, setBookingSlot] = useState("09:00 - 11:00");
+  const [bookingSlot, setBookingSlot] = useState("09:00 - 10:00");
+  const [bookingSubject, setBookingSubject] = useState("");
   const [bookingPurpose, setBookingPurpose] = useState("");
   const [bookingStudentId, setBookingStudentId] = useState("");
   const [bookingPhone, setBookingPhone] = useState("");
@@ -205,8 +206,12 @@ export default function App() {
       alert("กรุณาเลือกวันที่ต้องการจอง");
       return;
     }
+    if (!bookingSubject.trim()) {
+      alert("กรุณาระบุรายวิชา");
+      return;
+    }
     if (!bookingPurpose.trim()) {
-      alert("กรุณาระบุรายละเอียดวิชา");
+      alert("กรุณาระบุวัตถุประสงค์");
       return;
     }
     if (!bookingStudentId.trim()) {
@@ -219,14 +224,16 @@ export default function App() {
     }
 
     try {
+      const combinedPurpose = `${bookingSubject.trim()} (${bookingPurpose.trim()})`;
       await createBooking(
         bookingRoom, 
         bookingDate, 
         bookingSlot, 
-        bookingPurpose.trim(), 
+        combinedPurpose, 
         bookingStudentId.trim(), 
         bookingPhone.trim()
       );
+      setBookingSubject("");
       setBookingPurpose("");
       setBookingStudentId("");
       setBookingPhone("");
@@ -815,8 +822,8 @@ export default function App() {
                           onChange={(e) => setBookingRoom(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-850 focus:bg-white focus:outline-none transition-all font-bold"
                         >
-                          <option value="ห้องจัดรายการ 1">1. ห้องจัดรายการ 1</option>
-                          <option value="ห้องจัดรายการ 2">2. ห้องจัดรายการ 2</option>
+                          <option value="ห้องจัดรายการ 1">ห้องจัดรายการ 1</option>
+                          <option value="ห้องจัดรายการ 2">ห้องจัดรายการ 2</option>
                         </select>
                       </div>
 
@@ -837,24 +844,38 @@ export default function App() {
                             onChange={(e) => setBookingSlot(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none transition-all font-mono font-medium text-slate-750"
                           >
-                            <option value="09:00 - 11:00">09:00 - 11:00</option>
-                            <option value="11:00 - 13:00">11:05 - 13:00</option>
-                            <option value="13:00 - 15:00">13:00 - 15:00</option>
-                            <option value="15:00 - 17:00">15:00 - 17:00</option>
-                            <option value="17:00 - 19:00">17:00 - 19:00</option>
+                            <option value="09:00 - 10:00">09:00 - 10:00</option>
+                            <option value="10:00 - 11:00">10:00 - 11:00</option>
+                            <option value="11:00 - 12:00">11:00 - 12:00</option>
+                            <option value="13:00 - 14:00">13:00 - 14:00</option>
+                            <option value="14:00 - 15:00">14:00 - 15:00</option>
+                            <option value="15:00 - 16:00">15:00 - 16:00</option>
+                            <option value="16:00 - 17:00">16:00 - 17:00</option>
                           </select>
                         </div>
                       </div>
 
-                      <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">4. รายละเอียดวิชา</label>
-                        <textarea
-                          rows={2}
-                          value={bookingPurpose}
-                          onChange={(e) => setBookingPurpose(e.target.value)}
-                          placeholder="ระบุวิชาเรียนและวัตถุประสงค์ในการจัด เช่น อัดวิทยุ CA101..."
-                          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
-                        />
+                      <div className="space-y-3 pb-1 border-b border-slate-50">
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">4. รายวิชา</label>
+                          <input
+                            type="text"
+                            value={bookingSubject}
+                            onChange={(e) => setBookingSubject(e.target.value)}
+                            placeholder="ระบุชื่อวิชา เช่น CA102 การผลิตรายการวิทยุ"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">วัตถุประสงค์</label>
+                          <textarea
+                            rows={2}
+                            value={bookingPurpose}
+                            onChange={(e) => setBookingPurpose(e.target.value)}
+                            placeholder="ระบุวัตถุประสงค์การใช้ห้อง เช่น ฝึกหัดจัดรายการสด / อัดผลงานวิชาเรียน..."
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
+                          />
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -936,17 +957,22 @@ export default function App() {
                               </div>
 
                               <div className="shrink-0">
-                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                                  b.status === 'approved' 
-                                    ? 'bg-emerald-100 text-emerald-850'
-                                    : b.status === 'rejected'
-                                    ? 'bg-rose-100 text-rose-850'
-                                    : 'bg-amber-100 text-amber-850'
-                                }`}>
-                                  {b.status === 'approved' && '✓ อนุมัติแล้ว'}
-                                  {b.status === 'rejected' && '✕ ปฏิเสธแล้ว'}
-                                  {b.status === 'pending' && '⏳ รออนุมัติ'}
-                                </span>
+                                {b.status === 'approved' ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#00c58d]/15 border border-[#00c58d]/30 text-[#00c58d] shadow-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00c58d] animate-pulse"></span>
+                                    อนุมัติแล้ว
+                                  </span>
+                                ) : b.status === 'rejected' ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#ff2d55]/15 border border-[#ff2d55]/30 text-[#ff2d55] shadow-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d55]"></span>
+                                    ปฏิเสธแล้ว
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#f59e0b]/15 border border-[#f59e0b]/30 text-[#f59e0b] shadow-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse"></span>
+                                    รออนุมัติ
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))
@@ -976,22 +1002,32 @@ export default function App() {
                                 <span className="bg-slate-100 text-[9px] font-mono font-bold text-slate-500 px-1.5 py-0.2 rounded uppercase">
                                   {prog.category}
                                 </span>
-                                <span className={`text-[10px] font-extrabold ${
-                                  prog.status === 'active'
-                                    ? 'text-rose-600 animate-pulse font-black'
-                                    : prog.status === 'completed'
-                                    ? 'text-slate-400'
-                                    : 'text-sky-600'
-                                }`}>
-                                  {prog.status === 'active' && '🔴 LIVE NOW'}
-                                  {prog.status === 'completed' && 'เสร็จสิ้น'}
-                                  {prog.status === 'upcoming' && 'เตรียมพร้อม'}
-                                </span>
+                                {prog.status === 'active' ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-extrabold bg-[#ef4444]/12 border border-[#ef4444]/25 text-[#ef4444] animate-pulse">
+                                    <span className="w-1 h-1 rounded-full bg-[#ef4444]"></span>
+                                    🔴 LIVE NOW
+                                  </span>
+                                ) : prog.status === 'completed' ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 border border-slate-200 text-slate-400">
+                                    ✓ เสร็จสิ้น
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-extrabold bg-[#f59e0b]/15 border border-[#f59e0b]/30 text-[#f59e0b]">
+                                    ⏳ เตรียมพร้อม
+                                  </span>
+                                )}
                               </div>
                               <h5 className="font-bold text-xs text-slate-850 font-display line-clamp-1">
-                                {prog.programName}
+                                {prog.subject ? prog.subject : prog.programName}
                               </h5>
-                              <p className="text-[10px] text-slate-500">ดีเจ: <span className="font-bold text-slate-700">{prog.hosts}</span></p>
+                              {prog.purpose && (
+                                <p className="text-[10px] text-slate-500 line-clamp-1">
+                                  วัตถุประสงค์: <span className="font-semibold text-slate-700">{prog.purpose}</span>
+                                </p>
+                              )}
+                              <p className="text-[9px] text-slate-400">
+                                ผู้จัด: <span className="font-semibold text-slate-600">{prog.hosts}</span>
+                              </p>
                             </div>
                             <div className="pt-2 border-t border-slate-50 flex justify-between items-center text-[9px] text-slate-400 font-mono">
                               <span>{prog.roomName}</span>

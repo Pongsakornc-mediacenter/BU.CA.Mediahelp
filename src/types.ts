@@ -107,5 +107,9 @@ export interface BroadcastProgram {
   status: 'upcoming' | 'active' | 'completed';
   createdAt: string; // ISO String
   updatedAt: string; // ISO String
+  subject?: string;
+  purpose?: string;
+  studentIdInput?: string;
+  phone?: string;
 }
 

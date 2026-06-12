@@ -926,7 +926,18 @@ export function useData() {
   };
 
   // --- Broadcast Program CRUD Operations ---
-  const createProgram = async (programName: string, hosts: string, category: 'radio' | 'tv' | 'podcast' | 'other', roomName: string, date: string, timeSlot: string) => {
+  const createProgram = async (
+    programName: string, 
+    hosts: string, 
+    category: 'radio' | 'tv' | 'podcast' | 'other', 
+    roomName: string, 
+    date: string, 
+    timeSlot: string,
+    subject?: string,
+    purpose?: string,
+    studentIdInput?: string,
+    phone?: string
+  ) => {
     if (!currentUser) return;
     const programPayload: Omit<BroadcastProgram, 'id'> = {
       studentId: currentUser.uid,
@@ -940,7 +951,11 @@ export function useData() {
       timeSlot,
       status: 'upcoming',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      subject,
+      purpose,
+      studentIdInput,
+      phone
     };
 
     const shouldUseFirebase = isFirebaseConfigured && db;
