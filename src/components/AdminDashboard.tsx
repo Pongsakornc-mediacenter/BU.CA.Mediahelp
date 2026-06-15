@@ -124,6 +124,9 @@ export default function AdminDashboard({
   // Find currently opened ticket
   const activeTicket = tickets.find(t => t.id === selectedTicketId);
 
+  // Lightbox Image Preview State
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
   const handleProgramFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProgDate) {
@@ -262,18 +265,20 @@ export default function AdminDashboard({
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTicketId || !replyText.trim()) return;
+    const textToSend = replyText.trim();
+    if (!selectedTicketId || !textToSend) return;
 
+    // Reset input instantly like standard chat!
+    setReplyText("");
     setReplyLoading(true);
-    try {
-      await onSubmitReply(selectedTicketId, replyText.trim());
-      setReplyText("");
-      // Refresh active ticket view
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setReplyLoading(false);
-    }
+
+    onSubmitReply(selectedTicketId, textToSend)
+      .catch((error) => {
+        console.error("Error sending response in background:", error);
+      })
+      .finally(() => {
+        setReplyLoading(false);
+      });
   };
 
   return (
@@ -611,17 +616,24 @@ export default function AdminDashboard({
                       <div className="bg-slate-100 text-slate-800 rounded-2xl rounded-tl-none p-3.5 shadow-sm text-xs leading-relaxed">
                         <p className="font-medium whitespace-pre-wrap">{activeTicket.description}</p>
                         
-                        {/* Embedded payload Image (Features 10 base64 displayer) */}
-                        {activeTicket.imageUrl && (
-                          <div className="mt-3 rounded-lg overflow-hidden border border-slate-200 max-w-full bg-white">
-                            <img 
-                              src={activeTicket.imageUrl} 
-                              alt="Student Attachments" 
-                              referrerPolicy="no-referrer"
-                              className="max-h-60 object-contain w-full"
-                            />
-                            <div className="p-1.5 bg-slate-50 text-[10px] text-slate-500 text-center font-mono border-t border-slate-100">
-                              📷 ภาพประกอบปัญหาจากอุปกรณ์ของนักศึกษา
+                        {/* Embedded payload Images (Up to 5 images supported) */}
+                        {((activeTicket.imageUrls && activeTicket.imageUrls.length > 0) || activeTicket.imageUrl) && (
+                          <div className="mt-3 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              {(activeTicket.imageUrls && activeTicket.imageUrls.length > 0 ? activeTicket.imageUrls : [activeTicket.imageUrl]).filter(Boolean).map((imgUrl, imgIdx) => (
+                                <div key={imgIdx} className="rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center">
+                                  <img 
+                                    src={imgUrl} 
+                                    alt={`Student Attachment ${imgIdx + 1}`} 
+                                    referrerPolicy="no-referrer"
+                                    className="max-h-60 object-contain w-full cursor-zoom-in"
+                                    onClick={() => setPreviewImageUrl(imgUrl)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <div className="p-1.5 bg-slate-50 rounded-md text-[10px] text-slate-500 text-center font-mono border border-slate-100">
+                              📷 ภาพถ่ายอุปกรณ์พัง/ขัดข้อง ({activeTicket.imageUrls?.length || 1} รูป)
                             </div>
                           </div>
                         )}
@@ -669,16 +681,23 @@ export default function AdminDashboard({
                           <p className="whitespace-pre-wrap font-medium">{msg.text}</p>
                           
                           {/* If first message of student and there is an attachment image, render it */}
-                          {!isMe && idx === 0 && activeTicket.imageUrl && (
-                            <div className="mt-3 rounded-lg overflow-hidden border border-slate-200 bg-white max-w-full">
-                              <img 
-                                src={activeTicket.imageUrl} 
-                                alt="Student Attachments" 
-                                referrerPolicy="no-referrer"
-                                className="max-h-60 object-contain w-full"
-                              />
+                          {!isMe && idx === 0 && ((activeTicket.imageUrls && activeTicket.imageUrls.length > 0) || activeTicket.imageUrl) && (
+                            <div className="mt-3 space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                {(activeTicket.imageUrls && activeTicket.imageUrls.length > 0 ? activeTicket.imageUrls : [activeTicket.imageUrl]).filter(Boolean).map((imgUrl, imgIdx) => (
+                                  <div key={imgIdx} className="rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center">
+                                    <img 
+                                      src={imgUrl} 
+                                      alt={`Student Attachment ${imgIdx + 1}`} 
+                                      referrerPolicy="no-referrer"
+                                      className="max-h-60 object-contain w-full cursor-zoom-in"
+                                      onClick={() => setPreviewImageUrl(imgUrl)}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
                               <div className="p-1.5 bg-slate-50 text-[10px] text-slate-500 text-center font-mono border-t border-slate-100">
-                                📷 ภาพประกอบปัญหาจากอุปกรณ์ของนักศึกษา
+                                📷 ภาพประกอบปัญหาจากอุปกรณ์ของนักศึกษา ({activeTicket.imageUrls?.length || 1} รูป)
                               </div>
                             </div>
                           )}
@@ -991,9 +1010,6 @@ export default function AdminDashboard({
                   >
                     <option value="ห้องจัดรายการ 1">ห้องจัดรายการ 1</option>
                     <option value="ห้องจัดรายการ 2">ห้องจัดรายการ 2</option>
-                    {AVAILABLE_STUDIO_ROOMS.map(r => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
                   </select>
                 </div>
                 <div>
@@ -1019,9 +1035,6 @@ export default function AdminDashboard({
                     <option value="14:00 - 15:00">14:00 - 15:00</option>
                     <option value="15:00 - 16:00">15:00 - 16:00</option>
                     <option value="16:00 - 17:00">16:00 - 17:00</option>
-                    {AVAILABLE_TIMESLOTS.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -1215,6 +1228,38 @@ export default function AdminDashboard({
           </div>
         </div>
 
+      </div>
+    )}
+
+    {/* Lightbox Image Preview Modal */}
+    {previewImageUrl && (
+      <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 cursor-pointer animate-fade-in"
+        onClick={() => setPreviewImageUrl(null)}
+      >
+        <div 
+          className="relative max-w-[1366px] w-full max-h-[95vh] bg-slate-900/95 border border-slate-800 rounded-2xl overflow-hidden p-2 flex flex-col items-center cursor-default shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button 
+            className="absolute top-4 right-4 bg-black/80 hover:bg-black text-rose-500 hover:text-rose-600 rounded-full p-2 cursor-pointer shadow-lg transition-colors z-10 w-10 h-10 flex items-center justify-center font-bold text-xl"
+            onClick={() => setPreviewImageUrl(null)}
+            title="ปิดการแสดงภาพ"
+          >
+            ✕
+          </button>
+          <div className="w-full flex items-center justify-center overflow-auto p-1">
+            <img 
+              src={previewImageUrl} 
+              alt="Enlarged preview" 
+              className="max-w-full max-h-[88vh] object-contain rounded-lg shadow-inner"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div className="py-2.5 px-4 text-slate-400 text-xs text-center font-medium bg-slate-950/40 w-full border-t border-slate-800/50">
+            คลิกพื้นที่สีดำรอบข้างหรือกดปุ่ม ✕ เพื่อปิดหน้าต่างนี้
+          </div>
+        </div>
       </div>
     )}
 

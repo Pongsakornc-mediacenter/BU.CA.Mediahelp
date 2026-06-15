@@ -23,6 +23,7 @@ export interface Ticket {
   title: string;
   description: string;
   imageUrl?: string; // Base64 compressed image string or url
+  imageUrls?: string[]; // Up to 5 image attachments
   status: 'pending' | 'inprogress' | 'answered' | 'closed';
   createdAt: string; // ISO String
   updatedAt: string; // ISO String

@@ -492,7 +492,7 @@ export function useData() {
   };
 
   // Ticket submissions
-  const createSupportTicket = async (category: HelpCategory, title: string, description: string, imageBase64?: string) => {
+  const createSupportTicket = async (category: HelpCategory, title: string, description: string, imageUrls?: string[]) => {
     if (!currentUser) return;
 
     const firstMessage = {
@@ -511,7 +511,8 @@ export function useData() {
       category,
       title,
       description,
-      imageUrl: imageBase64,
+      imageUrl: imageUrls && imageUrls.length > 0 ? imageUrls[0] : undefined,
+      imageUrls: imageUrls || [],
       status: 'pending',
       messages: [firstMessage],
       createdAt: new Date().toISOString(),

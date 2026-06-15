@@ -84,7 +84,7 @@ export default function App() {
   const [ticketCategory, setTicketCategory] = useState<HelpCategory>('camera');
   const [ticketTitle, setTicketTitle] = useState("");
   const [ticketDesc, setTicketDesc] = useState("");
-  const [ticketImage, setTicketImage] = useState<string | null>(null);
+  const [ticketImages, setTicketImages] = useState<string[]>([]);
   const [submittingTicket, setSubmittingTicket] = useState(false);
 
   // Check-In Form States
@@ -99,38 +99,73 @@ export default function App() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [studentMsgText, setStudentMsgText] = useState("");
 
-  // File conversion of image attachments
+  // Lightbox Image Preview State
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  // File conversion of image attachments (supports up to 5 images with compression)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        // Compress on canvas to save document quota (~60kb)
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 450;
-        let width = img.width;
-        let height = img.height;
+    const remainingSlots = 5 - ticketImages.length;
+    if (remainingSlots <= 0) {
+      alert("สามารถอัปโหลดรูปภาพได้สูงสุด 5 รูปเท่านั้นค่ะ");
+      return;
+    }
 
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
-        canvas.width = width;
-        canvas.height = height;
+    filesToProcess.forEach((file: File) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          // Compress on canvas to save document quota (~80% quality, max 1366x1024 as requested)
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1366;
+          const MAX_HEIGHT = 1024;
+          let width = img.width;
+          let height = img.height;
 
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, width, height);
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
 
-        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
-        setTicketImage(compressedBase64);
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          let quality = 0.8;
+          let compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+
+          // Safe limit: protect Firestore from exceeding the 1MB document limit.
+          // Gently throttle down the quality or dimensions if it's too large, ensuring high compatibility.
+          let attempts = 0;
+          while (compressedBase64.length > 165000 && quality > 0.4 && attempts < 4) {
+            quality -= 0.1;
+            compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+            attempts++;
+          }
+
+          setTicketImages((prev) => {
+            if (prev.length >= 5) return prev;
+            return [...prev, compressedBase64];
+          });
+        };
       };
-    };
+    });
+
+    e.target.value = "";
+  };
+
+  const handleDeleteImage = (indexToRemove: number) => {
+    setTicketImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const handleTicketSubmit = async (e: React.FormEvent) => {
@@ -140,19 +175,30 @@ export default function App() {
       return;
     }
 
-    setSubmittingTicket(true);
-    try {
-      await createSupportTicket(ticketCategory, ticketTitle.trim(), ticketDesc.trim(), ticketImage || undefined);
-      setTicketTitle("");
-      setTicketDesc("");
-      setTicketImage(null);
-      alert("🎉 ส่งตั๋วขอความช่วยเหลือถึงอาจารย์ผู้สอนสำเร็จ! ระบบกำลังดึงการปรับปรุงคำตอบแบบเรียลไทม์");
-      setStudentTab('helpdesk');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmittingTicket(false);
-    }
+    const title = ticketTitle.trim();
+    const desc = ticketDesc.trim();
+    const category = ticketCategory;
+    const images = [...ticketImages];
+
+    // Clear and reset form immediately so student screen wipes instantly 
+    // exactly like submitting an order/cart!
+    setTicketTitle("");
+    setTicketDesc("");
+    setTicketImages([]);
+    setTicketCategory('camera');
+    setStudentTab('helpdesk');
+    setSubmittingTicket(false);
+
+    // Call creation asynchronously in the background so the UI is free and responsive instantly!
+    createSupportTicket(category, title, desc, images)
+      .then(() => {
+        console.log("Ticket created successfully in the background");
+      })
+      .catch((err) => {
+        console.error("Background ticket submission error:", err);
+      });
+
+    alert("🎉 ส่งตั๋วขอความช่วยเหลือถึงอาจารย์ผู้สอนสำเร็จ! ระบบกำลังดึงการปรับปรุงคำตอบแบบเรียลไทม์");
   };
 
   const handleClassCheckInSubmit = async (e: React.FormEvent) => {
@@ -191,13 +237,16 @@ export default function App() {
 
   const handleStudentChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStudentTicketId || !studentMsgText.trim()) return;
-    try {
-      await sendTicketMessage(activeStudentTicketId, studentMsgText.trim());
-      setStudentMsgText("");
-    } catch (err) {
-      console.error(err);
-    }
+    const textToSend = studentMsgText.trim();
+    if (!activeStudentTicketId || !textToSend) return;
+
+    // Reset input instantly like standard chat!
+    setStudentMsgText("");
+
+    sendTicketMessage(activeStudentTicketId, textToSend)
+      .catch((err) => {
+        console.error("Error sending student chat in background:", err);
+      });
   };
 
   const handleRoomBookingSubmit = async (e: React.FormEvent) => {
@@ -571,33 +620,42 @@ export default function App() {
 
                       {/* Photo Attachment (Feature 10: Image submission base64) */}
                       <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1">อัปโหลดภาพถ่ายอุปกรณ์หรือหน้าจอที่ขัดข้อง (ถ้ามี):</label>
+                        <label className="text-xs font-semibold text-slate-600 block mb-1">อัปโหลดภาพถ่ายอุปกรณ์หรือหน้าจอที่ขัดข้อง (สูงสุด 5 รูป):</label>
                         <div className="flex items-center gap-3">
                           <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg cursor-pointer transition-colors border border-slate-200 flex items-center gap-1.5 shrink-0">
                             <FileImage className="w-4 h-4 text-slate-500" />
-                            เลือกรูปภาพปัญหากล้อง
+                            เลือกรูปภาพปัญหากล้อง (สูงสุด 5 รูป)
                             <input
+                              key={ticketImages.length === 0 ? "empty" : "has-images"}
                               type="file"
                               accept="image/*"
+                              multiple
                               id="camera_attachment_input"
                               onChange={handleImageUpload}
                               className="hidden"
                             />
                           </label>
                           <p className="text-[10px] text-slate-400 truncate">
-                            {ticketImage ? '✓ แนบรูปภาพอุปกรณ์เรียบร้อย' : 'รองรับภาพถ่ายหน้ากล้องและแสงไฟ'}
+                            {ticketImages.length > 0 
+                              ? `✓ แนบรูปภาพอุปกรณ์สำเร็จ ${ticketImages.length}/5 รูป` 
+                              : 'รองรับภาพถ่ายหน้ากล้องและแสงไฟ'}
                           </p>
                         </div>
-                        {ticketImage && (
-                          <div className="relative mt-2.5 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 aspect-video flex items-center justify-center">
-                            <img src={ticketImage} alt="Setup error attachment" className="max-h-full object-contain" referrerPolicy="no-referrer" />
-                            <button
-                              type="button"
-                              onClick={() => setTicketImage(null)}
-                              className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 text-[10px] uppercase font-bold"
-                            >
-                              ✕ ลบ
-                            </button>
+                        {ticketImages.length > 0 && (
+                          <div className="grid grid-cols-5 gap-2 mt-3">
+                            {ticketImages.map((imgSrc, index) => (
+                              <div key={index} className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 aspect-square flex items-center justify-center group shadow-sm">
+                                <img src={imgSrc} alt={`Attachment draft ${index + 1}`} className="max-h-full object-contain" referrerPolicy="no-referrer" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteImage(index)}
+                                  className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md transition-colors"
+                                  title="ลบรูปภาพนี้"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -717,6 +775,29 @@ export default function App() {
                                                   {msg.senderName} ({msg.senderRole === 'admin' ? 'ผู้สอน' : 'คุณ'}):
                                                 </span>
                                                 <p className="whitespace-pre-wrap font-medium">{msg.text}</p>
+
+                                                {/* Render attachments for student's first message */}
+                                                {isMe && idx === 0 && ((ticket.imageUrls && ticket.imageUrls.length > 0) || ticket.imageUrl) && (
+                                                  <div className="mt-2 text-left">
+                                                    <div className="grid grid-cols-2 gap-1.5 max-w-md">
+                                                      {(ticket.imageUrls && ticket.imageUrls.length > 0 ? ticket.imageUrls : [ticket.imageUrl]).filter(Boolean).map((imgUrl, imgIdx) => (
+                                                        <div key={imgIdx} className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
+                                                          <img 
+                                                            src={imgUrl} 
+                                                            alt={`My Attachment ${imgIdx + 1}`} 
+                                                            referrerPolicy="no-referrer"
+                                                            className="max-h-40 object-contain w-full cursor-zoom-in"
+                                                            onClick={() => setPreviewImageUrl(imgUrl)}
+                                                          />
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                    <div className="text-[9px] text-slate-400 font-semibold mt-1">
+                                                      📷 ภาพถ่ายแนบประกอบที่บันทึกไว้ ({ticket.imageUrls?.length || 1} รูป)
+                                                    </div>
+                                                  </div>
+                                                )}
+
                                                 <span className={`text-[8px] block text-right mt-1 font-mono ${
                                                   isMe ? 'text-slate-400' : 'text-indigo-300'
                                                 }`}>
@@ -1063,6 +1144,38 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+      {/* Lightbox Image Preview Modal */}
+      {previewImageUrl && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 cursor-pointer animate-fade-in"
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <div 
+            className="relative max-w-[1366px] w-full max-h-[95vh] bg-slate-900/95 border border-slate-800 rounded-2xl overflow-hidden p-2 flex flex-col items-center cursor-default shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              className="absolute top-4 right-4 bg-black/80 hover:bg-black text-rose-500 hover:text-rose-600 rounded-full p-2 cursor-pointer shadow-lg transition-colors z-10 w-10 h-10 flex items-center justify-center font-bold text-xl"
+              onClick={() => setPreviewImageUrl(null)}
+              title="ปิดการแสดงภาพ"
+            >
+              ✕
+            </button>
+            <div className="w-full flex items-center justify-center overflow-auto p-1">
+              <img 
+                src={previewImageUrl} 
+                alt="Enlarged preview" 
+                className="max-w-full max-h-[88vh] object-contain rounded-lg shadow-inner"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="py-2.5 px-4 text-slate-400 text-xs text-center font-medium bg-slate-950/40 w-full border-t border-slate-800/50">
+              คลิกพื้นที่สีดำรอบข้างหรือกดปุ่ม ✕ เพื่อปิดหน้าต่างนี้
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
