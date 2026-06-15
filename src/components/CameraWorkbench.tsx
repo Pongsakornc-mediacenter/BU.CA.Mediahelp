@@ -12,9 +12,9 @@ export default function CameraWorkbench() {
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
   
   // Custom manual state bindings
-  const [aperture, setAperture] = useState<number>(2.8); // f/number (1.4, 1.8, 2.8, 4, 5.6, 8, 11, 16)
-  const [iso, setIso] = useState<number>(400); // 100, 200, 400, 800, 1600, 3200, 6400
-  const [shutterSpeed, setShutterSpeed] = useState<string>("1/125"); // 1/1000, 1/500, 1/250, 1/125, 1/60, 1/30, 1/15, 1s
+  const [aperture, setAperture] = useState<number>(2.8); // f/number (1.4, 2.8, 4, 8, 22)
+  const [iso, setIso] = useState<number>(400); // 100, 400, 800, 1600, 3200, 6400
+  const [shutterSpeed, setShutterSpeed] = useState<string>("1/125"); // 1s, 1/50, 1/125, 1/400, 1/800
   const [whiteBalance, setWhiteBalance] = useState<string>("5,000 - 5,500 K"); // Kelvin scale ranges
 
   // Sync settings when selecting preset
@@ -46,13 +46,10 @@ export default function CameraWorkbench() {
 
     // Shutter speed effect
     const speedMap: Record<string, number> = {
-      "1/1000": -3,
-      "1/500": -2,
-      "1/250": -1,
+      "1/800": -3,
+      "1/400": -1.7,
       "1/125": 0,
-      "1/60": 1,
-      "1/30": 2,
-      "1/15": 3,
+      "1/50": 1.3,
       "1s": 5
     };
     const speedDelta = speedMap[shutterSpeed] !== undefined ? speedMap[shutterSpeed] : 0;
@@ -70,8 +67,8 @@ export default function CameraWorkbench() {
   const getBlurValue = () => {
     if (aperture <= 1.4) return "14px";
     if (aperture <= 2.8) return "8px";
-    if (aperture <= 5.6) return "4px";
-    if (aperture <= 11) return "1.5px";
+    if (aperture <= 4) return "4px";
+    if (aperture <= 8) return "1.5px";
     return "0px";
   };
 
@@ -89,7 +86,7 @@ export default function CameraWorkbench() {
   };
 
   const isTripodWarningNeeded = () => {
-    return shutterSpeed === "1/30" || shutterSpeed === "1/15" || shutterSpeed === "1s";
+    return shutterSpeed === "1/50" || shutterSpeed === "1s";
   };
 
   return (
@@ -265,7 +262,7 @@ export default function CameraWorkbench() {
                 <span className="font-mono text-indigo-600 font-black text-xs">f/{aperture}</span>
               </div>
               <div className="flex gap-1">
-                {[1.4, 2.8, 5.6, 11, 16].map((fVal) => (
+                {[1.4, 2.8, 4, 8, 22].map((fVal) => (
                   <button
                     key={fVal}
                     type="button"
@@ -281,7 +278,7 @@ export default function CameraWorkbench() {
                 ))}
               </div>
             </div>
- 
+
             {/* shutter speed */}
             <div>
               <div className="flex justify-between items-center text-xs mb-1">
@@ -289,7 +286,7 @@ export default function CameraWorkbench() {
                 <span className="font-mono text-indigo-600 font-black text-xs">{shutterSpeed}</span>
               </div>
               <div className="flex gap-1">
-                {["1/1000", "1/250", "1/125", "1/30", "1s"].map((speedVal) => (
+                {["1s", "1/50", "1/125", "1/400", "1/800"].map((speedVal) => (
                   <button
                     key={speedVal}
                     type="button"
@@ -305,7 +302,7 @@ export default function CameraWorkbench() {
                 ))}
               </div>
             </div>
- 
+
             {/* ISO */}
             <div>
               <div className="flex justify-between items-center text-xs mb-1">
@@ -313,12 +310,12 @@ export default function CameraWorkbench() {
                 <span className="font-mono text-indigo-600 font-black text-xs">ISO {iso}</span>
               </div>
               <div className="flex gap-1">
-                {[100, 400, 1600, 3200, 6400].map((isoVal) => (
+                {[100, 400, 800, 1600, 3200, 6400].map((isoVal) => (
                   <button
                     key={isoVal}
                     type="button"
                     onClick={() => setIso(isoVal)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs border font-extrabold cursor-pointer transition-all ${
+                    className={`flex-1 py-1.5 rounded-lg text-[11px] sm:text-xs border font-extrabold cursor-pointer transition-all ${
                       iso === isoVal
                         ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
                         : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'

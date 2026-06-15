@@ -1098,7 +1098,7 @@ export default function AdminDashboard({
                 <button
                   type="submit"
                   disabled={submittingProg}
-                  className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-sm"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-sm"
                 >
                   {submittingProg ? 'กำลังเพิ่มบันทึก...' : '💾 บันทึกเวลาจัดรายการ'}
                 </button>
