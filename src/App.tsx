@@ -1039,26 +1039,26 @@ export default function App() {
                   </div>
 
                   {/* Main Grid Table representation */}
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-inner bg-slate-50">
+                  <div className="overflow-x-auto border border-slate-200/70 rounded-xl shadow-inner bg-slate-50/50">
                     <table className="w-full min-w-[900px] border-collapse text-xs text-center">
                       <thead>
-                        {/* Bright Yellow row: วิชา */}
+                        {/* Elegant light yellow row for วิชา */}
                         <tr className="border-b border-slate-200">
-                          <th colSpan={9} className="py-2.5 bg-[#fffd37] text-slate-900 font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
+                          <th colSpan={9} className="py-3 bg-[#FCF3CF] text-amber-950 font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
                             วิชา (Scheduled Subjects)
                           </th>
                         </tr>
-                        {/* Table Headers */}
-                        <tr className="bg-[#bdf0b3] text-slate-800 font-bold border-b border-slate-200">
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-slate-100 text-slate-700 font-extrabold">Date/Time</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-slate-100 text-slate-700 font-extrabold w-36">Room Lab</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">9.00 - 10.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">10.00 - 11.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">11.00 - 12.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-amber-50 text-amber-800 w-24 font-extrabold">พักเที่ยง</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">13.00 - 14.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">14.00 - 15.00</th>
-                          <th className="py-2.5 px-2 bg-emerald-50 text-emerald-800">15.00 - 16.00</th>
+                        {/* Table Headers with soft green row */}
+                        <tr className="bg-[#E2F7E1] text-emerald-950 font-bold border-b border-slate-200">
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 bg-slate-100/90 text-slate-700 font-extrabold">Date/Time</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 bg-slate-100/90 text-slate-700 font-extrabold w-36">Room Lab</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">9.00 - 10.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">10.00 - 11.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">11.00 - 12.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 bg-amber-100/80 text-amber-950 w-24 font-black">พักเที่ยง</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">13.00 - 14.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">14.00 - 15.00</th>
+                          <th className="py-2.5 px-2 text-emerald-900 font-extrabold">15.00 - 16.00</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1078,21 +1078,25 @@ export default function App() {
                               {/* Day Name and Date */}
                               <td className="py-3 px-2 border-r border-slate-200 font-bold bg-slate-50 text-slate-800">
                                 <div className="text-xs uppercase">{dayInfo.dayName}</div>
-                                <div className="text-[10px] text-slate-500 font-normal">{dayInfo.displayDate}</div>
+                                <div className="text-[10px] text-slate-500 font-semibold">{dayInfo.displayDate}</div>
                               </td>
 
-                              {/* Room Lab name with theme coloring */}
-                              <td className={`py-3 px-2 border-r border-slate-200 font-bold text-white text-[11px] ${
-                                activeScheduleRoom === "ห้องจัดรายการ 1" ? "bg-[#ef8840]" : "bg-[#4a90e2]"
-                              }`}>
-                                {activeScheduleRoom}
+                              {/* Room Lab name with clean modern tags */}
+                              <td className="py-3 px-2 border-r border-slate-200 font-bold text-[11px] bg-slate-50 text-slate-700">
+                                <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                  activeScheduleRoom === "ห้องจัดรายการ 1" 
+                                    ? "bg-[#ef8840]/10 text-[#ef8840] border border-[#ef8840]/20" 
+                                    : "bg-[#4a90e2]/10 text-[#4a90e2] border border-[#4a90e2]/20"
+                                }`}>
+                                  {activeScheduleRoom}
+                                </span>
                               </td>
 
                               {/* Slots */}
                               {slots.map((slot) => {
                                 if (slot === "พักเที่ยง") {
                                   return (
-                                    <td key={slot} className="py-3 px-2 border-r border-slate-200 bg-slate-100 text-slate-400 font-bold text-[11px] select-none">
+                                    <td key={slot} className="py-3 px-2 border-r border-slate-200 bg-slate-50 text-slate-400 font-bold text-[11px] select-none">
                                       🍛 พักเที่ยง
                                     </td>
                                   );
@@ -1103,25 +1107,32 @@ export default function App() {
 
                                 if (b) {
                                   const isApproved = b.status === "approved";
+                                  const isRoom1 = activeScheduleRoom === "ห้องจัดรายการ 1";
+                                  
+                                  // Soft premium booking styling based on room and status
+                                  const approvedRoom1Style = "bg-[#FFF8F3] border-l-4 border-l-[#ef8840] text-amber-950";
+                                  const approvedRoom2Style = "bg-[#F0F7FF] border-l-4 border-l-[#4a90e2] text-blue-950";
+                                  const pendingStyle = "bg-amber-50/60 border-l-4 border-l-amber-400 text-amber-900";
+
+                                  const cellClass = isApproved 
+                                    ? (isRoom1 ? approvedRoom1Style : approvedRoom2Style)
+                                    : pendingStyle;
+
                                   return (
                                     <td 
                                       key={slot} 
-                                      className={`py-2 px-2 border-r border-slate-200 text-left align-top transition-all ${
-                                        isApproved 
-                                          ? "bg-[#fbdcb9]/80 border-l-2 border-l-[#ef8840]" 
-                                          : "bg-amber-50/80 border-l-2 border-l-amber-400"
-                                      }`}
+                                      className={`py-2 px-2 border-r border-slate-200 text-left align-top transition-all ${cellClass}`}
                                     >
-                                      <div className="flex flex-col h-full justify-between gap-1">
+                                      <div className="flex flex-col h-full justify-between gap-1.5">
                                         <div className="font-extrabold text-slate-800 text-[10px] sm:text-[11px] leading-snug line-clamp-2">
                                           {b.purpose}
                                         </div>
                                         <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono mt-1">
-                                          <span className="truncate max-w-[70px] font-semibold">{b.studentName.split(' ')[0]}</span>
-                                          <span className={`px-1 rounded-[4px] font-bold text-[8px] uppercase shrink-0 ${
+                                          <span className="truncate max-w-[70px] font-bold text-slate-600">{b.studentName.split(' ')[0]}</span>
+                                          <span className={`px-1 rounded-[4px] font-extrabold text-[8px] uppercase shrink-0 ${
                                             isApproved 
-                                              ? "bg-[#ef8840]/15 text-[#ef8840]" 
-                                              : "bg-amber-100 text-amber-850"
+                                              ? (isRoom1 ? "bg-[#ef8840]/15 text-[#ef8840]" : "bg-[#4a90e2]/15 text-[#4a90e2]")
+                                              : "bg-amber-200/60 text-amber-850"
                                           }`}>
                                             {isApproved ? "Approved" : "Pending"}
                                           </span>
@@ -1154,7 +1165,7 @@ export default function App() {
                                       <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 text-[9px]">➕</span>
                                       ว่าง
                                     </div>
-                                    <div className="text-[8px] text-slate-300 group-hover:text-emerald-500 transition-colors font-mono">
+                                    <div className="text-[8px] text-slate-350 group-hover:text-emerald-500 transition-colors font-mono">
                                       คลิกเพื่อเลือก
                                     </div>
                                   </td>
@@ -1167,19 +1178,23 @@ export default function App() {
                     </table>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 gap-2">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-4 py-3 rounded-xl border border-slate-150/60 gap-2">
+                    <div className="flex flex-wrap items-center gap-4">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-[#fbdcb9] border-l-2 border-l-[#ef8840] inline-block rounded"></span>
-                        <span className="font-semibold text-slate-600">อนุมัติการจองแล้ว (Approved)</span>
+                        <span className="w-3.5 h-3.5 bg-[#FFF8F3] border border-[#ef8840]/30 border-l-4 border-l-[#ef8840] inline-block rounded"></span>
+                        <span className="font-bold text-slate-600">จองห้อง 1 แล้ว (Approved)</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-amber-50 border-l-2 border-l-amber-400 inline-block rounded"></span>
-                        <span className="font-semibold text-slate-600">รอเข้าคิวอนุมัติ (Pending)</span>
+                        <span className="w-3.5 h-3.5 bg-[#F0F7FF] border border-[#4a90e2]/30 border-l-4 border-l-[#4a90e2] inline-block rounded"></span>
+                        <span className="font-bold text-slate-600">จองห้อง 2 แล้ว (Approved)</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-white border border-slate-200 inline-block rounded"></span>
-                        <span className="font-semibold text-slate-600">ว่าง (คลิกที่ช่องเพื่อเลือกวัน-เวลาลงฟอร์ม)</span>
+                        <span className="w-3.5 h-3.5 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 inline-block rounded"></span>
+                        <span className="font-bold text-slate-600">รอเข้าคิวอนุมัติ (Pending)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 bg-white border border-slate-200 inline-block rounded"></span>
+                        <span className="font-bold text-slate-600">ว่าง (คลิกที่ช่องเพื่อเลือกวัน-เวลา)</span>
                       </div>
                     </div>
                     <p className="italic text-indigo-650 font-bold">
