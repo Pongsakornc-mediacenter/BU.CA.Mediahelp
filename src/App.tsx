@@ -104,7 +104,7 @@ export default function App() {
     const monday = new Date(baseDate);
     monday.setDate(diffToMon);
 
-    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayNames = ["จันทร์", "อังคาร", "พุธ", "พฤหัสฯ", "ศุกร์", "เสาร์"];
     const dates: { dayName: string; dateStr: string; displayDate: string }[] = [];
     for (let i = 0; i < 6; i++) {
       const d = new Date(monday);
@@ -940,8 +940,6 @@ export default function App() {
                     {bookingSuccessMsg}
                   </div>
                 )}
-
-                {/* 1. SCHEDULE CHECK TABLE SECTION (ABOVE THE BOOKING FORM AND LIST) */}
                 <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm space-y-4">
                   {/* centered header of the table */}
                   <div className="text-center space-y-1">
@@ -1042,23 +1040,23 @@ export default function App() {
                   <div className="overflow-x-auto border border-slate-200/70 rounded-xl shadow-inner bg-slate-50/50">
                     <table className="w-full min-w-[900px] border-collapse text-xs text-center">
                       <thead>
-                        {/* Elegant light yellow row for วิชา */}
-                        <tr className="border-b border-slate-200">
-                          <th colSpan={9} className="py-3 bg-[#FCF3CF] text-amber-950 font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
-                            วิชา (Scheduled Subjects)
+                        {/* Elegant dark grey row for วิชา */}
+                        <tr className="border-b border-slate-700">
+                          <th colSpan={9} className="py-3 bg-slate-800 text-slate-100 font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
+                            📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
                           </th>
                         </tr>
-                        {/* Table Headers with soft green row */}
-                        <tr className="bg-[#E2F7E1] text-emerald-950 font-bold border-b border-slate-200">
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 bg-slate-100/90 text-slate-700 font-extrabold">Date/Time</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 bg-slate-100/90 text-slate-700 font-extrabold w-36">Room Lab</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">9.00 - 10.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">10.00 - 11.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">11.00 - 12.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 bg-amber-100/80 text-amber-950 w-24 font-black">พักเที่ยง</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">13.00 - 14.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-200/60 text-emerald-900 font-extrabold">14.00 - 15.00</th>
-                          <th className="py-2.5 px-2 text-emerald-900 font-extrabold">15.00 - 16.00</th>
+                        {/* Table Headers in unified slate dark styling for professional contrast */}
+                        <tr className="bg-slate-700 text-slate-100 font-bold border-b border-slate-600">
+                          <th className="py-2.5 px-2 border-r border-slate-600 bg-slate-800 text-slate-100 font-extrabold">วัน / เวลา</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 bg-slate-800 text-slate-100 font-extrabold w-36">Room Lab</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">9.00 - 10.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">10.00 - 11.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">11.00 - 12.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 bg-amber-600 text-white w-24 font-black">พักเที่ยง</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">13.00 - 14.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">14.00 - 15.00</th>
+                          <th className="py-2.5 px-2 text-slate-100 font-extrabold">15.00 - 16.00</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1083,7 +1081,7 @@ export default function App() {
 
                               {/* Room Lab name with clean modern tags */}
                               <td className="py-3 px-2 border-r border-slate-200 font-bold text-[11px] bg-slate-50 text-slate-700">
-                                <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold whitespace-nowrap ${
                                   activeScheduleRoom === "ห้องจัดรายการ 1" 
                                     ? "bg-[#ef8840]/10 text-[#ef8840] border border-[#ef8840]/20" 
                                     : "bg-[#4a90e2]/10 text-[#4a90e2] border border-[#4a90e2]/20"
@@ -1146,7 +1144,7 @@ export default function App() {
                                 return (
                                   <td 
                                     key={slot} 
-                                    className="py-3 px-2 border-r border-slate-200 transition-all hover:bg-emerald-50/45 group cursor-pointer"
+                                    className="py-3 px-2 border-r border-slate-200 transition-all hover:bg-emerald-50/60 group cursor-pointer"
                                     onClick={() => {
                                       setBookingRoom(activeScheduleRoom);
                                       setBookingDate(dayInfo.dateStr);
@@ -1161,12 +1159,16 @@ export default function App() {
                                       }
                                     }}
                                   >
-                                    <div className="text-[10px] text-slate-400 font-bold group-hover:text-emerald-600 transition-colors flex items-center justify-center gap-0.5">
-                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 text-[9px]">➕</span>
-                                      ว่าง
-                                    </div>
-                                    <div className="text-[8px] text-slate-350 group-hover:text-emerald-500 transition-colors font-mono">
-                                      คลิกเพื่อเลือก
+                                    <div className="flex flex-col items-center justify-center min-h-[36px] transition-all duration-200">
+                                      {/* Default state: Just a clean, tiny "ว่าง" */}
+                                      <span className="text-[11px] text-slate-400 font-bold group-hover:hidden transition-all duration-200">
+                                        ว่าง
+                                      </span>
+                                      
+                                      {/* Hover state: Beautiful, encouraging "+ คลิกเพื่อจอง" */}
+                                      <span className="hidden group-hover:inline-flex items-center gap-1 text-[10px] text-emerald-600 font-extrabold transition-all duration-200 bg-emerald-100/65 px-2 py-1 rounded-md border border-emerald-200 shadow-sm animate-fadeIn">
+                                        ➕ คลิกเพื่อจอง
+                                      </span>
                                     </div>
                                   </td>
                                 );
