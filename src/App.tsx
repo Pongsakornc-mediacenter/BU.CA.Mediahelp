@@ -373,6 +373,32 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col" id="app_root_layout">
       
+      {/* Custom Styles for table hover skew shine animation */}
+      <style>{`
+        .shine-cell {
+          position: relative;
+          overflow: hidden !important;
+        }
+        .shine-cell-overlay {
+          position: absolute;
+          top: 0;
+          left: -35%;
+          height: 100%;
+          width: 0;
+          transform: skew(30deg);
+          transform-origin: top left;
+          transition-duration: 0.4s;
+          transition-property: all;
+          transition-timing-function: ease-out;
+          background: linear-gradient(90deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.15) 50%, rgba(16, 185, 129, 0) 100%);
+          pointer-events: none;
+          z-index: 5;
+        }
+        .shine-cell:hover .shine-cell-overlay {
+          width: 135%;
+        }
+      `}</style>
+
       {/* 1. Global Interactive Live Notifications (Toast Banner) */}
       <AnimatePresence>
         {lastNotification && (
@@ -1144,7 +1170,7 @@ export default function App() {
                                 return (
                                   <td 
                                     key={slot} 
-                                    className="py-3 px-2 border-r border-slate-200 transition-all hover:bg-emerald-50/60 group cursor-pointer"
+                                    className="py-3 px-2 border-r border-slate-200 cursor-pointer shine-cell group bg-white hover:bg-emerald-50/25 transition-colors duration-300"
                                     onClick={() => {
                                       setBookingRoom(activeScheduleRoom);
                                       setBookingDate(dayInfo.dateStr);
@@ -1159,14 +1185,18 @@ export default function App() {
                                       }
                                     }}
                                   >
-                                    <div className="flex flex-col items-center justify-center min-h-[36px] transition-all duration-200">
+                                    {/* The skew/shine overlay block */}
+                                    <div className="shine-cell-overlay"></div>
+
+                                    {/* Stable layout container that never shifts size */}
+                                    <div className="relative flex items-center justify-center min-h-[36px] select-none">
                                       {/* Default state: Just a clean, tiny "ว่าง" */}
-                                      <span className="text-[11px] text-slate-400 font-bold group-hover:hidden transition-all duration-200">
+                                      <span className="text-[11px] text-slate-400 font-bold group-hover:opacity-0 transition-opacity duration-200 absolute">
                                         ว่าง
                                       </span>
                                       
                                       {/* Hover state: Beautiful, encouraging "+ คลิกเพื่อจอง" */}
-                                      <span className="hidden group-hover:inline-flex items-center gap-1 text-[10px] text-emerald-600 font-extrabold transition-all duration-200 bg-emerald-100/65 px-2 py-1 rounded-md border border-emerald-200 shadow-sm animate-fadeIn">
+                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[10px] text-emerald-600 font-extrabold absolute whitespace-nowrap">
                                         ➕ คลิกเพื่อจอง
                                       </span>
                                     </div>
