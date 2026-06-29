@@ -80,6 +80,61 @@ export default function App() {
   const [bookingPhone, setBookingPhone] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
   
+  // Schedule Check Table States
+  const [activeScheduleRoom, setActiveScheduleRoom] = useState<string>("ห้องจัดรายการ 1");
+  const [scheduleBaseDate, setScheduleBaseDate] = useState<string>(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+
+  // Helper to retrieve the week's dates (Monday to Saturday) based on a given date (YYYY-MM-DD)
+  const getWeekDates = (dateStr: string) => {
+    let baseDate = new Date();
+    if (dateStr) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      }
+    }
+    const day = baseDate.getDay(); // 0 is Sun, 1 is Mon, etc.
+    const diffToMon = baseDate.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(baseDate);
+    monday.setDate(diffToMon);
+
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dates: { dayName: string; dateStr: string; displayDate: string }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateString = `${yyyy}-${mm}-${dd}`;
+      
+      const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+      const displayDate = `${d.getDate()} ${thaiMonths[d.getMonth()]}`;
+      dates.push({
+        dayName: dayNames[i],
+        dateStr: dateString,
+        displayDate
+      });
+    }
+    return dates;
+  };
+
+  const findBookingForCell = (roomName: string, dateStr: string, slotStr: string) => {
+    const normalizedSlot = slotStr === "9.00 - 10.00" ? "09:00 - 10:00" : slotStr;
+    return bookings.find(b => 
+      b.roomName === roomName && 
+      b.date === dateStr && 
+      (b.timeSlot === normalizedSlot || b.timeSlot === slotStr) &&
+      b.status !== 'rejected'
+    );
+  };
+  
   // Submit Ticket Form States
   const [ticketCategory, setTicketCategory] = useState<HelpCategory>('camera');
   const [ticketTitle, setTicketTitle] = useState("");
@@ -886,6 +941,253 @@ export default function App() {
                   </div>
                 )}
 
+                {/* 1. SCHEDULE CHECK TABLE SECTION (ABOVE THE BOOKING FORM AND LIST) */}
+                <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm space-y-4">
+                  {/* centered header of the table */}
+                  <div className="text-center space-y-1">
+                    <h4 className="text-base font-extrabold text-slate-800 tracking-tight font-display flex items-center justify-center gap-1.5">
+                      📅 ตารางห้องจัดรายการ
+                    </h4>
+                    <p className="text-slate-500 text-[11px] sm:text-xs">
+                      กรุณาตรวจสอบตารางการจองด้านล่างเพื่อตรวจสอบคิวที่ว่างก่อนกรอกแบบฟอร์มจองห้องจัดรายการต่อ
+                    </p>
+                  </div>
+
+                  {/* Room selectors (tabs like in the user's Excel mockup) */}
+                  <div className="flex max-w-xl mx-auto border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveScheduleRoom("ห้องจัดรายการ 1");
+                        setBookingRoom("ห้องจัดรายการ 1");
+                      }}
+                      className={`flex-1 py-2.5 text-center text-xs font-extrabold transition-all border-r border-slate-200 cursor-pointer ${
+                        activeScheduleRoom === "ห้องจัดรายการ 1"
+                          ? "bg-[#ef8840] text-white"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      🎙️ ห้องจัดรายการ 1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveScheduleRoom("ห้องจัดรายการ 2");
+                        setBookingRoom("ห้องจัดรายการ 2");
+                      }}
+                      className={`flex-1 py-2.5 text-center text-xs font-extrabold transition-all cursor-pointer ${
+                        activeScheduleRoom === "ห้องจัดรายการ 2"
+                          ? "bg-[#4a90e2] text-white"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      🎧 ห้องจัดรายการ 2
+                    </button>
+                  </div>
+
+                  {/* Navigation controls for weeks */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = new Date(scheduleBaseDate);
+                          base.setDate(base.getDate() - 7);
+                          const yyyy = base.getFullYear();
+                          const mm = String(base.getMonth() + 1).padStart(2, '0');
+                          const dd = String(base.getDate()).padStart(2, '0');
+                          setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
+                        }}
+                        className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        ◀ สัปดาห์ก่อนหน้า
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = new Date();
+                          const yyyy = base.getFullYear();
+                          const mm = String(base.getMonth() + 1).padStart(2, '0');
+                          const dd = String(base.getDate()).padStart(2, '0');
+                          const todayStr = `${yyyy}-${mm}-${dd}`;
+                          setScheduleBaseDate(todayStr);
+                          setBookingDate(todayStr);
+                        }}
+                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        วันนี้ / สัปดาห์นี้
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = new Date(scheduleBaseDate);
+                          base.setDate(base.getDate() + 7);
+                          const yyyy = base.getFullYear();
+                          const mm = String(base.getMonth() + 1).padStart(2, '0');
+                          const dd = String(base.getDate()).padStart(2, '0');
+                          setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
+                        }}
+                        className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        สัปดาห์ถัดไป ▶
+                      </button>
+                    </div>
+
+                    <div className="text-xs text-slate-600 font-bold bg-slate-100/75 px-3 py-1.5 rounded-lg border border-slate-200/55 flex items-center gap-1.5">
+                      📅 สัปดาห์ประจำวันที่: <span className="text-indigo-700 font-extrabold">{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
+                    </div>
+                  </div>
+
+                  {/* Main Grid Table representation */}
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-inner bg-slate-50">
+                    <table className="w-full min-w-[900px] border-collapse text-xs text-center">
+                      <thead>
+                        {/* Bright Yellow row: วิชา */}
+                        <tr className="border-b border-slate-200">
+                          <th colSpan={9} className="py-2.5 bg-[#fffd37] text-slate-900 font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
+                            วิชา (Scheduled Subjects)
+                          </th>
+                        </tr>
+                        {/* Table Headers */}
+                        <tr className="bg-[#bdf0b3] text-slate-800 font-bold border-b border-slate-200">
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-slate-100 text-slate-700 font-extrabold">Date/Time</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-slate-100 text-slate-700 font-extrabold w-36">Room Lab</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">9.00 - 10.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">10.00 - 11.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">11.00 - 12.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-amber-50 text-amber-800 w-24 font-extrabold">พักเที่ยง</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">13.00 - 14.00</th>
+                          <th className="py-2.5 px-2 border-r border-slate-200 bg-emerald-50 text-emerald-800">14.00 - 15.00</th>
+                          <th className="py-2.5 px-2 bg-emerald-50 text-emerald-800">15.00 - 16.00</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getWeekDates(scheduleBaseDate).map((dayInfo) => {
+                          const slots = [
+                            "9.00 - 10.00",
+                            "10.00 - 11.00",
+                            "11.00 - 12.00",
+                            "พักเที่ยง",
+                            "13.00 - 14.00",
+                            "14.00 - 15.00",
+                            "15.00 - 16.00"
+                          ];
+
+                          return (
+                            <tr key={dayInfo.dayName} className="border-b border-slate-200 bg-white hover:bg-slate-50/30 transition-colors">
+                              {/* Day Name and Date */}
+                              <td className="py-3 px-2 border-r border-slate-200 font-bold bg-slate-50 text-slate-800">
+                                <div className="text-xs uppercase">{dayInfo.dayName}</div>
+                                <div className="text-[10px] text-slate-500 font-normal">{dayInfo.displayDate}</div>
+                              </td>
+
+                              {/* Room Lab name with theme coloring */}
+                              <td className={`py-3 px-2 border-r border-slate-200 font-bold text-white text-[11px] ${
+                                activeScheduleRoom === "ห้องจัดรายการ 1" ? "bg-[#ef8840]" : "bg-[#4a90e2]"
+                              }`}>
+                                {activeScheduleRoom}
+                              </td>
+
+                              {/* Slots */}
+                              {slots.map((slot) => {
+                                if (slot === "พักเที่ยง") {
+                                  return (
+                                    <td key={slot} className="py-3 px-2 border-r border-slate-200 bg-slate-100 text-slate-400 font-bold text-[11px] select-none">
+                                      🍛 พักเที่ยง
+                                    </td>
+                                  );
+                                }
+
+                                // Look up if there's an approved or pending booking for this cell
+                                const b = findBookingForCell(activeScheduleRoom, dayInfo.dateStr, slot);
+
+                                if (b) {
+                                  const isApproved = b.status === "approved";
+                                  return (
+                                    <td 
+                                      key={slot} 
+                                      className={`py-2 px-2 border-r border-slate-200 text-left align-top transition-all ${
+                                        isApproved 
+                                          ? "bg-[#fbdcb9]/80 border-l-2 border-l-[#ef8840]" 
+                                          : "bg-amber-50/80 border-l-2 border-l-amber-400"
+                                      }`}
+                                    >
+                                      <div className="flex flex-col h-full justify-between gap-1">
+                                        <div className="font-extrabold text-slate-800 text-[10px] sm:text-[11px] leading-snug line-clamp-2">
+                                          {b.purpose}
+                                        </div>
+                                        <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono mt-1">
+                                          <span className="truncate max-w-[70px] font-semibold">{b.studentName.split(' ')[0]}</span>
+                                          <span className={`px-1 rounded-[4px] font-bold text-[8px] uppercase shrink-0 ${
+                                            isApproved 
+                                              ? "bg-[#ef8840]/15 text-[#ef8840]" 
+                                              : "bg-amber-100 text-amber-850"
+                                          }`}>
+                                            {isApproved ? "Approved" : "Pending"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  );
+                                }
+
+                                // Empty/Free Slot: Click to book!
+                                return (
+                                  <td 
+                                    key={slot} 
+                                    className="py-3 px-2 border-r border-slate-200 transition-all hover:bg-emerald-50/45 group cursor-pointer"
+                                    onClick={() => {
+                                      setBookingRoom(activeScheduleRoom);
+                                      setBookingDate(dayInfo.dateStr);
+                                      // Normalize bookingSlot value
+                                      const normalizedSlotVal = slot === "9.00 - 10.00" ? "09:00 - 10:00" : slot;
+                                      setBookingSlot(normalizedSlotVal);
+                                      
+                                      // Scroll down and focus booking form smoothly
+                                      const formElement = document.getElementById("booking_tab_root");
+                                      if (formElement) {
+                                        formElement.scrollIntoView({ behavior: 'smooth' });
+                                      }
+                                    }}
+                                  >
+                                    <div className="text-[10px] text-slate-400 font-bold group-hover:text-emerald-600 transition-colors flex items-center justify-center gap-0.5">
+                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 text-[9px]">➕</span>
+                                      ว่าง
+                                    </div>
+                                    <div className="text-[8px] text-slate-300 group-hover:text-emerald-500 transition-colors font-mono">
+                                      คลิกเพื่อเลือก
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 gap-2">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 bg-[#fbdcb9] border-l-2 border-l-[#ef8840] inline-block rounded"></span>
+                        <span className="font-semibold text-slate-600">อนุมัติการจองแล้ว (Approved)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 bg-amber-50 border-l-2 border-l-amber-400 inline-block rounded"></span>
+                        <span className="font-semibold text-slate-600">รอเข้าคิวอนุมัติ (Pending)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 bg-white border border-slate-200 inline-block rounded"></span>
+                        <span className="font-semibold text-slate-600">ว่าง (คลิกที่ช่องเพื่อเลือกวัน-เวลาลงฟอร์ม)</span>
+                      </div>
+                    </div>
+                    <p className="italic text-indigo-650 font-bold">
+                      💡 เคล็ดลับ: คุณสามารถคลิกช่อง "ว่าง" บนตารางเพื่อใส่ข้อมูลวัน-เวลาลงฟอร์มจองได้ทันที!
+                    </p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   
                   {/* LEFT COLUMN: Booking submission form (5-cols) */}
@@ -900,7 +1202,10 @@ export default function App() {
                         <label className="text-xs font-bold text-slate-700 block mb-1">1. เลือกห้องจัดรายการ</label>
                         <select
                           value={bookingRoom}
-                          onChange={(e) => setBookingRoom(e.target.value)}
+                          onChange={(e) => {
+                            setBookingRoom(e.target.value);
+                            setActiveScheduleRoom(e.target.value);
+                          }}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-850 focus:bg-white focus:outline-none transition-all font-bold"
                         >
                           <option value="ห้องจัดรายการ 1">ห้องจัดรายการ 1</option>
@@ -914,7 +1219,12 @@ export default function App() {
                           <input
                             type="date"
                             value={bookingDate}
-                            onChange={(e) => setBookingDate(e.target.value)}
+                            onChange={(e) => {
+                              setBookingDate(e.target.value);
+                              if (e.target.value) {
+                                setScheduleBaseDate(e.target.value);
+                              }
+                            }}
                             className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
                           />
                         </div>
