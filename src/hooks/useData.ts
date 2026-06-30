@@ -152,6 +152,10 @@ export function useData() {
   const [lastNotification, setLastNotification] = useState<string | null>(null);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
   const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
+  const [roomImages, setRoomImages] = useState<{ [key: string]: string }>({
+    "ห้องจัดรายการ 1": "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000",
+    "ห้องจัดรายการ 2": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+  });
 
 
   // Load sandbox presets if firebase is active or fallback
@@ -218,6 +222,47 @@ export function useData() {
       }
     }
   }, []);
+
+  // Sync Room Images
+  useEffect(() => {
+    const shouldUseFirebase = isFirebaseConfigured && db;
+    if (shouldUseFirebase) {
+      const unsubscribe = onSnapshot(doc(db, 'configs', 'room_images'), (snapshot) => {
+        if (snapshot.exists()) {
+          setRoomImages(snapshot.data() as { [key: string]: string });
+        } else {
+          // If doesn't exist, create it with default
+          setDoc(doc(db, 'configs', 'room_images'), {
+            "ห้องจัดรายการ 1": "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000",
+            "ห้องจัดรายการ 2": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+          }).catch(err => console.warn("Failed to write default room images:", err));
+        }
+      }, (error) => {
+        console.error("Room images sync error:", error);
+      });
+      return unsubscribe;
+    } else {
+      const local = getLocalStorageItem('bu_ca_room_images', null);
+      if (local) {
+        setRoomImages(local);
+      }
+    }
+  }, []);
+
+  const updateRoomImages = async (newImages: { [key: string]: string }) => {
+    // Optimistic update: instantly update local state and localStorage
+    setRoomImages(newImages);
+    saveLocalStorageItem('bu_ca_room_images', newImages);
+
+    const shouldUseFirebase = isFirebaseConfigured && db;
+    if (shouldUseFirebase) {
+      try {
+        await setDoc(doc(db, 'configs', 'room_images'), newImages);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'configs/room_images');
+      }
+    }
+  };
 
   // Sync Programs
   useEffect(() => {
@@ -850,6 +895,21 @@ export function useData() {
   // --- Room Booking CRUD Operations ---
   const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string) => {
     if (!currentUser) return;
+
+    let subject = "";
+    let bookingPurpose = "";
+    if (purpose.includes("(")) {
+      const match = purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
+      if (match) {
+        subject = match[1].trim();
+        bookingPurpose = match[2].trim();
+      } else {
+        subject = purpose;
+      }
+    } else {
+      subject = purpose;
+    }
+
     const bookingPayload: Omit<RoomBooking, 'id'> = {
       studentId: currentUser.uid,
       studentName: currentUser.name,
@@ -860,12 +920,14 @@ export function useData() {
       purpose,
       studentIdInput,
       phone,
-      status: 'pending',
+      status: 'approved',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      subject,
+      bookingPurpose
     };
 
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser && currentUser.uid === auth.currentUser.uid);
     if (shouldUseFirebase) {
       try {
         await addDoc(collection(db, 'bookings'), bookingPayload);
@@ -889,7 +951,7 @@ export function useData() {
       status,
       updatedAt: new Date().toISOString()
     };
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'bookings', id);
@@ -910,7 +972,7 @@ export function useData() {
   };
 
   const deleteBooking = async (id: string) => {
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'bookings', id);
@@ -959,7 +1021,7 @@ export function useData() {
       phone
     };
 
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser && currentUser.uid === auth.currentUser.uid);
     if (shouldUseFirebase) {
       try {
         await addDoc(collection(db, 'programs'), programPayload);
@@ -983,7 +1045,7 @@ export function useData() {
       status,
       updatedAt: new Date().toISOString()
     };
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'programs', id);
@@ -1004,7 +1066,7 @@ export function useData() {
   };
 
   const deleteProgram = async (id: string) => {
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'programs', id);
@@ -1045,6 +1107,8 @@ export function useData() {
     deleteBooking,
     createProgram,
     updateProgramStatus,
-    deleteProgram
+    deleteProgram,
+    roomImages,
+    updateRoomImages
   };
 }

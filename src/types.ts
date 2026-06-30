@@ -92,6 +92,8 @@ export interface RoomBooking {
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string; // ISO String
   updatedAt: string; // ISO String
+  subject?: string;
+  bookingPurpose?: string;
 }
 
 export interface BroadcastProgram {

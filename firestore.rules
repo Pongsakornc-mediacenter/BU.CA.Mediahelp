@@ -153,6 +153,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Configs Collection (e.g. room preview images)
+    match /configs/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Broadcast Programs Collection
     match /programs/{programId} {
       allow read, list: if isSignedIn();

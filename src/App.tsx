@@ -27,13 +27,25 @@ import {
   Mic,
   Lightbulb,
   PenTool,
-  Plus
+  Plus,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData } from './hooks/useData';
 import CameraWorkbench from './components/CameraWorkbench';
 import AdminDashboard from './components/AdminDashboard';
 import { HelpCategory } from './types';
+
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      resolve(event.target?.result as string);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
 
 export default function App() {
   const {
@@ -61,11 +73,41 @@ export default function App() {
     deleteBooking,
     createProgram,
     updateProgramStatus,
-    deleteProgram
+    deleteProgram,
+    roomImages,
+    updateRoomImages
   } = useData();
 
   // Admin view toggle for student simulation view switcher (Requested Feature)
   const [isAdminViewingAsStudent, setIsAdminViewingAsStudent] = useState(false);
+
+  // Room Settings States
+  const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
+  const [tempRoom1Image, setTempRoom1Image] = useState("");
+  const [tempRoom2Image, setTempRoom2Image] = useState("");
+
+  // Sync temp images when loaded
+  React.useEffect(() => {
+    if (roomImages) {
+      setTempRoom1Image(roomImages["ห้องจัดรายการ 1"] || "");
+      setTempRoom2Image(roomImages["ห้องจัดรายการ 2"] || "");
+    }
+  }, [roomImages]);
+
+  const room1FileRef = React.useRef<HTMLInputElement>(null);
+  const room2FileRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setTempImage: (img: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const compressed = await compressImage(file);
+        setTempImage(compressed);
+      } catch (err) {
+        console.error("Error compressing file:", err);
+      }
+    }
+  };
 
   // Active view states for Student
   const [studentTab, setStudentTab] = useState<'workbench' | 'helpdesk' | 'booking'>('workbench');
@@ -79,6 +121,7 @@ export default function App() {
   const [bookingStudentId, setBookingStudentId] = useState("");
   const [bookingPhone, setBookingPhone] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   
   // Schedule Check Table States
   const [activeScheduleRoom, setActiveScheduleRoom] = useState<string>("ห้องจัดรายการ 1");
@@ -327,6 +370,9 @@ export default function App() {
       return;
     }
 
+    // Close the modal immediately for instant, responsive UI feedback
+    setIsBookingModalOpen(false);
+
     try {
       const combinedPurpose = `${bookingSubject.trim()} (${bookingPurpose.trim()})`;
       await createBooking(
@@ -341,7 +387,7 @@ export default function App() {
       setBookingPurpose("");
       setBookingStudentId("");
       setBookingPhone("");
-      setBookingSuccessMsg("🎉 ส่งคำขอจองห้องจัดรายการเรียบร้อยแล้วค่ะ! กรุณารออาจารย์เข้าคิวอนุมัติผ่านระบบแผงควบคุม");
+      setBookingSuccessMsg("🎉 ยืนยันการจองห้องจัดรายการเสร็จสิ้นเรียบร้อยแล้วค่ะ! ข้อมูลแสดงในตารางจัดรายการเรียบร้อยแล้ว");
       setTimeout(() => setBookingSuccessMsg(""), 6000);
     } catch (err) {
       console.error("Booking error details:", err);
@@ -441,7 +487,7 @@ export default function App() {
 
       {/* 2. Top Navigation Bar */}
       <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm/50">
-        <div className="max-w-[1700px] mx-auto px-4 h-16 flex justify-between items-center">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-to-tr from-violet-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-md">
               <Camera className="w-5 h-5" />
@@ -475,6 +521,17 @@ export default function App() {
                     {isAdminViewingAsStudent ? '🔄 สลับกลับโหมดอาจารย์' : '👁️ สลับมุมมองนักศึกษา'}
                   </button>
                 )}
+                {currentUser.email === 'pongsakorn.c@bu.ac.th' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRoomSettingsOpen(true)}
+                    id="room_images_settings_btn"
+                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 p-2 rounded-xl transition-all border border-indigo-100 flex items-center justify-center cursor-pointer shadow-sm"
+                    title="ตั้งค่ารูปภาพห้องจัดรายการ"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                )}
                 <div className="hidden sm:block text-right">
                   <span className="text-slate-800 text-xs font-bold block">{currentUser.name}</span>
                   <span className="text-slate-400 text-[9px] block font-mono">{currentUser.email}</span>
@@ -497,7 +554,7 @@ export default function App() {
       </header>
 
       {/* 3. Central Content Arena */}
-      <main className="flex-1 w-full max-w-[1700px] mx-auto p-4 sm:p-6 space-y-6 transition-all duration-300">
+      <main className="flex-1 w-full max-w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 transition-all duration-300">
 
         {/* Auth Required Check screen if not logged in */}
         {!currentUser ? (
@@ -574,6 +631,7 @@ export default function App() {
             onUpdateProgramStatus={updateProgramStatus}
             onDeleteProgram={deleteProgram}
             onCreateBooking={createBooking}
+            roomImages={roomImages}
           />
         ) : (
           /* =======================================================
@@ -945,50 +1003,40 @@ export default function App() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-6"
+                className="space-y-6 text-white"
                 id="booking_tab_root"
               >
                 
-                {/* Header Welcome banner */}
-                <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm">
-                  <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2 font-display">
-                    <BookOpen className="w-5 h-5 text-indigo-600" />
-                    ระบบจองห้องสตูดิโอนิเทศศาสตร์ (CA Studio Room Bookings Portal)
-                  </h3>
-                  <p className="text-slate-500 text-xs mt-1">
-                    จองเวลาใช้อุปกรณ์กลุ่ม ห้องทำพอดแคสต์ สตูดิโอโทรทัศน์เสมือนจริง และประเด็นออกอากาศวิทยุแบบสอดประสานกันเรียลไทม์
-                  </p>
-                </div>
-
                 {/* Submitting Success feedback banner */}
                 {bookingSuccessMsg && (
-                  <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-4 rounded-xl border border-emerald-200 animate-pulse">
+                  <div className="bg-emerald-500/15 text-emerald-400 text-xs font-bold p-4 rounded-xl border border-emerald-500/20 animate-pulse">
                     {bookingSuccessMsg}
                   </div>
                 )}
-                <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm space-y-4">
-                  {/* centered header of the table */}
-                  <div className="text-center space-y-1">
-                    <h4 className="text-base font-extrabold text-slate-800 tracking-tight font-display flex items-center justify-center gap-1.5">
+
+                {/* Centered Dark Header Section with Room selectors */}
+                <div className="bg-[#111115] border border-[#2d2d34] p-6 sm:p-8 rounded-[24px] shadow-2xl text-center space-y-4">
+                  <div className="text-center space-y-2">
+                    <h4 className="text-lg sm:text-xl font-extrabold text-[#ef8840] tracking-tight font-display flex items-center justify-center gap-1.5">
                       📅 ตารางห้องจัดรายการ
                     </h4>
-                    <p className="text-slate-500 text-[11px] sm:text-xs">
+                    <p className="text-slate-400 text-xs max-w-2xl mx-auto leading-relaxed">
                       กรุณาตรวจสอบตารางการจองด้านล่างเพื่อตรวจสอบคิวที่ว่างก่อนกรอกแบบฟอร์มจองห้องจัดรายการต่อ
                     </p>
                   </div>
 
                   {/* Room selectors (tabs like in the user's Excel mockup) */}
-                  <div className="flex max-w-xl mx-auto border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="flex max-w-xl mx-auto bg-[#0a0a0c] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-inner p-1">
                     <button
                       type="button"
                       onClick={() => {
                         setActiveScheduleRoom("ห้องจัดรายการ 1");
                         setBookingRoom("ห้องจัดรายการ 1");
                       }}
-                      className={`flex-1 py-2.5 text-center text-xs font-extrabold transition-all border-r border-slate-200 cursor-pointer ${
+                      className={`flex-1 py-3 text-center text-xs font-extrabold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
                         activeScheduleRoom === "ห้องจัดรายการ 1"
-                          ? "bg-[#ef8840] text-white"
-                          : "bg-slate-50 hover:bg-slate-100 text-slate-600"
+                          ? "bg-[#ef8840] text-white shadow-md"
+                          : "hover:bg-white/5 text-slate-400"
                       }`}
                     >
                       🎙️ ห้องจัดรายการ 1
@@ -999,16 +1047,41 @@ export default function App() {
                         setActiveScheduleRoom("ห้องจัดรายการ 2");
                         setBookingRoom("ห้องจัดรายการ 2");
                       }}
-                      className={`flex-1 py-2.5 text-center text-xs font-extrabold transition-all cursor-pointer ${
+                      className={`flex-1 py-3 text-center text-xs font-extrabold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
                         activeScheduleRoom === "ห้องจัดรายการ 2"
-                          ? "bg-[#4a90e2] text-white"
-                          : "bg-slate-50 hover:bg-slate-100 text-slate-600"
+                          ? "bg-[#4a90e2] text-white shadow-md"
+                          : "hover:bg-white/5 text-slate-400"
                       }`}
                     >
                       🎧 ห้องจัดรายการ 2
                     </button>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+                  
+                  {/* LEFT COLUMN: Room Image Preview (Fills height to match table on desktop) */}
+                  <div className="xl:col-span-5 flex flex-col justify-start">
+                    <div className="w-[95%] mx-auto aspect-square bg-[#111115] border border-[#2d2d34] rounded-[24px] overflow-hidden shadow-2xl relative group">
+                      <img 
+                        src={roomImages?.[activeScheduleRoom] || (activeScheduleRoom === "ห้องจัดรายการ 1" ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000" : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000")} 
+                        alt={activeScheduleRoom}
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                      />
+                      {/* Elegant overlay gradient at bottom */}
+                      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+                    </div>
+                    {/* Caption underneath the image */}
+                    <div className="pt-3 text-center">
+                      <p className="text-[#94a3b8] text-xs font-semibold tracking-wide">
+                        มุมมองบรรยากาศห้อง/สถานที่จอง (Atmospheric Preview)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* RIGHT COLUMN: Table representation (xl:col-span-7) */}
+                  <div className="xl:col-span-7 bg-[#111115] border border-[#2d2d34] p-5 rounded-[24px] shadow-2xl space-y-4">
                   {/* Navigation controls for weeks */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <div className="flex items-center gap-2">
@@ -1022,7 +1095,7 @@ export default function App() {
                           const dd = String(base.getDate()).padStart(2, '0');
                           setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
                         }}
-                        className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                       >
                         ◀ สัปดาห์ก่อนหน้า
                       </button>
@@ -1037,7 +1110,7 @@ export default function App() {
                           setScheduleBaseDate(todayStr);
                           setBookingDate(todayStr);
                         }}
-                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        className="bg-[#ef8840]/10 hover:bg-[#ef8840]/20 text-[#ef8840] border border-[#ef8840]/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                       >
                         วันนี้ / สัปดาห์นี้
                       </button>
@@ -1051,38 +1124,37 @@ export default function App() {
                           const dd = String(base.getDate()).padStart(2, '0');
                           setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
                         }}
-                        className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                       >
                         สัปดาห์ถัดไป ▶
                       </button>
                     </div>
 
-                    <div className="text-xs text-slate-600 font-bold bg-slate-100/75 px-3 py-1.5 rounded-lg border border-slate-200/55 flex items-center gap-1.5">
-                      📅 สัปดาห์ประจำวันที่: <span className="text-indigo-700 font-extrabold">{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
+                    <div className="text-xs text-slate-100 font-bold bg-[#16161a] px-3 py-1.5 rounded-lg border border-[#2d2d34] flex items-center gap-1.5">
+                      📅 สัปดาห์ประจำวันที่: <span className="text-[#ef8840] font-extrabold">{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
                     </div>
                   </div>
 
                   {/* Main Grid Table representation */}
-                  <div className="overflow-x-auto border border-slate-200/70 rounded-xl shadow-inner bg-slate-50/50">
-                    <table className="w-full min-w-[900px] border-collapse text-xs text-center">
+                  <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
+                    <table className="w-full min-w-[1072px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
                       <thead>
                         {/* Elegant dark grey row for วิชา */}
-                        <tr className="border-b border-slate-700">
-                          <th colSpan={9} className="py-3 bg-slate-800 text-slate-100 font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
+                        <tr className="border-b border-[#2d2d34]">
+                          <th colSpan={8} className="py-3 bg-[#111113] text-[#ef8840] font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
                             📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
                           </th>
                         </tr>
                         {/* Table Headers in unified slate dark styling for professional contrast */}
-                        <tr className="bg-slate-700 text-slate-100 font-bold border-b border-slate-600">
-                          <th className="py-2.5 px-2 border-r border-slate-600 bg-slate-800 text-slate-100 font-extrabold">วัน / เวลา</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 bg-slate-800 text-slate-100 font-extrabold w-36">Room Lab</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">9.00 - 10.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">10.00 - 11.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">11.00 - 12.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 bg-amber-600 text-white w-24 font-black">พักเที่ยง</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">13.00 - 14.00</th>
-                          <th className="py-2.5 px-2 border-r border-slate-600 text-slate-100 font-extrabold">14.00 - 15.00</th>
-                          <th className="py-2.5 px-2 text-slate-100 font-extrabold">15.00 - 16.00</th>
+                        <tr className="bg-[#16161a] text-[#ffffff] font-bold border-b border-[#2d2d34]">
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[88px]">วัน / เวลา</th>
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">9.00 - 10.00</th>
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">10.00 - 11.00</th>
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">11.00 - 12.00</th>
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#e27329] text-[#ffffff] w-[80px] font-black">พักเที่ยง</th>
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">13.00 - 14.00</th>
+                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">14.00 - 15.00</th>
+                          <th className="py-2.5 px-2 text-[#ffffff] font-extrabold w-[136px]">15.00 - 16.00</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1098,29 +1170,18 @@ export default function App() {
                           ];
 
                           return (
-                            <tr key={dayInfo.dayName} className="border-b border-slate-200 bg-white hover:bg-slate-50/30 transition-colors">
+                            <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors">
                               {/* Day Name and Date */}
-                              <td className="py-3 px-2 border-r border-slate-200 font-bold bg-slate-50 text-slate-800">
-                                <div className="text-xs uppercase">{dayInfo.dayName}</div>
-                                <div className="text-[10px] text-slate-500 font-semibold">{dayInfo.displayDate}</div>
-                              </td>
-
-                              {/* Room Lab name with clean modern tags */}
-                              <td className="py-3 px-2 border-r border-slate-200 font-bold text-[11px] bg-slate-50 text-slate-700">
-                                <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold whitespace-nowrap ${
-                                  activeScheduleRoom === "ห้องจัดรายการ 1" 
-                                    ? "bg-[#ef8840]/10 text-[#ef8840] border border-[#ef8840]/20" 
-                                    : "bg-[#4a90e2]/10 text-[#4a90e2] border border-[#4a90e2]/20"
-                                }`}>
-                                  {activeScheduleRoom}
-                                </span>
+                              <td className="py-3 px-2 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100">
+                                <div className="text-xs uppercase font-extrabold text-[#ef8840]">{dayInfo.dayName}</div>
+                                <div className="text-[10px] text-slate-400 font-semibold mt-0.5">{dayInfo.displayDate}</div>
                               </td>
 
                               {/* Slots */}
                               {slots.map((slot) => {
                                 if (slot === "พักเที่ยง") {
                                   return (
-                                    <td key={slot} className="py-3 px-2 border-r border-slate-200 bg-slate-50 text-slate-400 font-bold text-[11px] select-none">
+                                    <td key={slot} className="py-3 px-2 border-r border-[#2d2d34] bg-[#111113] text-slate-400 font-bold text-[11px] select-none">
                                       🍛 พักเที่ยง
                                     </td>
                                   );
@@ -1132,73 +1193,117 @@ export default function App() {
                                 if (b) {
                                   const isApproved = b.status === "approved";
                                   const isRoom1 = activeScheduleRoom === "ห้องจัดรายการ 1";
-                                  
-                                  // Soft premium booking styling based on room and status
-                                  const approvedRoom1Style = "bg-[#FFF8F3] border-l-4 border-l-[#ef8840] text-amber-950";
-                                  const approvedRoom2Style = "bg-[#F0F7FF] border-l-4 border-l-[#4a90e2] text-blue-950";
-                                  const pendingStyle = "bg-amber-50/60 border-l-4 border-l-amber-400 text-amber-900";
-
-                                  const cellClass = isApproved 
-                                    ? (isRoom1 ? approvedRoom1Style : approvedRoom2Style)
-                                    : pendingStyle;
 
                                   return (
                                     <td 
                                       key={slot} 
-                                      className={`py-2 px-2 border-r border-slate-200 text-left align-top transition-all ${cellClass}`}
+                                      className="p-1.5 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group"
                                     >
-                                      <div className="flex flex-col h-full justify-between gap-1.5">
-                                        <div className="font-extrabold text-slate-800 text-[10px] sm:text-[11px] leading-snug line-clamp-2">
-                                          {b.purpose}
-                                        </div>
-                                        <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono mt-1">
-                                          <span className="truncate max-w-[70px] font-bold text-slate-600">{b.studentName.split(' ')[0]}</span>
-                                          <span className={`px-1 rounded-[4px] font-extrabold text-[8px] uppercase shrink-0 ${
-                                            isApproved 
-                                              ? (isRoom1 ? "bg-[#ef8840]/15 text-[#ef8840]" : "bg-[#4a90e2]/15 text-[#4a90e2]")
-                                              : "bg-amber-200/60 text-amber-850"
-                                          }`}>
-                                            {isApproved ? "Approved" : "Pending"}
-                                          </span>
-                                        </div>
-                                      </div>
+                                      {(() => {
+                                        let displaySubject = b.subject || "";
+                                        let displayPurpose = b.bookingPurpose || "";
+                                        if (!displaySubject && b.purpose) {
+                                          if (b.purpose.includes("(")) {
+                                            const match = b.purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
+                                            if (match) {
+                                              displaySubject = match[1].trim();
+                                              displayPurpose = match[2].trim();
+                                            } else {
+                                              displaySubject = b.purpose;
+                                            }
+                                          } else {
+                                            displaySubject = b.purpose;
+                                          }
+                                        }
+                                        return (
+                                          <>
+                                            {/* Visible Compact Card */}
+                                            <div className={`p-2 rounded-lg border text-left flex flex-col justify-center h-full min-h-[92px] gap-1 transition-all duration-300 shadow-md ${
+                                              isApproved 
+                                                ? (isRoom1 
+                                                  ? "bg-[#0e0e11] border-[#ef8840]/30 border-l-4 border-l-[#ef8840]" 
+                                                  : "bg-[#0e0e11] border-[#4a90e2]/30 border-l-4 border-l-[#4a90e2]")
+                                                : "bg-[#0e0e11] border-amber-500/30 border-l-4 border-l-amber-500"
+                                            }`}>
+                                              <div className="flex flex-col gap-1 w-full overflow-hidden">
+                                                {/* Header: Subject */}
+                                                <div className="font-black text-[13px] text-[#e2e8f0] tracking-wide uppercase truncate" title={displaySubject}>
+                                                  {displaySubject}
+                                                </div>
+                                                
+                                                {/* Divider Line */}
+                                                <hr className="border-[#2d2d34]" />
+                                                
+                                                {/* Booker Name */}
+                                                <div className="text-[10.5px] font-bold text-[#cbd5e1] truncate leading-tight" title={b.studentName}>
+                                                  {(b.studentName || "").toLowerCase()}
+                                                </div>
+
+                                                {/* Student ID */}
+                                                <div className="text-[10px] font-mono font-bold text-[#94a3b8] tracking-wider">
+                                                  {b.studentIdInput || "-"}
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* Hover Details Card Popup */}
+                                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[85%] mb-1 w-[250px] pointer-events-none opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-200 z-50 bg-[#0e0e11] border border-[#2d2d34] rounded-xl shadow-[0_0_25px_rgba(0,0,0,0.85)] p-3.5 flex flex-col gap-2">
+                                              <div className="text-left">
+                                                <div className="flex justify-between items-center mb-1 text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                                                  <span>{activeScheduleRoom}</span>
+                                                  <span>⏱️ {slot}</span>
+                                                </div>
+                                                <div className="font-extrabold text-[12px] leading-tight text-white mb-2">
+                                                  {displaySubject} {displayPurpose && <span className="font-semibold text-slate-300 text-[10.5px]">({displayPurpose})</span>}
+                                                </div>
+                                                <hr className="border-[#2d2d34] my-1.5" />
+                                                <div className="space-y-1 text-slate-300">
+                                                  <div className="flex items-center gap-1.5 font-bold text-slate-100 text-[11px]">
+                                                    <span className="text-xs select-none">👤</span>
+                                                    <span>{b.studentName}</span>
+                                                  </div>
+                                                  {b.studentIdInput && (
+                                                    <div className="flex items-center gap-1.5 font-mono font-medium text-slate-300 text-[10px]">
+                                                      <span className="text-xs select-none">🆔</span>
+                                                      <span>{b.studentIdInput}</span>
+                                                    </div>
+                                                  )}
+                                                  {b.phone && (
+                                                    <div className="flex items-center gap-1.5 font-mono font-medium text-slate-300 text-[10px]">
+                                                      <span className="text-xs select-none">📞</span>
+                                                      <span>{b.phone}</span>
+                                                    </div>
+                                                  )}
+                                                  {b.purpose && (
+                                                    <div className="text-[10px] text-slate-400 border-t border-[#2d2d34] pt-1.5 mt-1 bg-[#16161a]/30 p-1 rounded-md">
+                                                      <span className="font-semibold text-slate-300">วัตถุประสงค์: </span>
+                                                      <span>{b.purpose}</span>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </>
+                                        );
+                                      })()}
                                     </td>
                                   );
                                 }
 
-                                // Empty/Free Slot: Click to book!
+                                // Empty/Free Slot
                                 return (
                                   <td 
                                     key={slot} 
-                                    className="py-3 px-2 border-r border-slate-200 cursor-pointer shine-cell group bg-white hover:bg-emerald-50/25 transition-colors duration-300"
-                                    onClick={() => {
-                                      setBookingRoom(activeScheduleRoom);
-                                      setBookingDate(dayInfo.dateStr);
-                                      // Normalize bookingSlot value
-                                      const normalizedSlotVal = slot === "9.00 - 10.00" ? "09:00 - 10:00" : slot;
-                                      setBookingSlot(normalizedSlotVal);
-                                      
-                                      // Scroll down and focus booking form smoothly
-                                      const formElement = document.getElementById("booking_tab_root");
-                                      if (formElement) {
-                                        formElement.scrollIntoView({ behavior: 'smooth' });
-                                      }
-                                    }}
+                                    className="p-1.5 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
                                   >
-                                    {/* The skew/shine overlay block */}
-                                    <div className="shine-cell-overlay"></div>
-
-                                    {/* Stable layout container that never shifts size */}
-                                    <div className="relative flex items-center justify-center min-h-[36px] select-none">
-                                      {/* Default state: Just a clean, tiny "ว่าง" */}
-                                      <span className="text-[11px] text-slate-400 font-bold group-hover:opacity-0 transition-opacity duration-200 absolute">
-                                        ว่าง
-                                      </span>
-                                      
-                                      {/* Hover state: Beautiful, encouraging "+ คลิกเพื่อจอง" */}
-                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[10px] text-emerald-600 font-extrabold absolute whitespace-nowrap">
-                                        ➕ คลิกเพื่อจอง
-                                      </span>
+                                    {/* Empty card container that matches the booked card dimensions and style */}
+                                    <div className="p-2 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex flex-col items-center justify-center h-full min-h-[92px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
+                                      <div className="relative flex flex-col items-center justify-center select-none w-full gap-1">
+                                        <span className="text-lg opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
+                                        <span className="text-[11px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
+                                          ว่าง
+                                        </span>
+                                      </div>
                                     </div>
                                   </td>
                                 );
@@ -1210,29 +1315,8 @@ export default function App() {
                     </table>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-4 py-3 rounded-xl border border-slate-150/60 gap-2">
-                    <div className="flex flex-wrap items-center gap-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 bg-[#FFF8F3] border border-[#ef8840]/30 border-l-4 border-l-[#ef8840] inline-block rounded"></span>
-                        <span className="font-bold text-slate-600">จองห้อง 1 แล้ว (Approved)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 bg-[#F0F7FF] border border-[#4a90e2]/30 border-l-4 border-l-[#4a90e2] inline-block rounded"></span>
-                        <span className="font-bold text-slate-600">จองห้อง 2 แล้ว (Approved)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 inline-block rounded"></span>
-                        <span className="font-bold text-slate-600">รอเข้าคิวอนุมัติ (Pending)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 bg-white border border-slate-200 inline-block rounded"></span>
-                        <span className="font-bold text-slate-600">ว่าง (คลิกที่ช่องเพื่อเลือกวัน-เวลา)</span>
-                      </div>
-                    </div>
-                    <p className="italic text-indigo-650 font-bold">
-                      💡 เคล็ดลับ: คุณสามารถคลิกช่อง "ว่าง" บนตารางเพื่อใส่ข้อมูลวัน-เวลาลงฟอร์มจองได้ทันที!
-                    </p>
-                  </div>
+
+                </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1494,7 +1578,7 @@ export default function App() {
 
       {/* 4. Footer */}
       <footer className="bg-white border-t border-slate-100 py-6 mt-12 bg-slate-50/70">
-        <div className="max-w-[1700px] mx-auto px-4 text-center space-y-1.5">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-1.5">
           <p className="text-slate-500 text-xs leading-normal">
             © 2026 BU CA Media Support Panel. พัฒนาโดยใช้เทคโนโลยี React, Tailwind v4 และ Google Firestore Spark Plan (No-Cost tier)<br />
             สลับโหมดผู้ใช้เพื่อทำการทดสอบฟังก์ชันแลกเปลี่ยนข้อมูลด่วน คำตอบสั่นแจ้งเตือน และรายงานสรุป Excel สำหรับนักจัดสัมมนาได้อิสระ
@@ -1533,6 +1617,367 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Centered Booking Form Modal */}
+      <AnimatePresence>
+        {isBookingModalOpen && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setIsBookingModalOpen(false)}
+            id="booking_modal_backdrop"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative w-full max-w-lg bg-white border border-slate-100 rounded-[24px] p-6 sm:p-7 shadow-2xl cursor-default my-auto"
+              onClick={(e) => e.stopPropagation()}
+              id="booking_modal_content"
+            >
+              {/* Close Button */}
+              <button 
+                type="button"
+                className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 w-8 h-8 flex items-center justify-center transition-colors cursor-pointer"
+                onClick={() => setIsBookingModalOpen(false)}
+                title="ปิดหน้าต่าง"
+              >
+                ✕
+              </button>
+
+              <div className="space-y-4">
+                {/* Header info */}
+                <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+                  <div className="bg-indigo-50 text-indigo-650 p-2.5 rounded-xl border border-indigo-100/50">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-slate-850 text-base font-display">
+                      ยืนยันการจอง
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Form starts */}
+                <form onSubmit={handleRoomBookingSubmit} className="space-y-4 pt-1">
+                  
+                  {/* Select Room */}
+                  <div>
+                    <label className="text-[11px] font-extrabold text-slate-700 block mb-1">1. ห้องจัดรายการวิทยุ/โทรทัศน์</label>
+                    <select
+                      value={bookingRoom}
+                      disabled
+                      className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-500 font-bold appearance-none cursor-default select-none focus:outline-none"
+                    >
+                      <option value="ห้องจัดรายการ 1">🎙️ ห้องจัดรายการ 1</option>
+                      <option value="ห้องจัดรายการ 2">🎧 ห้องจัดรายการ 2</option>
+                    </select>
+                  </div>
+
+                  {/* Date & Timeslot Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-slate-700 block mb-1">2. วันที่จอง</label>
+                      <input
+                        type="date"
+                        value={bookingDate}
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-500 font-bold cursor-default select-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-slate-700 block mb-1">3. ช่วงเวลา (Timeslot)</label>
+                      <select
+                        value={bookingSlot}
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none transition-all font-mono font-bold text-slate-500 appearance-none cursor-default select-none"
+                      >
+                        <option value="09:00 - 10:00">09:00 - 10:00</option>
+                        <option value="10:00 - 11:00">10:00 - 11:00</option>
+                        <option value="11:00 - 12:00">11:00 - 12:00</option>
+                        <option value="13:00 - 14:00">13:00 - 14:00</option>
+                        <option value="14:00 - 15:00">14:00 - 15:00</option>
+                        <option value="15:00 - 16:00">15:00 - 16:00</option>
+                        <option value="16:00 - 17:00">16:00 - 17:00</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Subject and Purpose */}
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-slate-700 block mb-1">4. รายวิชาเรียน</label>
+                      <input
+                        type="text"
+                        value={bookingSubject}
+                        onChange={(e) => setBookingSubject(e.target.value)}
+                        required
+                        placeholder="ระบุรหัสวิชา/ชื่อวิชา เช่น CA102 วิทยุกระจายเสียง"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-slate-700 block mb-1">วัตถุประสงค์การใช้งาน</label>
+                      <textarea
+                        rows={2.5}
+                        value={bookingPurpose}
+                        onChange={(e) => setBookingPurpose(e.target.value)}
+                        required
+                        placeholder="เช่น ซ้อมจัดรายการเพลงสั้น / อัดเทปส่งอาจารย์กลุ่ม / งานสัมมนาพอดแคสต์..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-850 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Student ID & Contact phone */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-slate-700 block mb-1">5. รหัสนักศึกษาผู้จอง</label>
+                      <input
+                        type="text"
+                        maxLength={15}
+                        value={bookingStudentId}
+                        onChange={(e) => setBookingStudentId(e.target.value)}
+                        required
+                        placeholder="รหัสนักศึกษา 10 หลัก"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-850 font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-slate-700 block mb-1">6. เบอร์โทรศัพท์ติดต่อ</label>
+                      <input
+                        type="tel"
+                        maxLength={12}
+                        value={bookingPhone}
+                        onChange={(e) => setBookingPhone(e.target.value)}
+                        required
+                        placeholder="เช่น 089XXXXXXX"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-850 font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit / Action buttons */}
+                  <div className="flex gap-3 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setIsBookingModalOpen(false)}
+                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold rounded-xl py-3 text-xs transition-colors cursor-pointer"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold rounded-xl py-3 text-xs transition-colors shadow-md shadow-indigo-600/15 cursor-pointer"
+                    >
+                      ⚡ ยืนยันการจอง
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {isRoomSettingsOpen && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto"
+            onClick={() => setIsRoomSettingsOpen(false)}
+            id="room_settings_modal_backdrop"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative w-full max-w-lg bg-[#0e0e11] border border-[#2d2d34] rounded-[24px] p-6 sm:p-7 shadow-[0_0_50px_rgba(0,0,0,0.8)] cursor-default my-auto text-white"
+              onClick={(e) => e.stopPropagation()}
+              id="room_settings_modal_content"
+            >
+              {/* Close Button */}
+              <button 
+                type="button"
+                className="absolute top-5 right-5 text-slate-400 hover:text-white rounded-full hover:bg-white/10 w-8 h-8 flex items-center justify-center transition-colors cursor-pointer"
+                onClick={() => setIsRoomSettingsOpen(false)}
+                title="ปิดหน้าต่าง"
+              >
+                ✕
+              </button>
+
+              <div className="space-y-4">
+                {/* Header info */}
+                <div className="flex items-center gap-2.5 pb-2 border-b border-[#2d2d34]">
+                  <div className="bg-[#ef8840]/10 text-[#ef8840] p-2.5 rounded-xl border border-[#ef8840]/20">
+                    <Settings className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-white text-base font-display">
+                      ตั้งค่ารูปภาพห้องจัดรายการ (Room Preview Images)
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">เฉพาะแอดมิน pongsakorn.c@bu.ac.th</p>
+                  </div>
+                </div>
+
+                {/* Form starts */}
+                <div className="space-y-6 pt-1">
+                  
+                  {/* Grid for Rooms Side-By-Side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* ROOM 1 UPLOAD */}
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="text-[11px] font-extrabold text-slate-300 block text-center">🎙️ ห้องจัดรายการ 1</span>
+                      
+                      {/* Clickable Square Container */}
+                      <div 
+                        onClick={() => room1FileRef.current?.click()}
+                        className="w-full aspect-square bg-[#16161a] border-2 border-dashed border-[#2d2d34] hover:border-[#ef8840] hover:bg-[#1a1a22] rounded-2xl overflow-hidden relative group cursor-pointer flex flex-col items-center justify-center transition-all shadow-inner"
+                      >
+                        {tempRoom1Image ? (
+                          <>
+                            <img 
+                              src={tempRoom1Image} 
+                              alt="Room 1 Preview" 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            {/* Hover Overlay like Discord */}
+                            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-2 text-center space-y-1">
+                              <Camera className="w-6 h-6 text-slate-200 animate-bounce" />
+                              <span className="text-[10px] font-black tracking-wider uppercase">อัปโหลดรูปใหม่</span>
+                              <span className="text-[8px] text-slate-400 font-medium">Click to upload</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
+                            <div className="bg-[#1e1e24] group-hover:bg-[#ef8840]/15 text-slate-400 group-hover:text-[#ef8840] p-3 rounded-full transition-colors border border-[#2d2d34]">
+                              <Camera className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-extrabold text-slate-400 group-hover:text-slate-200 block">อัปโหลดภาพ</span>
+                              <span className="text-[8px] text-slate-500 block mt-0.5">Click to upload</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <input 
+                        type="file" 
+                        ref={room1FileRef} 
+                        onChange={(e) => handleImageFileChange(e, setTempRoom1Image)}
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+
+                      {/* Optional URL input below */}
+                      <div className="w-full pt-1">
+                        <label className="text-[9px] font-bold text-slate-400 block mb-0.5">หรือใส่ URL รูปภาพ</label>
+                        <input
+                          type="url"
+                          value={tempRoom1Image}
+                          onChange={(e) => setTempRoom1Image(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="w-full bg-[#16161a] border border-[#2d2d34] rounded-lg px-2 py-1.5 text-[10px] text-slate-200 focus:bg-[#1a1a22] focus:border-[#ef8840] focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* ROOM 2 UPLOAD */}
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="text-[11px] font-extrabold text-slate-300 block text-center">🎧 ห้องจัดรายการ 2</span>
+                      
+                      {/* Clickable Square Container */}
+                      <div 
+                        onClick={() => room2FileRef.current?.click()}
+                        className="w-full aspect-square bg-[#16161a] border-2 border-dashed border-[#2d2d34] hover:border-[#4a90e2] hover:bg-[#1a1a22] rounded-2xl overflow-hidden relative group cursor-pointer flex flex-col items-center justify-center transition-all shadow-inner"
+                      >
+                        {tempRoom2Image ? (
+                          <>
+                            <img 
+                              src={tempRoom2Image} 
+                              alt="Room 2 Preview" 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            {/* Hover Overlay like Discord */}
+                            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-2 text-center space-y-1">
+                              <Camera className="w-6 h-6 text-slate-200 animate-bounce" />
+                              <span className="text-[10px] font-black tracking-wider uppercase">อัปโหลดรูปใหม่</span>
+                              <span className="text-[8px] text-slate-400 font-medium">Click to upload</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
+                            <div className="bg-[#1e1e24] group-hover:bg-[#4a90e2]/15 text-slate-400 group-hover:text-[#4a90e2] p-3 rounded-full transition-colors border border-[#2d2d34]">
+                              <Camera className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-extrabold text-slate-400 group-hover:text-slate-200 block">อัปโหลดภาพ</span>
+                              <span className="text-[8px] text-slate-500 block mt-0.5">Click to upload</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <input 
+                        type="file" 
+                        ref={room2FileRef} 
+                        onChange={(e) => handleImageFileChange(e, setTempRoom2Image)}
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+
+                      {/* Optional URL input below */}
+                      <div className="w-full pt-1">
+                        <label className="text-[9px] font-bold text-slate-400 block mb-0.5">หรือใส่ URL รูปภาพ</label>
+                        <input
+                          type="url"
+                          value={tempRoom2Image}
+                          onChange={(e) => setTempRoom2Image(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="w-full bg-[#16161a] border border-[#2d2d34] rounded-lg px-2 py-1.5 text-[10px] text-slate-200 focus:bg-[#1a1a22] focus:border-[#4a90e2] focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsRoomSettingsOpen(false)}
+                      className="flex-1 bg-[#1e1e24] hover:bg-[#25252d] text-slate-300 font-extrabold rounded-xl py-3 text-xs transition-colors cursor-pointer"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Close modal immediately for smooth and instant response
+                        setIsRoomSettingsOpen(false);
+                        
+                        // Fire the save action in the background
+                        updateRoomImages({
+                          "ห้องจัดรายการ 1": tempRoom1Image,
+                          "ห้องจัดรายการ 2": tempRoom2Image
+                        }).catch((err) => {
+                          console.error("Failed to update room images:", err);
+                        });
+                      }}
+                      className="flex-1 bg-[#ef8840] hover:bg-[#ef8840]/90 text-white font-extrabold rounded-xl py-3 text-xs transition-all cursor-pointer shadow-md"
+                    >
+                      บันทึกการตั้งค่า
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

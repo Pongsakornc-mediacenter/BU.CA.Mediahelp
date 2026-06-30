@@ -93,7 +93,7 @@ export default function CameraWorkbench() {
     <div 
       className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col mx-auto w-full" 
       id="camera_workbench_main"
-      style={{ maxWidth: '1700px' }}
+      style={{ maxWidth: '100%' }}
     >
       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
         <div>
