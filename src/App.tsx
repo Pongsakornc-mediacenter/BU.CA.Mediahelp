@@ -1344,10 +1344,10 @@ export default function App() {
                 </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="flex justify-center">
                   
-                  {/* LEFT COLUMN: Booking submission form (5-cols) */}
-                  <div className="lg:col-span-5 space-y-4">
+                  {/* Booking submission form */}
+                  <div className="w-full max-w-xl space-y-4">
                     <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                       <h4 className="font-bold text-slate-800 text-sm border-b border-slate-50 pb-2 flex items-center gap-1.5">
                         <Plus className="w-4 h-4 text-indigo-600" />
@@ -1457,140 +1457,6 @@ export default function App() {
                         ⚡ ส่งคำขอจองห้องจัดรายการ
                       </button>
                     </form>
-                  </div>
-
-                  {/* RIGHT COLUMN: Active Room Bookings tracking & scheduling view (7-cols) */}
-                  <div className="lg:col-span-7 space-y-6">
-                    
-                    {/* Active bookings list board */}
-                    <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                      <h4 className="font-bold text-slate-800 text-xs border-b border-slate-50 pb-2 flex items-center gap-1.5 justify-between">
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 text-emerald-600" />
-                          กระดานคิวและสถานะยืนยันการจองสตูดิโอ (Room Booking Queue)
-                        </span>
-                        <span className="bg-slate-100 font-mono text-[9px] text-slate-500 px-2 py-0.5 rounded-full">
-                          ทั้งหมด {bookings.length} คำขอ
-                        </span>
-                      </h4>
-
-                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                        {bookings.length === 0 ? (
-                          <div className="text-center py-10 text-slate-400 text-xs flex flex-col items-center justify-center space-y-2">
-                            <Clock className="w-8 h-8 text-slate-200" />
-                            <p className="font-medium text-slate-500">ยังไม่มีผู้ใดยื่นจองสตูดิโอในระบบ</p>
-                          </div>
-                        ) : (
-                          bookings.map((b) => (
-                            <div key={b.id} className="border border-slate-50 rounded-xl p-3 bg-slate-50/15 hover:bg-slate-50/40 transition-colors flex justify-between items-center gap-3">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-bold text-xs text-slate-800">{b.roomName}</span>
-                                  <span className="bg-indigo-50 text-indigo-700 text-[9px] font-bold px-1.5 py-0.2 rounded">
-                                    {b.timeSlot}
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-indigo-980/70 font-medium">
-                                  โดย {b.studentName} ใน {b.date}
-                                </p>
-                                {b.studentIdInput && b.phone && (
-                                  <p className="text-[9px] text-slate-400 font-mono">
-                                    รหัสนักศึกษา: {b.studentIdInput} • เบอร์โทร: {b.phone}
-                                  </p>
-                                )}
-                                <p className="text-[11px] text-slate-500 font-medium italic mt-0.5">
-                                  "{b.purpose}"
-                                </p>
-                              </div>
-
-                              <div className="shrink-0">
-                                {b.status === 'approved' ? (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#00c58d]/15 border border-[#00c58d]/30 text-[#00c58d] shadow-sm">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00c58d] animate-pulse"></span>
-                                    อนุมัติแล้ว
-                                  </span>
-                                ) : b.status === 'rejected' ? (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#ff2d55]/15 border border-[#ff2d55]/30 text-[#ff2d55] shadow-sm">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d55]"></span>
-                                    ปฏิเสธแล้ว
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#f59e0b]/15 border border-[#f59e0b]/30 text-[#f59e0b] shadow-sm">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse"></span>
-                                    รออนุมัติ
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Broadcasting schedule schedule for students to inspect */}
-                    <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                      <h4 className="font-bold text-slate-800 text-xs border-b border-slate-50 pb-2 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Layers className="w-4 h-4 text-pink-600 animate-pulse" />
-                          ผังรายการสดสถานีสื่อโทรทัศน์/วิทยุ (Broadcasting Schedules)
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded">
-                            🔴 LIVE {programs.filter(p => p.status === 'active').length}
-                          </span>
-                        </div>
-                      </h4>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[280px] overflow-y-auto pr-1">
-                        {programs.map((prog) => (
-                          <div key={prog.id} className="border border-slate-50 hover:bg-slate-50/20 p-3.5 rounded-xl space-y-2 flex flex-col justify-between">
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between items-center">
-                                <span className="bg-slate-100 text-[9px] font-mono font-bold text-slate-500 px-1.5 py-0.2 rounded uppercase">
-                                  {prog.category}
-                                </span>
-                                {prog.status === 'active' ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-extrabold bg-[#ef4444]/12 border border-[#ef4444]/25 text-[#ef4444] animate-pulse">
-                                    <span className="w-1 h-1 rounded-full bg-[#ef4444]"></span>
-                                    🔴 LIVE NOW
-                                  </span>
-                                ) : prog.status === 'completed' ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 border border-slate-200 text-slate-400">
-                                    ✓ เสร็จสิ้น
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-extrabold bg-[#f59e0b]/15 border border-[#f59e0b]/30 text-[#f59e0b]">
-                                    ⏳ เตรียมพร้อม
-                                  </span>
-                                )}
-                              </div>
-                              <h5 className="font-bold text-xs text-slate-850 font-display line-clamp-1">
-                                {prog.subject ? prog.subject : prog.programName}
-                              </h5>
-                              {prog.purpose && (
-                                <p className="text-[10px] text-slate-500 line-clamp-1">
-                                  วัตถุประสงค์: <span className="font-semibold text-slate-700">{prog.purpose}</span>
-                                </p>
-                              )}
-                              <p className="text-[9px] text-slate-400">
-                                ผู้จัด: <span className="font-semibold text-slate-600">{prog.hosts}</span>
-                              </p>
-                            </div>
-                            <div className="pt-2 border-t border-slate-50 flex justify-between items-center text-[9px] text-slate-400 font-mono">
-                              <span>{prog.roomName}</span>
-                              <span>{prog.timeSlot}</span>
-                            </div>
-                          </div>
-                        ))}
-
-                        {programs.length === 0 && (
-                          <div className="col-span-1 sm:col-span-2 text-center py-6 text-slate-400 text-xs">
-                            ยังไม่ได้จัดผังรายการการออกอากาศในระบบ
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
                   </div>
 
                 </div>
