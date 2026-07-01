@@ -1365,34 +1365,34 @@ export default function AdminDashboard({
     )}
 
     {activeTab === 'student_schedule' && (
-      <div className="space-y-6 animate-fade-in text-white" id="student_booking_schedule_tab">
+      <div className="space-y-3 animate-fade-in text-white" id="student_booking_schedule_tab">
         {/* Submitting Success feedback banner */}
         {bookingSuccessMsg && (
-          <div className="bg-emerald-500/15 text-emerald-400 text-xs font-bold p-4 rounded-xl border border-emerald-500/20 animate-pulse">
+          <div className="bg-emerald-500/15 text-emerald-400 text-xs font-bold p-3 rounded-xl border border-emerald-500/20 animate-pulse">
             {bookingSuccessMsg}
           </div>
         )}
 
         {/* Centered Dark Header Section with Room selectors */}
-        <div className="bg-[#111115] border border-[#2d2d34] p-6 sm:p-8 rounded-[24px] shadow-2xl text-center space-y-4">
-          <div className="text-center space-y-2">
-            <h4 className="text-lg sm:text-xl font-extrabold text-[#ef8840] tracking-tight font-display flex items-center justify-center gap-1.5">
+        <div className="bg-[#111115] border border-[#2d2d34] p-3 sm:p-4 rounded-[20px] shadow-2xl text-center space-y-2">
+          <div className="text-center space-y-1">
+            <h4 className={`text-base sm:text-lg font-extrabold ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"} tracking-tight font-display flex items-center justify-center gap-1.5`}>
               📅 ตารางห้องจัดรายการ
             </h4>
-            <p className="text-slate-400 text-xs max-w-2xl mx-auto leading-relaxed">
+            <p className="text-slate-400 text-[11px] max-w-xl mx-auto leading-tight">
               กรุณาตรวจสอบตารางการจองด้านล่างเพื่อตรวจสอบคิวที่ว่างก่อนกรอกแบบฟอร์มจองห้องจัดรายการต่อ
             </p>
           </div>
 
           {/* Room selectors (tabs like in the user's Excel mockup) */}
-          <div className="flex max-w-xl mx-auto bg-[#0a0a0c] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-inner p-1">
+          <div className="flex max-w-md mx-auto bg-[#0a0a0c] border border-[#2d2d34] rounded-xl overflow-hidden shadow-inner p-0.5">
             <button
               type="button"
               onClick={() => {
                 setActiveScheduleRoom("ห้องจัดรายการ 1");
                 setBookingRoom("ห้องจัดรายการ 1");
               }}
-              className={`flex-1 py-3 text-center text-xs font-extrabold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 py-1.5 text-center text-[11px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeScheduleRoom === "ห้องจัดรายการ 1"
                   ? "bg-[#ef8840] text-white shadow-md"
                   : "hover:bg-white/5 text-slate-400"
@@ -1406,7 +1406,7 @@ export default function AdminDashboard({
                 setActiveScheduleRoom("ห้องจัดรายการ 2");
                 setBookingRoom("ห้องจัดรายการ 2");
               }}
-              className={`flex-1 py-3 text-center text-xs font-extrabold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2 ${
+              className={`flex-1 py-1.5 text-center text-[11px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeScheduleRoom === "ห้องจัดรายการ 2"
                   ? "bg-[#4a90e2] text-white shadow-md"
                   : "hover:bg-white/5 text-slate-400"
@@ -1417,11 +1417,11 @@ export default function AdminDashboard({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
           
-          {/* LEFT COLUMN: Room Image Preview */}
+          {/* LEFT COLUMN: Room Image Preview (Fills height to match table on desktop) */}
           <div className="xl:col-span-5 flex flex-col justify-start">
-            <div className="w-[95%] mx-auto aspect-square bg-[#111115] border border-[#2d2d34] rounded-[24px] overflow-hidden shadow-2xl relative group">
+            <div className="w-full mx-auto aspect-[3/2] bg-[#111115] border border-[#2d2d34] rounded-[16px] overflow-hidden shadow-2xl relative group">
               <img 
                 src={roomImages?.[activeScheduleRoom] || (activeScheduleRoom === "ห้องจัดรายการ 1" ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000" : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000")} 
                 alt={activeScheduleRoom}
@@ -1429,115 +1429,121 @@ export default function AdminDashboard({
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
               />
               {/* Elegant overlay gradient at bottom */}
-              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
             </div>
             {/* Caption underneath the image */}
-            <div className="pt-3 text-center">
-              <p className="text-[#94a3b8] text-xs font-semibold tracking-wide">
+            <div className="pt-1.5 text-center">
+              <p className="text-[#94a3b8] text-[11px] font-semibold tracking-wide">
                 มุมมองบรรยากาศห้อง/สถานที่จอง (Atmospheric Preview)
               </p>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Table representation */}
-          <div className="xl:col-span-7 bg-[#111115] border border-[#2d2d34] p-5 rounded-[24px] shadow-2xl space-y-4">
-          {/* Navigation controls for weeks */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const base = new Date(scheduleBaseDate);
-                  base.setDate(base.getDate() - 7);
-                  const yyyy = base.getFullYear();
-                  const mm = String(base.getMonth() + 1).padStart(2, '0');
-                  const dd = String(base.getDate()).padStart(2, '0');
-                  setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
-                }}
-                className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-              >
-                ◀ สัปดาห์ก่อนหน้า
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const base = new Date();
-                  const yyyy = base.getFullYear();
-                  const mm = String(base.getMonth() + 1).padStart(2, '0');
-                  const dd = String(base.getDate()).padStart(2, '0');
-                  const todayStr = `${yyyy}-${mm}-${dd}`;
-                  setScheduleBaseDate(todayStr);
-                  setBookingDate(todayStr);
-                }}
-                className="bg-[#ef8840]/10 hover:bg-[#ef8840]/20 text-[#ef8840] border border-[#ef8840]/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-              >
-                วันนี้ / สัปดาห์นี้
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const base = new Date(scheduleBaseDate);
-                  base.setDate(base.getDate() + 7);
-                  const yyyy = base.getFullYear();
-                  const mm = String(base.getMonth() + 1).padStart(2, '0');
-                  const dd = String(base.getDate()).padStart(2, '0');
-                  setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
-                }}
-                className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-              >
-                สัปดาห์ถัดไป ▶
-              </button>
+          {/* RIGHT COLUMN: Table representation (xl:col-span-7) */}
+          <div className="xl:col-span-7 bg-[#111115] border border-[#2d2d34] p-3 rounded-[16px] shadow-2xl space-y-3">
+            {/* Navigation controls for weeks */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = new Date(scheduleBaseDate);
+                    base.setDate(base.getDate() - 7);
+                    const yyyy = base.getFullYear();
+                    const mm = String(base.getMonth() + 1).padStart(2, '0');
+                    const dd = String(base.getDate()).padStart(2, '0');
+                    setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
+                  }}
+                  className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-[#ffffff] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  ◀ สัปดาห์ก่อนหน้า
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = new Date();
+                    const yyyy = base.getFullYear();
+                    const mm = String(base.getMonth() + 1).padStart(2, '0');
+                    const dd = String(base.getDate()).padStart(2, '0');
+                    const todayStr = `${yyyy}-${mm}-${dd}`;
+                    setScheduleBaseDate(todayStr);
+                    setBookingDate(todayStr);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
+                    activeScheduleRoom === "ห้องจัดรายการ 1"
+                      ? "bg-[#ef8840]/10 hover:bg-[#ef8840]/20 text-[#ef8840] border-[#ef8840]/20"
+                      : "bg-[#4a90e2]/10 hover:bg-[#4a90e2]/20 text-[#4a90e2] border-[#4a90e2]/20"
+                  }`}
+                >
+                  วันนี้ / สัปดาห์นี้
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = new Date(scheduleBaseDate);
+                    base.setDate(base.getDate() + 7);
+                    const yyyy = base.getFullYear();
+                    const mm = String(base.getMonth() + 1).padStart(2, '0');
+                    const dd = String(base.getDate()).padStart(2, '0');
+                    setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
+                  }}
+                  className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-[#ffffff] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  สัปดาห์ถัดไป ▶
+                </button>
+              </div>
+
+              <div className="text-xs text-[#ffffff] font-bold bg-[#16161a] px-3 py-1.5 rounded-lg border border-[#2d2d34] flex items-center gap-1.5">
+                📅 สัปดาห์ประจำวันที่: <span className={`font-extrabold ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"}`}>{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
+              </div>
             </div>
 
-            <div className="text-xs text-slate-100 font-bold bg-[#16161a] px-3 py-1.5 rounded-lg border border-[#2d2d34] flex items-center gap-1.5">
-              📅 สัปดาห์ประจำวันที่: <span className="text-[#ef8840] font-extrabold">{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
-            </div>
-          </div>
+            {/* Main Grid Table representation */}
+            <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
+              <table className="w-full border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
+                <thead>
+                  {/* Elegant dark grey row for วิชา */}
+                  <tr className="border-b border-[#2d2d34]">
+                    <th colSpan={8} className={`py-3 bg-[#111113] ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"} font-extrabold text-xs sm:text-sm tracking-wide shadow-sm`}>
+                      📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
+                    </th>
+                  </tr>
+                  {/* Table Headers in unified slate dark styling for professional contrast */}
+                  <tr className="bg-[#16161a] text-[#ffffff] font-bold border-b border-[#2d2d34]">
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[11%]">วัน / เวลา</th>
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[13%]">9.00 - 10.00</th>
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[13%]">10.00 - 11.00</th>
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[13%]">11.00 - 12.00</th>
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#e27329] text-[#ffffff] w-[9%] font-black">พักเที่ยง</th>
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[13%]">13.00 - 14.00</th>
+                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[13%]">14.00 - 15.00</th>
+                    <th className="py-2.5 px-2 text-[#ffffff] font-extrabold w-[15%]">15.00 - 16.00</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getWeekDates(scheduleBaseDate).map((dayInfo) => {
+                    const slots = [
+                      "9.00 - 10.00",
+                      "10.00 - 11.00",
+                      "11.00 - 12.00",
+                      "พักเที่ยง",
+                      "13.00 - 14.00",
+                      "14.00 - 15.00",
+                      "15.00 - 16.00"
+                    ];
 
-          {/* Main Grid Table representation */}
-          <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
-            <table className="w-full min-w-[1072px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
-              <thead>
-                <tr className="border-b border-[#2d2d34]">
-                  <th colSpan={8} className="py-3 bg-[#111113] text-[#ef8840] font-extrabold text-xs sm:text-sm tracking-wide shadow-sm">
-                    📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
-                  </th>
-                </tr>
-                <tr className="bg-[#16161a] text-[#ffffff] font-bold border-b border-[#2d2d34]">
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[88px]">วัน / เวลา</th>
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">9.00 - 10.00</th>
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">10.00 - 11.00</th>
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">11.00 - 12.00</th>
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#e27329] text-[#ffffff] w-[80px] font-black">พักเที่ยง</th>
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">13.00 - 14.00</th>
-                  <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[136px]">14.00 - 15.00</th>
-                  <th className="py-2.5 px-2 text-[#ffffff] font-extrabold w-[136px]">15.00 - 16.00</th>
-                </tr>
-              </thead>
-              <tbody>
-                {getWeekDates(scheduleBaseDate).map((dayInfo) => {
-                  const slots = [
-                    "9.00 - 10.00",
-                    "10.00 - 11.00",
-                    "11.00 - 12.00",
-                    "พักเที่ยง",
-                    "13.00 - 14.00",
-                    "14.00 - 15.00",
-                    "15.00 - 16.00"
-                  ];
-
-                  return (
-                    <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors">
-                      <td className="py-3 px-2 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100">
-                        <div className="text-xs uppercase font-extrabold text-[#ef8840]">{dayInfo.dayName}</div>
-                        <div className="text-[10px] text-slate-400 font-semibold mt-0.5">{dayInfo.displayDate}</div>
-                      </td>
+                    return (
+                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors">
+                        <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100">
+                          <div className={`text-[11px] uppercase font-extrabold ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"}`}>{dayInfo.dayName}</div>
+                          <div className="text-[9px] text-slate-400 font-semibold mt-0.5">{dayInfo.displayDate}</div>
+                        </td>
 
                       {slots.map((slot) => {
                         if (slot === "พักเที่ยง") {
                           return (
-                            <td key={slot} className="py-3 px-2 border-r border-[#2d2d34] bg-[#111113] text-slate-400 font-bold text-[11px] select-none">
-                              🍛 พักเที่ยง
+                            <td key={slot} className="py-1.5 px-1 border-r border-[#2d2d34] bg-[#111113] text-slate-400 font-bold text-[10px] select-none">
+                              🍛 พัก
                             </td>
                           );
                         }
@@ -1551,7 +1557,7 @@ export default function AdminDashboard({
                           return (
                             <td 
                               key={slot} 
-                              className="p-1.5 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group"
+                              className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group"
                             >
                               {(() => {
                                 let displaySubject = b.subject || "";
@@ -1572,29 +1578,26 @@ export default function AdminDashboard({
                                 return (
                                   <>
                                     {/* Visible Compact Card */}
-                                    <div className={`p-2 rounded-lg border text-left flex flex-col justify-center h-full min-h-[92px] gap-1 transition-all duration-300 shadow-md ${
+                                    <div className={`p-1.5 rounded-lg border text-left flex flex-col justify-center h-full min-h-[54px] gap-0.5 transition-all duration-300 shadow-sm ${
                                       isApproved 
                                         ? (isRoom1 
-                                          ? "bg-[#0e0e11] border-[#ef8840]/30 border-l-4 border-l-[#ef8840]" 
-                                          : "bg-[#0e0e11] border-[#4a90e2]/30 border-l-4 border-l-[#4a90e2]")
-                                        : "bg-[#0e0e11] border-amber-500/30 border-l-4 border-l-amber-500"
+                                          ? "bg-[#0e0e11] border-[#ef8840]/30 border-l-[3px] border-l-[#ef8840]" 
+                                          : "bg-[#0e0e11] border-[#4a90e2]/30 border-l-[3px] border-l-[#4a90e2]")
+                                        : "bg-[#0e0e11] border-amber-500/30 border-l-[3px] border-l-amber-500"
                                     }`}>
-                                      <div className="flex flex-col gap-1 w-full overflow-hidden">
+                                      <div className="flex flex-col gap-0.5 w-full overflow-hidden">
                                         {/* Header: Subject */}
-                                        <div className="font-black text-[13px] text-[#e2e8f0] tracking-wide uppercase truncate" title={displaySubject}>
+                                        <div className="font-extrabold text-[10.5px] text-[#e2e8f0] tracking-tight uppercase truncate" title={displaySubject}>
                                           {displaySubject}
                                         </div>
                                         
-                                        {/* Divider Line */}
-                                        <hr className="border-[#2d2d34]" />
-                                        
                                         {/* Booker Name */}
-                                        <div className="text-[10.5px] font-bold text-[#cbd5e1] truncate leading-tight" title={b.studentName}>
+                                        <div className="text-[9.5px] font-bold text-[#cbd5e1] truncate leading-tight" title={b.studentName}>
                                           {(b.studentName || "").toLowerCase()}
                                         </div>
 
                                         {/* Student ID */}
-                                        <div className="text-[10px] font-mono font-bold text-[#94a3b8] tracking-wider">
+                                        <div className="text-[8.5px] font-mono font-bold text-[#94a3b8] tracking-wider leading-none">
                                           {b.studentIdInput || "-"}
                                         </div>
                                       </div>
@@ -1644,22 +1647,22 @@ export default function AdminDashboard({
                           );
                         }
 
-                         return (
-                           <td 
-                             key={slot} 
-                             className="p-1.5 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
-                           >
-                             {/* Empty card container that matches the booked card dimensions and style */}
-                             <div className="p-2 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex flex-col items-center justify-center h-full min-h-[92px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
-                               <div className="relative flex flex-col items-center justify-center select-none w-full gap-1">
-                                 <span className="text-lg opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
-                                 <span className="text-[11px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
-                                   ว่าง
-                                 </span>
-                               </div>
-                             </div>
-                           </td>
-                         );
+                        return (
+                          <td 
+                            key={slot} 
+                            className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
+                          >
+                            {/* Empty card container that matches the booked card dimensions and style */}
+                            <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-full min-h-[54px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
+                              <div className="relative flex items-center justify-center select-none w-full gap-1">
+                                <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
+                                <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
+                                  ว่าง
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                        );
                       })}
                     </tr>
                   );
@@ -1667,7 +1670,6 @@ export default function AdminDashboard({
               </tbody>
             </table>
           </div>
-
 
         </div>
         </div>
