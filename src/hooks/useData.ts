@@ -893,7 +893,7 @@ export function useData() {
   };
 
   // --- Room Booking CRUD Operations ---
-  const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string) => {
+  const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string) => {
     if (!currentUser) return;
 
     let subject = "";
@@ -912,7 +912,7 @@ export function useData() {
 
     const bookingPayload: Omit<RoomBooking, 'id'> = {
       studentId: currentUser.uid,
-      studentName: currentUser.name,
+      studentName: studentNameInput && studentNameInput.trim() ? studentNameInput.trim() : currentUser.name,
       studentEmail: currentUser.email,
       roomName,
       date,
