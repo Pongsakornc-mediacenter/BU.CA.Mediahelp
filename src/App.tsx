@@ -48,16 +48,9 @@ const compressImage = (file: File): Promise<string> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-          const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
+        // Use original dimensions reduced by 10%
+        let width = Math.round(img.width * 0.9);
+        let height = Math.round(img.height * 0.9);
 
         canvas.width = width;
         canvas.height = height;
