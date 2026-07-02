@@ -1504,7 +1504,7 @@ export default function AdminDashboard({
                             e.stopPropagation();
                             setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
                           }}
-                          className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-black/65 hover:bg-black/85 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in"
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-white/75 hover:bg-white/90 text-slate-800 rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in backdrop-blur-[2px]"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
@@ -1514,7 +1514,7 @@ export default function AdminDashboard({
                             e.stopPropagation();
                             setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
                           }}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-black/65 hover:bg-black/85 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-white/75 hover:bg-white/90 text-slate-800 rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in backdrop-blur-[2px]"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
