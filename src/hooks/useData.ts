@@ -178,7 +178,9 @@ export function useData() {
 
   // Sync Bookings
   useEffect(() => {
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = isFirebaseConfigured && db && !isMockSession;
+
     if (shouldUseFirebase) {
       const unsubscribe = onSnapshot(collection(db, 'bookings'), async (snapshot) => {
         if (snapshot.empty) {
@@ -221,7 +223,7 @@ export function useData() {
         setBookings(local);
       }
     }
-  }, []);
+  }, [currentUser]);
 
   // Sync Room Images
   useEffect(() => {
@@ -266,7 +268,9 @@ export function useData() {
 
   // Sync Programs
   useEffect(() => {
-    const shouldUseFirebase = isFirebaseConfigured && db;
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = isFirebaseConfigured && db && !isMockSession;
+
     if (shouldUseFirebase) {
       const unsubscribe = onSnapshot(collection(db, 'programs'), async (snapshot) => {
         if (snapshot.empty) {
@@ -309,7 +313,7 @@ export function useData() {
         setPrograms(local);
       }
     }
-  }, []);
+  }, [currentUser]);
 
   // Auth synchronization (Firebase or Local Sandbox)
   useEffect(() => {
@@ -927,7 +931,8 @@ export function useData() {
       bookingPurpose
     };
 
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser && currentUser.uid === auth.currentUser.uid);
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
       try {
         await addDoc(collection(db, 'bookings'), bookingPayload);
@@ -951,7 +956,8 @@ export function useData() {
       status,
       updatedAt: new Date().toISOString()
     };
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'bookings', id);
@@ -972,7 +978,8 @@ export function useData() {
   };
 
   const deleteBooking = async (id: string) => {
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'bookings', id);
@@ -1021,7 +1028,8 @@ export function useData() {
       phone
     };
 
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser && currentUser.uid === auth.currentUser.uid);
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
       try {
         await addDoc(collection(db, 'programs'), programPayload);
@@ -1045,7 +1053,8 @@ export function useData() {
       status,
       updatedAt: new Date().toISOString()
     };
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'programs', id);
@@ -1066,7 +1075,8 @@ export function useData() {
   };
 
   const deleteProgram = async (id: string) => {
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && auth && auth.currentUser);
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
       try {
         const docRef = doc(db, 'programs', id);

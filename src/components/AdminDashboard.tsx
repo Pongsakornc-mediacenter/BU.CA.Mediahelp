@@ -492,19 +492,6 @@ export default function AdminDashboard({
 
         <button
           type="button"
-          onClick={() => setActiveTab('bookings')}
-          className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-            activeTab === 'bookings'
-              ? 'bg-slate-800 text-white shadow-sm'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          ระบบอนุมัติจองห้อง & ตารางจัดรายการ ({bookings.length} จอง / {programs.length} รายการ)
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab('student_schedule')}
           className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeTab === 'student_schedule'
