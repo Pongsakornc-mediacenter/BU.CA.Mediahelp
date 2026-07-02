@@ -155,7 +155,7 @@ service cloud.firestore {
 
     // Configs Collection (e.g. room preview images)
     match /configs/{configId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 

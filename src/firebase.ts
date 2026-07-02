@@ -23,7 +23,7 @@ if (
 ) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    db = getFirestore(app);
+    db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId || '(default)');
     auth = getAuth(app);
     isFirebaseConfigured = true;
     console.log("Firebase is successfully initialized and ready!");
