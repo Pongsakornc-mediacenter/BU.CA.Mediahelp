@@ -65,7 +65,7 @@ const compressImage = (file: File): Promise<string> => {
         const ctx = canvas.getContext("2d");
         ctx?.drawImage(img, 0, 0, width, height);
 
-        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
+        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.90);
         resolve(compressedBase64);
       };
       img.onerror = (err) => reject(err);
