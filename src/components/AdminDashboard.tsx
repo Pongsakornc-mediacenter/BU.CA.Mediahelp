@@ -39,7 +39,9 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Ticket, AttendanceRecord, HelpCategory, ClassSession, RoomBooking, BroadcastProgram } from '../types';
 import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS } from '../hooks/useData';
@@ -69,7 +71,7 @@ interface AdminDashboardProps {
   onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
   onDeleteProgram: (id: string) => Promise<void>;
   onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string) => Promise<void>;
-  roomImages?: { [key: string]: string };
+  roomImages?: { [key: string]: string | string[] };
 }
 
 export default function AdminDashboard({
@@ -99,6 +101,13 @@ export default function AdminDashboard({
 
   // Student booking schedule states for the new teacher tab
   const [activeScheduleRoom, setActiveScheduleRoom] = useState<string>("ห้องจัดรายการ 1");
+  const [activeImageIdx, setActiveImageIdx] = useState<number>(0);
+
+  // Reset active image index when switching rooms
+  useEffect(() => {
+    setActiveImageIdx(0);
+  }, [activeScheduleRoom]);
+
   const [scheduleBaseDate, setScheduleBaseDate] = useState<string>(() => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -1455,14 +1464,84 @@ export default function AdminDashboard({
           {/* LEFT COLUMN: Room Image Preview (Fills height to match table on desktop) */}
           <div className="xl:col-span-5 flex flex-col justify-start">
             <div className="w-full mx-auto aspect-[3/2] bg-[#111115] border border-[#2d2d34] rounded-[16px] overflow-hidden shadow-2xl relative group">
-              <img 
-                src={roomImages?.[activeScheduleRoom] || (activeScheduleRoom === "ห้องจัดรายการ 1" ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000" : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000")} 
-                alt={activeScheduleRoom}
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-              />
-              {/* Elegant overlay gradient at bottom */}
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+              {(() => {
+                const val = roomImages?.[activeScheduleRoom];
+                let images: string[] = [];
+                if (Array.isArray(val)) {
+                  images = val.filter(Boolean);
+                } else if (typeof val === "string" && val) {
+                  images = [val];
+                }
+                
+                if (images.length === 0) {
+                  images = [
+                    activeScheduleRoom === "ห้องจัดรายการ 1"
+                      ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"
+                      : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+                  ];
+                }
+
+                const currentImgIdx = Math.min(activeImageIdx, images.length - 1);
+                const currentImg = images[currentImgIdx] || images[0];
+
+                return (
+                  <>
+                    <img 
+                      src={currentImg} 
+                      alt={activeScheduleRoom}
+                      referrerPolicy="no-referrer"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                    />
+                    {/* Elegant overlay gradient at bottom */}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+                    
+                    {/* Navigation Arrows */}
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                          }}
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-black/65 hover:bg-black/85 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                          }}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-black/65 hover:bg-black/85 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Indicator Dots */}
+                    {images.length > 1 && (
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full z-10">
+                        {images.map((_, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveImageIdx(idx);
+                            }}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${
+                              idx === currentImgIdx ? "bg-[#ef8840] scale-125" : "bg-white/60 hover:bg-white"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             {/* Caption underneath the image */}
             <div className="pt-1.5 text-center">

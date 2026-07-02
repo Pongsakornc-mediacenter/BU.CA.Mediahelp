@@ -152,9 +152,9 @@ export function useData() {
   const [lastNotification, setLastNotification] = useState<string | null>(null);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
   const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
-  const [roomImages, setRoomImages] = useState<{ [key: string]: string }>({
-    "ห้องจัดรายการ 1": "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000",
-    "ห้องจัดรายการ 2": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+  const [roomImages, setRoomImages] = useState<{ [key: string]: string | string[] }>({
+    "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"],
+    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"]
   });
 
 
@@ -229,12 +229,12 @@ export function useData() {
     if (shouldUseFirebase) {
       const unsubscribe = onSnapshot(doc(db, 'configs', 'room_images'), (snapshot) => {
         if (snapshot.exists()) {
-          setRoomImages(snapshot.data() as { [key: string]: string });
+          setRoomImages(snapshot.data() as { [key: string]: string | string[] });
         } else {
           // If doesn't exist, create it with default
           setDoc(doc(db, 'configs', 'room_images'), {
-            "ห้องจัดรายการ 1": "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000",
-            "ห้องจัดรายการ 2": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+            "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"],
+            "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"]
           }).catch(err => console.warn("Failed to write default room images:", err));
         }
       }, (error) => {
@@ -249,7 +249,7 @@ export function useData() {
     }
   }, []);
 
-  const updateRoomImages = async (newImages: { [key: string]: string }) => {
+  const updateRoomImages = async (newImages: { [key: string]: string | string[] }) => {
     // Optimistic update: instantly update local state and localStorage
     setRoomImages(newImages);
     saveLocalStorageItem('bu_ca_room_images', newImages);

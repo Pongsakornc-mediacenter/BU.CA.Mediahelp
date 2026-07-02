@@ -28,7 +28,10 @@ import {
   Lightbulb,
   PenTool,
   Plus,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData } from './hooks/useData';
@@ -107,14 +110,35 @@ export default function App() {
 
   // Room Settings States
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
-  const [tempRoom1Image, setTempRoom1Image] = useState("");
-  const [tempRoom2Image, setTempRoom2Image] = useState("");
+  const [tempRoom1Images, setTempRoom1Images] = useState<string[]>(["", "", "", "", ""]);
+  const [tempRoom2Images, setTempRoom2Images] = useState<string[]>(["", "", "", "", ""]);
+  const [activeRoomSettingsTab, setActiveRoomSettingsTab] = useState<"ห้องจัดรายการ 1" | "ห้องจัดรายการ 2">("ห้องจัดรายการ 1");
+  const [uploadTargetIdx, setUploadTargetIdx] = useState<number | null>(null);
+  const settingsFileRef = React.useRef<HTMLInputElement>(null);
 
   // Sync temp images when loaded
   React.useEffect(() => {
     if (roomImages) {
-      setTempRoom1Image(roomImages["ห้องจัดรายการ 1"] || "");
-      setTempRoom2Image(roomImages["ห้องจัดรายการ 2"] || "");
+      const getArray = (val: any, defaultUrl: string) => {
+        let arr: string[] = [];
+        if (Array.isArray(val)) {
+          arr = val.filter(Boolean);
+        } else if (typeof val === "string" && val) {
+          arr = [val];
+        }
+        if (arr.length === 0) {
+          arr = [defaultUrl];
+        }
+        // Fill up to 5 elements with empty strings
+        const filled = [...arr];
+        while (filled.length < 5) {
+          filled.push("");
+        }
+        return filled.slice(0, 5);
+      };
+
+      setTempRoom1Images(getArray(roomImages["ห้องจัดรายการ 1"], "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"));
+      setTempRoom2Images(getArray(roomImages["ห้องจัดรายการ 2"], "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"));
     }
   }, [roomImages]);
 
@@ -125,17 +149,29 @@ export default function App() {
     }
   }, [currentUser]);
 
-  const room1FileRef = React.useRef<HTMLInputElement>(null);
-  const room2FileRef = React.useRef<HTMLInputElement>(null);
-
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setTempImage: (img: string) => void) => {
+  const handleSettingsFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && uploadTargetIdx !== null) {
       try {
         const compressed = await compressImage(file);
-        setTempImage(compressed);
+        if (activeRoomSettingsTab === "ห้องจัดรายการ 1") {
+          setTempRoom1Images((prev) => {
+            const next = [...prev];
+            next[uploadTargetIdx] = compressed;
+            return next;
+          });
+        } else {
+          setTempRoom2Images((prev) => {
+            const next = [...prev];
+            next[uploadTargetIdx] = compressed;
+            return next;
+          });
+        }
       } catch (err) {
         console.error("Error compressing file:", err);
+      } finally {
+        e.target.value = "";
+        setUploadTargetIdx(null);
       }
     }
   };
@@ -157,6 +193,13 @@ export default function App() {
   
   // Schedule Check Table States
   const [activeScheduleRoom, setActiveScheduleRoom] = useState<string>("ห้องจัดรายการ 1");
+  const [activeImageIdx, setActiveImageIdx] = useState<number>(0);
+
+  // Reset active image index when switching rooms
+  React.useEffect(() => {
+    setActiveImageIdx(0);
+  }, [activeScheduleRoom]);
+
   const [scheduleBaseDate, setScheduleBaseDate] = useState<string>(() => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -1127,14 +1170,84 @@ export default function App() {
                   {/* LEFT COLUMN: Room Image Preview (Fills height to match table on desktop) */}
                   <div className="xl:col-span-5 flex flex-col justify-start">
                     <div className="w-full mx-auto aspect-[3/2] bg-[#111115] border border-[#2d2d34] rounded-[16px] overflow-hidden shadow-2xl relative group">
-                      <img 
-                        src={roomImages?.[activeScheduleRoom] || (activeScheduleRoom === "ห้องจัดรายการ 1" ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000" : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000")} 
-                        alt={activeScheduleRoom}
-                        referrerPolicy="no-referrer"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                      />
-                      {/* Elegant overlay gradient at bottom */}
-                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+                      {(() => {
+                        const val = roomImages?.[activeScheduleRoom];
+                        let images: string[] = [];
+                        if (Array.isArray(val)) {
+                          images = val.filter(Boolean);
+                        } else if (typeof val === "string" && val) {
+                          images = [val];
+                        }
+                        
+                        if (images.length === 0) {
+                          images = [
+                            activeScheduleRoom === "ห้องจัดรายการ 1"
+                              ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"
+                              : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+                          ];
+                        }
+
+                        const currentImgIdx = Math.min(activeImageIdx, images.length - 1);
+                        const currentImg = images[currentImgIdx] || images[0];
+
+                        return (
+                          <>
+                            <img 
+                              src={currentImg} 
+                              alt={activeScheduleRoom}
+                              referrerPolicy="no-referrer"
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                            />
+                            {/* Elegant overlay gradient at bottom */}
+                            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+                            
+                            {/* Navigation Arrows */}
+                            {images.length > 1 && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                                  }}
+                                  className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-black/65 hover:bg-black/85 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in"
+                                >
+                                  <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                                  }}
+                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-black/65 hover:bg-black/85 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in"
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+
+                            {/* Indicator Dots */}
+                            {images.length > 1 && (
+                              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full z-10">
+                                {images.map((_, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveImageIdx(idx);
+                                    }}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                      idx === currentImgIdx ? "bg-[#ef8840] scale-125" : "bg-white/60 hover:bg-white"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     {/* Caption underneath the image */}
                     <div className="pt-1.5 text-center">
@@ -1730,7 +1843,7 @@ export default function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="relative w-full max-w-lg bg-[#0e0e11] border border-[#2d2d34] rounded-[24px] p-6 sm:p-7 shadow-[0_0_50px_rgba(0,0,0,0.8)] cursor-default my-auto text-white"
+              className="relative w-full max-w-xl bg-[#0e0e11] border border-[#2d2d34] rounded-[24px] p-5 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] cursor-default my-auto text-white"
               onClick={(e) => e.stopPropagation()}
               id="room_settings_modal_content"
             >
@@ -1752,163 +1865,183 @@ export default function App() {
                   </div>
                   <div>
                     <h3 className="font-extrabold text-slate-200 text-base font-display">
-                      ตั้งค่ารูปภาพห้องจัดรายการ (Room Preview Images)
+                      ตั้งค่ารูปภาพห้องจัดรายการ (Room Images Gallery - Max 5)
                     </h3>
-                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">เฉพาะแอดมิน pongsakorn.c@bu.ac.th</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">เฉพาะแอดมิน pongsakorn.c@bu.ac.th • แสดงผลสอดคล้องกันทุกเครื่อง ทุกแอคเคาท์</p>
                   </div>
                 </div>
 
-                {/* Form starts */}
-                <div className="space-y-6 pt-1">
-                  
-                  {/* Grid for Rooms Side-By-Side */}
-                  <div className="grid grid-cols-2 gap-4">
-                    
-                    {/* ROOM 1 UPLOAD */}
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="text-[11px] font-extrabold text-slate-300 block text-center">🎙️ ห้องจัดรายการ 1</span>
+                {/* Tab Switcher inside Settings */}
+                <div className="flex bg-[#16161a] border border-[#2d2d34] p-1 rounded-xl gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveRoomSettingsTab("ห้องจัดรายการ 1")}
+                    className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                      activeRoomSettingsTab === "ห้องจัดรายการ 1"
+                        ? "bg-[#ef8840] text-white shadow-md font-black"
+                        : "hover:bg-white/5 text-slate-400"
+                    }`}
+                  >
+                    🎙️ ห้องจัดรายการ 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveRoomSettingsTab("ห้องจัดรายการ 2")}
+                    className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                      activeRoomSettingsTab === "ห้องจัดรายการ 2"
+                        ? "bg-[#4a90e2] text-white shadow-md font-black"
+                        : "hover:bg-white/5 text-slate-400"
+                    }`}
+                  >
+                    🎧 ห้องจัดรายการ 2
+                  </button>
+                </div>
+
+                {/* Hidden File Input for the Settings */}
+                <input 
+                  type="file" 
+                  ref={settingsFileRef} 
+                  onChange={handleSettingsFileChange}
+                  accept="image/*" 
+                  className="hidden" 
+                />
+
+                {/* Form / Images slots */}
+                <div className="space-y-3 pt-1">
+                  <p className="text-slate-400 text-[10.5px] font-semibold">
+                    กรุณาคลิกที่รูปภาพเพื่ออัปโหลดจากไฟล์ภายในเครื่อง หรือนำเข้าโดยตรงด้วย URL รูปภาพประกอบ (อัปโหลดได้สูงสุดห้องละ 5 รูป)
+                  </p>
+
+                  <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                    {(activeRoomSettingsTab === "ห้องจัดรายการ 1" ? tempRoom1Images : tempRoom2Images).map((currentUrl, idx) => {
+                      const accentColor = activeRoomSettingsTab === "ห้องจัดรายการ 1" ? "group-hover:text-[#ef8840] hover:border-[#ef8840]" : "group-hover:text-[#4a90e2] hover:border-[#4a90e2]";
+                      const borderFocus = activeRoomSettingsTab === "ห้องจัดรายการ 1" ? "focus:border-[#ef8840]/60" : "focus:border-[#4a90e2]/60";
                       
-                      {/* Clickable Square Container */}
-                      <div 
-                        onClick={() => room1FileRef.current?.click()}
-                        className="w-full aspect-square bg-[#16161a] border-2 border-dashed border-[#2d2d34] hover:border-[#ef8840] hover:bg-[#1a1a22] rounded-2xl overflow-hidden relative group cursor-pointer flex flex-col items-center justify-center transition-all shadow-inner"
-                      >
-                        {tempRoom1Image ? (
-                          <>
-                            <img 
-                              src={tempRoom1Image} 
-                              alt="Room 1 Preview" 
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                            {/* Hover Overlay like Discord */}
-                            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-2 text-center space-y-1">
-                              <Camera className="w-6 h-6 text-slate-200 animate-bounce" />
-                              <span className="text-[10px] font-black tracking-wider uppercase">อัปโหลดรูปใหม่</span>
-                              <span className="text-[8px] text-slate-400 font-medium">Click to upload</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
-                            <div className="bg-[#1e1e24] group-hover:bg-[#ef8840]/15 text-slate-400 group-hover:text-[#ef8840] p-3 rounded-full transition-colors border border-[#2d2d34]">
-                              <Camera className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-extrabold text-slate-400 group-hover:text-slate-200 block">อัปโหลดภาพ</span>
-                              <span className="text-[8px] text-slate-500 block mt-0.5">Click to upload</span>
-                            </div>
+                      return (
+                        <div key={idx} className="flex items-center gap-3 bg-[#16161a] border border-[#2d2d34] p-2.5 rounded-xl hover:bg-[#1a1a20] transition-colors">
+                          {/* Thumbnail / Upload Button */}
+                          <div 
+                            onClick={() => {
+                              setUploadTargetIdx(idx);
+                              settingsFileRef.current?.click();
+                            }}
+                            className={`w-11 h-11 bg-[#0e0e11] border border-[#2d2d34] ${accentColor} rounded-lg overflow-hidden relative group cursor-pointer flex flex-col items-center justify-center transition-all shrink-0`}
+                            title="อัปโหลดรูปภาพ"
+                          >
+                            {currentUrl ? (
+                              <>
+                                <img 
+                                  src={currentUrl} 
+                                  alt={`Slot ${idx + 1}`} 
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                  <Camera className="w-4.5 h-4.5 text-slate-200" />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-slate-500 group-hover:text-slate-300">
+                                <Camera className="w-4.5 h-4.5" />
+                                <span className="text-[7.5px] font-bold mt-0.5">อัปโหลด</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      
-                      <input 
-                        type="file" 
-                        ref={room1FileRef} 
-                        onChange={(e) => handleImageFileChange(e, setTempRoom1Image)}
-                        accept="image/*" 
-                        className="hidden" 
-                      />
 
-                      {/* Optional URL input below */}
-                      <div className="w-full pt-1">
-                        <label className="text-[9px] font-bold text-slate-400 block mb-0.5">หรือใส่ URL รูปภาพ</label>
-                        <input
-                          type="url"
-                          value={tempRoom1Image.startsWith("data:") ? "" : tempRoom1Image}
-                          onChange={(e) => setTempRoom1Image(e.target.value)}
-                          placeholder={tempRoom1Image.startsWith("data:") ? "✓ อัปโหลดไฟล์รูปภาพแล้ว" : "https://example.com/image.jpg"}
-                          className="w-full bg-[#16161a] border border-[#2d2d34] rounded-lg px-2 py-1.5 text-[10px] text-slate-200 focus:bg-[#1a1a22] focus:border-[#ef8840] focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    {/* ROOM 2 UPLOAD */}
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="text-[11px] font-extrabold text-slate-300 block text-center">🎧 ห้องจัดรายการ 2</span>
-                      
-                      {/* Clickable Square Container */}
-                      <div 
-                        onClick={() => room2FileRef.current?.click()}
-                        className="w-full aspect-square bg-[#16161a] border-2 border-dashed border-[#2d2d34] hover:border-[#4a90e2] hover:bg-[#1a1a22] rounded-2xl overflow-hidden relative group cursor-pointer flex flex-col items-center justify-center transition-all shadow-inner"
-                      >
-                        {tempRoom2Image ? (
-                          <>
-                            <img 
-                              src={tempRoom2Image} 
-                              alt="Room 2 Preview" 
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          {/* URL Input */}
+                          <div className="flex-1 min-w-0">
+                            <label className="text-[8.5px] font-extrabold text-slate-400 block mb-0.5 uppercase tracking-wider">
+                              รูปภาพตำแหน่งที่ {idx + 1} {currentUrl.startsWith("data:") && <span className="text-emerald-400 font-extrabold">(✓ อัปโหลดไฟล์สำเร็จ)</span>}
+                            </label>
+                            <input
+                              type="url"
+                              value={currentUrl.startsWith("data:") ? "" : currentUrl}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (activeRoomSettingsTab === "ห้องจัดรายการ 1") {
+                                  setTempRoom1Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = val;
+                                    return next;
+                                  });
+                                } else {
+                                  setTempRoom2Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = val;
+                                    return next;
+                                  });
+                                }
+                              }}
+                              placeholder={currentUrl.startsWith("data:") ? "✓ อัปโหลดไฟล์รูปภาพแล้ว" : "https://example.com/image.jpg"}
+                              className={`w-full bg-[#0e0e11] border border-[#2d2d34] rounded-lg px-2 py-1 text-[10.5px] text-slate-200 focus:bg-[#1a1a22] ${borderFocus} focus:outline-none transition-all font-mono`}
                             />
-                            {/* Hover Overlay like Discord */}
-                            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-2 text-center space-y-1">
-                              <Camera className="w-6 h-6 text-slate-200 animate-bounce" />
-                              <span className="text-[10px] font-black tracking-wider uppercase">อัปโหลดรูปใหม่</span>
-                              <span className="text-[8px] text-slate-400 font-medium">Click to upload</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
-                            <div className="bg-[#1e1e24] group-hover:bg-[#4a90e2]/15 text-slate-400 group-hover:text-[#4a90e2] p-3 rounded-full transition-colors border border-[#2d2d34]">
-                              <Camera className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-extrabold text-slate-400 group-hover:text-slate-200 block">อัปโหลดภาพ</span>
-                              <span className="text-[8px] text-slate-500 block mt-0.5">Click to upload</span>
-                            </div>
                           </div>
-                        )}
-                      </div>
+
+                          {/* Delete Button */}
+                          {currentUrl && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (activeRoomSettingsTab === "ห้องจัดรายการ 1") {
+                                  setTempRoom1Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = "";
+                                    return next;
+                                  });
+                                } else {
+                                  setTempRoom2Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = "";
+                                    return next;
+                                  });
+                                }
+                              }}
+                              className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all cursor-pointer border border-red-500/20"
+                              title="ล้างรูปภาพนี้"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3 border-t border-[#2d2d34]">
+                  <button
+                    type="button"
+                    onClick={() => setIsRoomSettingsOpen(false)}
+                    className="flex-1 bg-[#1e1e24] hover:bg-[#25252d] text-slate-300 font-extrabold rounded-xl py-3 text-xs transition-colors cursor-pointer"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Close modal immediately
+                      setIsRoomSettingsOpen(false);
                       
-                      <input 
-                        type="file" 
-                        ref={room2FileRef} 
-                        onChange={(e) => handleImageFileChange(e, setTempRoom2Image)}
-                        accept="image/*" 
-                        className="hidden" 
-                      />
+                      // Filter out empty URLs or files
+                      const filteredRoom1 = tempRoom1Images.filter(Boolean);
+                      const filteredRoom2 = tempRoom2Images.filter(Boolean);
 
-                      {/* Optional URL input below */}
-                      <div className="w-full pt-1">
-                        <label className="text-[9px] font-bold text-slate-400 block mb-0.5">หรือใส่ URL รูปภาพ</label>
-                        <input
-                          type="url"
-                          value={tempRoom2Image.startsWith("data:") ? "" : tempRoom2Image}
-                          onChange={(e) => setTempRoom2Image(e.target.value)}
-                          placeholder={tempRoom2Image.startsWith("data:") ? "✓ อัปโหลดไฟล์รูปภาพแล้ว" : "https://example.com/image.jpg"}
-                          className="w-full bg-[#16161a] border border-[#2d2d34] rounded-lg px-2 py-1.5 text-[10px] text-slate-200 focus:bg-[#1a1a22] focus:border-[#4a90e2] focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-                    </div>
+                      // Fall back to defaults if fully cleared
+                      const finalRoom1 = filteredRoom1.length > 0 ? filteredRoom1 : ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"];
+                      const finalRoom2 = filteredRoom2.length > 0 ? filteredRoom2 : ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"];
 
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsRoomSettingsOpen(false)}
-                      className="flex-1 bg-[#1e1e24] hover:bg-[#25252d] text-slate-300 font-extrabold rounded-xl py-3 text-xs transition-colors cursor-pointer"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Close modal immediately for smooth and instant response
-                        setIsRoomSettingsOpen(false);
-                        
-                        // Fire the save action in the background
-                        updateRoomImages({
-                          "ห้องจัดรายการ 1": tempRoom1Image,
-                          "ห้องจัดรายการ 2": tempRoom2Image
-                        }).catch((err) => {
-                          console.error("Failed to update room images:", err);
-                        });
-                      }}
-                      className="flex-1 bg-[#ef8840] hover:bg-[#ef8840]/90 text-white font-extrabold rounded-xl py-3 text-xs transition-all cursor-pointer shadow-md"
-                    >
-                      บันทึกการตั้งค่า
-                    </button>
-                  </div>
+                      // Fire the save action in the background
+                      updateRoomImages({
+                        "ห้องจัดรายการ 1": finalRoom1,
+                        "ห้องจัดรายการ 2": finalRoom2
+                      }).catch((err) => {
+                        console.error("Failed to update room images:", err);
+                      });
+                    }}
+                    className="flex-1 bg-[#ef8840] hover:bg-[#ef8840]/90 text-white font-extrabold rounded-xl py-3 text-xs transition-all cursor-pointer shadow-md"
+                  >
+                    บันทึกการตั้งค่าทั้งหมด
+                  </button>
                 </div>
               </div>
             </motion.div>
