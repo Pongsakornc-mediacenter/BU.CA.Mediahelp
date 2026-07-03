@@ -1446,11 +1446,11 @@ export default function AdminDashboard({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           
           {/* LEFT COLUMN: Room Image Preview (Fills height to match table on desktop) */}
-          <div className="xl:col-span-5 flex flex-col justify-start">
-            <div className="w-full mx-auto aspect-[3/2] bg-[#111115] border border-[#2d2d34] rounded-[16px] overflow-hidden shadow-2xl relative group">
+          <div className="lg:col-span-5 flex flex-col justify-start">
+            <div className="w-full max-w-md md:max-w-xl lg:max-w-none mx-auto aspect-[3/2] bg-[#111115] border border-[#2d2d34] rounded-[16px] overflow-hidden shadow-2xl relative group">
               {(() => {
                 const val = roomImages?.[activeScheduleRoom];
                 let images: string[] = [];
@@ -1463,8 +1463,8 @@ export default function AdminDashboard({
                 if (images.length === 0) {
                   images = [
                     activeScheduleRoom === "ห้องจัดรายการ 1"
-                      ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"
-                      : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"
+                      ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"
+                      : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"
                   ];
                 }
 
@@ -1538,8 +1538,8 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Table representation (xl:col-span-7) */}
-          <div className="xl:col-span-7 bg-[#111115] border border-[#2d2d34] p-3 rounded-[16px] shadow-2xl space-y-3">
+          {/* RIGHT COLUMN: Table representation (lg:col-span-7) */}
+          <div className="lg:col-span-7 bg-[#111115] border border-[#2d2d34] p-3 rounded-[16px] shadow-2xl space-y-3">
             {/* Navigation controls for weeks */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="flex items-center gap-2">

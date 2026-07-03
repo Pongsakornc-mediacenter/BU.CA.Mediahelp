@@ -127,7 +127,7 @@ export default function CameraWorkbench() {
               <div 
                 className="absolute inset-0 transition-all duration-300 transform scale-105"
                 style={{
-                  backgroundImage: 'url("https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80")',
+                  backgroundImage: 'url("https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=2000&q=90")',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   filter: `blur(${getBlurValue()})`
@@ -138,7 +138,7 @@ export default function CameraWorkbench() {
               <div 
                 className="absolute inset-0 transition-all duration-300 transform scale-105"
                 style={{
-                  backgroundImage: 'url("https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80")',
+                  backgroundImage: 'url("https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=2000&q=90")',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)',

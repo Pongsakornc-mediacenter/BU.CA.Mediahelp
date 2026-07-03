@@ -153,8 +153,8 @@ export function useData() {
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
   const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
   const [roomImages, setRoomImages] = useState<{ [key: string]: string | string[] }>({
-    "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"],
-    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"]
+    "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
+    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
   });
 
 
@@ -231,12 +231,54 @@ export function useData() {
     if (shouldUseFirebase) {
       const unsubscribe = onSnapshot(doc(db, 'configs', 'room_images'), (snapshot) => {
         if (snapshot.exists()) {
-          setRoomImages(snapshot.data() as { [key: string]: string | string[] });
+          const rawData = snapshot.data() as { [key: string]: string | string[] };
+          let hasUpdated = false;
+          const updatedData = { ...rawData };
+          
+          for (const key in updatedData) {
+            const val = updatedData[key];
+            if (Array.isArray(val)) {
+              updatedData[key] = val.map(url => {
+                if (typeof url === 'string') {
+                  let nextUrl = url;
+                  if (nextUrl.includes('w=1000')) {
+                    nextUrl = nextUrl.replace('w=1000', 'w=1920');
+                    hasUpdated = true;
+                  }
+                  if (nextUrl.includes('q=80')) {
+                    nextUrl = nextUrl.replace('q=80', 'q=85');
+                    hasUpdated = true;
+                  }
+                  return nextUrl;
+                }
+                return url;
+              });
+            } else if (typeof val === 'string') {
+              let nextUrl = val;
+              if (nextUrl.includes('w=1000')) {
+                nextUrl = nextUrl.replace('w=1000', 'w=1920');
+                hasUpdated = true;
+              }
+              if (nextUrl.includes('q=80')) {
+                nextUrl = nextUrl.replace('q=80', 'q=85');
+                hasUpdated = true;
+              }
+              updatedData[key] = nextUrl;
+            }
+          }
+          
+          if (hasUpdated) {
+            setDoc(doc(db, 'configs', 'room_images'), updatedData)
+              .then(() => console.log("Successfully upgraded room images in Firestore to 1920px (HD)"))
+              .catch(err => console.warn("Failed to save high-res room images:", err));
+          }
+          
+          setRoomImages(updatedData);
         } else {
           // If doesn't exist, create it with default
           setDoc(doc(db, 'configs', 'room_images'), {
-            "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=80&w=1000"],
-            "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000"]
+            "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
+            "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
           }).catch(err => console.warn("Failed to write default room images:", err));
         }
       }, (error) => {
@@ -246,7 +288,43 @@ export function useData() {
     } else {
       const local = getLocalStorageItem('bu_ca_room_images', null);
       if (local) {
-        setRoomImages(local);
+        let hasUpdated = false;
+        const updatedLocal = { ...local };
+        for (const key in updatedLocal) {
+          const val = updatedLocal[key];
+          if (Array.isArray(val)) {
+            updatedLocal[key] = val.map(url => {
+              if (typeof url === 'string') {
+                let nextUrl = url;
+                if (nextUrl.includes('w=1000')) {
+                  nextUrl = nextUrl.replace('w=1000', 'w=1920');
+                  hasUpdated = true;
+                }
+                if (nextUrl.includes('q=80')) {
+                  nextUrl = nextUrl.replace('q=80', 'q=85');
+                  hasUpdated = true;
+                }
+                return nextUrl;
+              }
+              return url;
+            });
+          } else if (typeof val === 'string') {
+            let nextUrl = val;
+            if (nextUrl.includes('w=1000')) {
+              nextUrl = nextUrl.replace('w=1000', 'w=1920');
+              hasUpdated = true;
+            }
+            if (nextUrl.includes('q=80')) {
+              nextUrl = nextUrl.replace('q=80', 'q=85');
+              hasUpdated = true;
+            }
+            updatedLocal[key] = nextUrl;
+          }
+        }
+        if (hasUpdated) {
+          saveLocalStorageItem('bu_ca_room_images', updatedLocal);
+        }
+        setRoomImages(updatedLocal);
       }
     }
   }, []);
