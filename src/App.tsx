@@ -1311,7 +1311,7 @@ export default function App() {
 
                   {/* Main Grid Table representation */}
                   <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
-                    <table className="w-full border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
+                    <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
                       <thead>
                         {/* Elegant dark grey row for วิชา */}
                         <tr className="border-b border-[#2d2d34]">
@@ -1379,34 +1379,84 @@ export default function App() {
                                             displaySubject = b.purpose;
                                           }
                                         }
+
+                                        // Match code and title
+                                        let subjectCode = "BRS311";
+                                        let subjectTitle = "";
+                                        if (displaySubject) {
+                                          const codeMatch = displaySubject.match(/^([A-Za-z]{2,4}\d{3,4})[\s:-]*(.*)$/);
+                                          if (codeMatch) {
+                                            subjectCode = codeMatch[1].toUpperCase();
+                                            subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
+                                          } else {
+                                            if (displaySubject.length <= 8) {
+                                              subjectCode = displaySubject;
+                                              subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
+                                            } else {
+                                              subjectCode = "WORK";
+                                              subjectTitle = displaySubject;
+                                            }
+                                          }
+                                        } else {
+                                          subjectCode = "BRS311";
+                                          subjectTitle = displayPurpose || "ฝึกจัดรายการ";
+                                        }
+
+                                        // Format Booker details
+                                        const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
+                                        let phoneMasked = "";
+                                        if (b.phone) {
+                                          const cleanPhone = b.phone.trim();
+                                          if (cleanPhone.length >= 8) {
+                                            phoneMasked = cleanPhone.slice(0, cleanPhone.length - 4) + "xxxx";
+                                          } else {
+                                            phoneMasked = cleanPhone;
+                                          }
+                                        } else {
+                                          phoneMasked = b.studentIdInput ? (b.studentIdInput.length > 4 ? b.studentIdInput.slice(0, 4) + "xxxx" : b.studentIdInput) : "";
+                                        }
+                                        
+                                        const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
+                                        const accentColorClass = isRoom1 ? "text-[#ef8840]" : "text-[#4a90e2]";
+                                        const barColorClass = isRoom1 ? "bg-[#ef8840]" : "bg-[#4a90e2]";
+                                        const borderOutlineClass = isRoom1 ? "border-[#ef8840]/30" : "border-[#4a90e2]/30";
+                                        const footerTextColorClass = isRoom1 ? "text-[#ef8840]" : "text-[#4a90e2]";
+
                                         return (
                                           <>
                                             {/* Visible Compact Card */}
-                                            <div className={`p-1.5 rounded-lg border-2 text-left flex flex-col justify-center h-full min-h-[58px] gap-0.5 transition-all duration-300 shadow-md ${
-                                              isApproved 
-                                                ? (isRoom1 
-                                                  ? "bg-[#2d2d2d] border-[#ef8840]" 
-                                                  : "bg-[#2d2d2d] border-[#4a90e2]")
-                                                : "bg-[#2d2d2d] border-amber-500"
-                                            }`}>
+                                            <div 
+                                              className={`relative p-3 pl-4 rounded-xl border border-solid text-left flex flex-col justify-between h-full min-h-[82px] transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] ${borderOutlineClass}`}
+                                            >
+                                              {/* Left Thick Rounded Accent Bar */}
+                                              <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
+
                                               <div className="flex flex-col gap-0.5 w-full overflow-hidden">
-                                                {/* Header: Subject */}
-                                                <div className="font-black text-xs text-white tracking-wider uppercase truncate" title={displaySubject}>
-                                                  {displaySubject}
-                                                </div>
-                                                
-                                                {/* Separator line */}
-                                                <div className="h-[1.5px] bg-white w-full opacity-90 my-0.5" />
-
-                                                {/* Booker Name */}
-                                                <div className="text-[10px] font-bold text-white truncate leading-tight" title={b.studentName}>
-                                                  {(b.studentName || "").toLowerCase()}
+                                                {/* Header: Subject Code */}
+                                                <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate ${accentColorClass}`}>
+                                                  {subjectCode}
                                                 </div>
 
-                                                {/* Student ID */}
-                                                <div className="text-[9px] font-mono font-bold text-white tracking-wide leading-none">
-                                                  {b.studentIdInput || "-"}
+                                                {/* Subject Title */}
+                                                <div 
+                                                  className="font-bold text-xs sm:text-[13px] text-[#d3d3d3] leading-snug mt-0.5 truncate" 
+                                                  title={subjectTitle}
+                                                >
+                                                  {subjectTitle}
                                                 </div>
+                                              </div>
+
+                                              {/* Separator line */}
+                                              <div 
+                                                className="h-[1px] bg-[#aeadad]/20 w-full my-1.5" 
+                                              />
+
+                                              {/* Booker Name & Contact details */}
+                                              <div 
+                                                className={`text-[10.5px] font-bold ${footerTextColorClass} truncate leading-none`}
+                                                title={footerText}
+                                              >
+                                                {footerText}
                                               </div>
                                             </div>
 
@@ -1461,7 +1511,7 @@ export default function App() {
                                     className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
                                   >
                                     {/* Empty card container that matches the booked card dimensions and style */}
-                                    <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-full min-h-[54px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
+                                    <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-full min-h-[82px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
                                       <div className="relative flex items-center justify-center select-none w-full gap-1">
                                         <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
                                         <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
