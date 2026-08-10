@@ -183,6 +183,33 @@ export default function App() {
   const [bookingPhone, setBookingPhone] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [myBookingFilter, setMyBookingFilter] = useState("");
+
+  const myBookings = bookings.filter(b => {
+    if (!b) return false;
+    const filter = myBookingFilter.trim().toLowerCase();
+    if (filter) {
+      const idInput = (b.studentIdInput || "").toLowerCase();
+      const stId = (b.studentId || "").toLowerCase();
+      const name = (b.studentName || "").toLowerCase();
+      const email = (b.studentEmail || "").toLowerCase();
+      const phone = (b.phone || "").toLowerCase();
+      const room = (b.roomName || "").toLowerCase();
+      const subj = (b.subject || "").toLowerCase();
+      const purp = (b.purpose || "").toLowerCase();
+      return idInput.includes(filter) || stId.includes(filter) || name.includes(filter) || email.includes(filter) || phone.includes(filter) || room.includes(filter) || subj.includes(filter) || purp.includes(filter);
+    }
+    const currentStId = (bookingStudentId || "").trim().toLowerCase();
+    const currentStName = (bookingStudentName || "").trim().toLowerCase();
+
+    if (currentStId) {
+      return (b.studentIdInput || "").toLowerCase().includes(currentStId) || (b.studentId || "").toLowerCase().includes(currentStId);
+    }
+    if (currentStName) {
+      return (b.studentName || "").toLowerCase().includes(currentStName);
+    }
+    return true;
+  });
   
   // Schedule Check Table States
   const [activeScheduleRoom, setActiveScheduleRoom] = useState<string>("ห้องจัดรายการ 1");
@@ -517,7 +544,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col" id="app_root_layout">
+    <div 
+      className={`bg-slate-50 font-sans text-slate-800 flex flex-col ${
+        !currentUser ? 'h-screen overflow-hidden' : 'min-h-screen'
+      }`} 
+      id="app_root_layout"
+    >
       
       {/* Custom Styles for table hover skew shine animation */}
       <style>{`
@@ -654,61 +686,55 @@ export default function App() {
       </header>
 
       {/* 3. Central Content Arena */}
-      <main className="flex-1 w-full max-w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 transition-all duration-300">
+      <main className={`flex-1 w-full max-w-full mx-auto transition-all duration-300 ${
+        !currentUser 
+          ? 'h-[calc(100vh-64px)] flex items-center justify-center p-4 overflow-hidden' 
+          : 'p-4 sm:p-6 lg:p-8 space-y-6'
+      }`}>
 
         {/* Auth Required Check screen if not logged in */}
         {!currentUser ? (
-          <div className="max-w-2xl mx-auto my-16 bg-white border border-slate-100 rounded-[32px] p-10 sm:p-14 shadow-xl text-center space-y-9" id="login_block">
+          <div className="w-full max-w-xl mx-auto bg-[#141416] border border-[#27272a] rounded-[28px] p-6 sm:p-8 shadow-2xl text-center space-y-6 my-auto" id="login_block">
             <div className="relative inline-flex">
-              <div className="absolute inset-0 bg-indigo-200 rounded-3xl blur-xl opacity-35 animate-pulse"></div>
-              <div className="relative bg-gradient-to-tr from-indigo-50 to-violet-50 text-indigo-600 p-5 rounded-3xl w-20 h-20 flex items-center justify-center border border-indigo-100 shadow-sm">
-                <GraduationCap className="w-10 h-10" />
+              <div className="bg-gradient-to-b from-[#2e2e34] to-[#1c1c20] text-orange-400 p-4 rounded-2xl w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center border border-[#3f3f46] shadow-lg">
+                <GraduationCap className="w-8 h-8 sm:w-10 sm:h-10 text-orange-400" />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <h2 className="text-2xl sm:text-3.5xl font-black font-display text-slate-900 tracking-tight leading-normal">
-                นิสิตและนักศึกษา <br className="sm:hidden" />
-                <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">นิเทศศาสตร์ ม.กรุงเทพ</span>
+            <div className="space-y-3 px-[10px] py-0">
+              <h2 className="text-xl sm:text-2xl font-black font-display text-[#c1c1c1] tracking-tight leading-snug">
+                อาจารย์และเจ้าหน้าที่ <span className="text-orange-400">นิเทศศาสตร์</span><span className="text-purple-400">ม.กรุงเทพ</span>
               </h2>
-              <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto leading-relaxed">
-                ยินดีต้อนรับเข้าสู่ระบบช่วยเหลืออุปกรณ์ห้องปฏิบัติการและศูนย์สื่อการเรียนรู้ <br className="hidden sm:block" />
+              <p className="text-[#c1c1c1] text-[12px] leading-relaxed max-w-[450px] mx-auto">
+                ยินดีต้อนรับเข้าสู่ระบบจัดการและบริการอุปกรณ์ห้องปฏิบัติการและศูนย์สื่อการเรียนรู้ <br className="hidden sm:block" />
                 เพื่อความปลอดภัยสูงสุด กรุณาลงชื่อเข้าใช้งานด้วยบัญชีสถาบันของท่าน
               </p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-6 sm:p-8 text-left space-y-4 shadow-sm">
-              <span className="text-slate-800 font-extrabold text-sm sm:text-base flex items-center gap-2">
+            <div className="bg-[#09090b] border border-[#27272a] rounded-2xl p-5 sm:p-6 text-left space-y-4 shadow-inner">
+              <span className="text-[#c1c1c1] font-extrabold text-[18px] flex items-center justify-center gap-2 text-center">
                 🔑 การเข้าใช้งานระบบ
               </span>
               <div className="space-y-3.5 pt-1">
-                <div className="flex items-start gap-3">
-                  <span className="bg-indigo-100 text-indigo-700 text-xs sm:text-[13px] font-black px-3 py-1 rounded-lg shrink-0 mt-0.5">
-                    นักศึกษา
-                  </span>
-                  <p className="text-slate-600 text-sm sm:text-[15px] leading-relaxed">
-                    ใช้บัญชี <strong className="text-indigo-600 font-bold">@bumail.net</strong> เพื่อเข้าสู่ระบบเเละขอความช่วยเหลือ
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="bg-violet-100 text-violet-700 text-xs sm:text-[13px] font-black px-3 py-1 rounded-lg shrink-0 mt-0.5">
+                <div className="flex items-center gap-3">
+                  <span className="bg-[#2a2038] text-[#c084fc] text-[16px] font-bold px-3.5 py-1.5 rounded-md shrink-0">
                     อาจารย์ / เจ้าหน้าที่
                   </span>
-                  <p className="text-slate-600 text-sm sm:text-[15px] leading-relaxed">
-                    ใช้บัญชี <strong className="text-indigo-600 font-bold">@bu.ac.th</strong> เพื่อเข้าสู่ระบบ
+                  <p className="text-[#c1c1c1] text-[18px] leading-relaxed">
+                    ใช้บัญชี <strong className="text-[#f97316] font-bold">@bu.ac.th</strong> เพื่อเข้าสู่ระบบ
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-4 pt-1">
               <button
                 type="button"
                 onClick={() => loginWithGoogle(true)}
                 id="google_signin_btn"
-                className="w-full bg-slate-900 hover:bg-slate-950 text-white font-extrabold rounded-2xl text-sm sm:text-base py-4 px-6 shadow-lg shadow-indigo-900/10 hover:shadow-indigo-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer"
+                className="w-full max-w-[494px] mx-auto bg-[#b4b4b4] hover:bg-[#a3a3a3] text-black font-extrabold rounded-2xl text-[22px] py-3.5 sm:py-4 px-6 shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer"
               >
-                <QrCode className="w-5 h-5" />
+                <QrCode className="w-6 h-6 text-black" />
                 เข้าสู่ระบบด้วย BU Google Account
               </button>
             </div>
@@ -753,20 +779,6 @@ export default function App() {
               >
                 <Sliders className="w-4 h-4" />
                 การตั้งค่า กล้องพื้นฐาน
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setStudentTab('helpdesk')}
-                id="tab_helpdesk_btn"
-                className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  studentTab === 'helpdesk'
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-slate-50'
-                }`}
-              >
-                <MessageSquare className="w-4 h-4" />
-                ส่งตั๋วขอความช่วยเหลือ
               </button>
 
               <button
@@ -1133,7 +1145,7 @@ export default function App() {
                         setActiveScheduleRoom("ห้องจัดรายการ 1");
                         setBookingRoom("ห้องจัดรายการ 1");
                       }}
-                      className={`flex-1 py-1.5 text-center text-[11px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 py-1.5 text-center text-[16px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
                         activeScheduleRoom === "ห้องจัดรายการ 1"
                           ? "bg-[#ef8840] text-white shadow-md"
                           : "hover:bg-white/5 text-slate-400"
@@ -1147,7 +1159,7 @@ export default function App() {
                         setActiveScheduleRoom("ห้องจัดรายการ 2");
                         setBookingRoom("ห้องจัดรายการ 2");
                       }}
-                      className={`flex-1 py-1.5 text-center text-[11px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 py-1.5 text-center text-[16px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
                         activeScheduleRoom === "ห้องจัดรายการ 2"
                           ? "bg-[#4a90e2] text-white shadow-md"
                           : "hover:bg-white/5 text-slate-400"
@@ -1244,7 +1256,7 @@ export default function App() {
                     </div>
                     {/* Caption underneath the image */}
                     <div className="pt-1.5 text-center">
-                      <p className="text-[#94a3b8] text-[11px] font-semibold tracking-wide">
+                      <p className="text-[#cdcfd3] text-[11.5px] font-bold tracking-wide">
                         มุมมองบรรยากาศห้อง/สถานที่จอง (Atmospheric Preview)
                       </p>
                     </div>
@@ -1422,24 +1434,47 @@ export default function App() {
                                         const borderOutlineClass = isRoom1 ? "border-[#ef8840]/30" : "border-[#4a90e2]/30";
                                         const footerTextColorClass = isRoom1 ? "text-[#ef8840]" : "text-[#4a90e2]";
 
+                                        const cardSubject = subjectCode || displaySubject || "BRS 311";
+                                        const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
+                                        const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
+
+                                        let rawPurpose = b.bookingPurpose || displayPurpose || "";
+                                        if (!rawPurpose && b.purpose) {
+                                          const parenMatch = b.purpose.match(/\((.*?)\)/);
+                                          if (parenMatch) {
+                                            rawPurpose = parenMatch[1].trim();
+                                          } else {
+                                            rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
+                                          }
+                                        }
+                                        if (!rawPurpose) {
+                                          rawPurpose = subjectTitle || "จัดรายการ";
+                                        }
+                                        let cleanPurpose = rawPurpose
+                                          .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+                                          .replace(/^\((.*)\)$/, '$1')
+                                          .trim();
+
+                                        const purposeText = cleanPurpose || rawPurpose || "จัดรายการ";
+
                                         return (
                                           <>
                                             {/* Visible Compact Card */}
                                             <div 
-                                              className={`relative p-3 pl-4 rounded-xl border border-solid text-left flex flex-col justify-between h-full min-h-[82px] transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] ${borderOutlineClass}`}
+                                              className={`relative p-3 pl-4 rounded-xl border border-solid text-left flex flex-col justify-between h-full min-h-[82px] transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 ${borderOutlineClass}`}
                                             >
                                               {/* Left Thick Rounded Accent Bar */}
                                               <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
 
                                               <div className="flex flex-col gap-0.5 w-full overflow-hidden">
                                                 {/* Header: Subject Code */}
-                                                <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate ${accentColorClass}`}>
+                                                <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}>
                                                   {subjectCode}
                                                 </div>
 
                                                 {/* Subject Title */}
                                                 <div 
-                                                  className="font-bold text-xs sm:text-[13px] text-[#d3d3d3] leading-snug mt-0.5 truncate" 
+                                                  className="font-bold text-xs sm:text-[13px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-snug mt-0.5 truncate transition-colors" 
                                                   title={subjectTitle}
                                                 >
                                                   {subjectTitle}
@@ -1448,12 +1483,12 @@ export default function App() {
 
                                               {/* Separator line */}
                                               <div 
-                                                className="h-[1px] bg-[#aeadad]/20 w-full my-1.5" 
+                                                className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-1.5 transition-colors" 
                                               />
 
                                               {/* Booker Name & Contact details */}
                                               <div 
-                                                className={`text-[10.5px] font-bold ${footerTextColorClass} truncate leading-none`}
+                                                className={`text-[10.5px] font-bold ${footerTextColorClass} group-hover:!text-[#ffffff] truncate leading-none transition-colors`}
                                                 title={footerText}
                                               >
                                                 {footerText}
@@ -1461,39 +1496,31 @@ export default function App() {
                                             </div>
 
                                             {/* Hover Details Card Popup */}
-                                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[85%] mb-1 w-[250px] pointer-events-none opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-200 z-50 bg-[#0e0e11] border border-[#2d2d34] rounded-xl shadow-[0_0_25px_rgba(0,0,0,0.85)] p-3.5 flex flex-col gap-2">
-                                              <div className="text-left">
-                                                <div className="flex justify-between items-center mb-1 text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                                                  <span>{activeScheduleRoom}</span>
-                                                  <span>⏱️ {slot}</span>
-                                                </div>
-                                                <div className="font-extrabold text-[12px] leading-tight text-white mb-2">
-                                                  {displaySubject} {displayPurpose && <span className="font-semibold text-slate-300 text-[10.5px]">({displayPurpose})</span>}
-                                                </div>
-                                                <hr className="border-[#2d2d34] my-1.5" />
-                                                <div className="space-y-1 text-slate-300">
-                                                  <div className="flex items-center gap-1.5 font-bold text-slate-100 text-[11px]">
-                                                    <span className="text-xs select-none">👤</span>
-                                                    <span>{b.studentName}</span>
-                                                  </div>
-                                                  {b.studentIdInput && (
-                                                    <div className="flex items-center gap-1.5 font-mono font-medium text-slate-300 text-[10px]">
-                                                      <span className="text-xs select-none">🆔</span>
-                                                      <span>{b.studentIdInput}</span>
-                                                    </div>
-                                                  )}
-                                                  {b.phone && (
-                                                    <div className="flex items-center gap-1.5 font-mono font-medium text-slate-300 text-[10px]">
-                                                      <span className="text-xs select-none">📞</span>
-                                                      <span>{b.phone}</span>
-                                                    </div>
-                                                  )}
-                                                  {b.purpose && (
-                                                    <div className="text-[10px] text-slate-400 border-t border-[#2d2d34] pt-1.5 mt-1 bg-[#16161a]/30 p-1 rounded-md">
-                                                      <span className="font-semibold text-slate-300">วัตถุประสงค์: </span>
-                                                      <span>{b.purpose}</span>
-                                                    </div>
-                                                  )}
+                                            <div 
+                                              className="absolute left-1/2 -translate-x-1/2 bottom-[85%] mb-2 w-[265px] pointer-events-none opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-200 z-50 bg-[#18181a] border border-[#3f3f46] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.95)] p-3.5 text-left flex flex-col force-text-white"
+                                            >
+                                              {/* Header: Room Name */}
+                                              <div className="font-black text-[20px] leading-tight tracking-wide">
+                                                {activeScheduleRoom}
+                                              </div>
+
+                                              {/* Solid White Divider Line */}
+                                              <div className="h-[2px] w-full my-2.5 bg-white" style={{ backgroundColor: '#ffffff' }} />
+
+                                              {/* Subject / Time */}
+                                              <div className="font-extrabold text-[16px] leading-tight tracking-tight mb-1">
+                                                {cardSubject} / {cleanSlot}
+                                              </div>
+
+                                              {/* Student ID */}
+                                              <div className="font-extrabold text-[15px] leading-tight tracking-tight mb-3">
+                                                รหัสนักศึกษา {studentIdStr}
+                                              </div>
+
+                                              {/* Bottom Gray Box */}
+                                              <div className="rounded-xl p-3 shadow-sm min-h-[48px] flex flex-col justify-center bg-[#8e8e93]">
+                                                <div className="font-extrabold text-[14px] leading-snug break-words">
+                                                  วัตถุประสงค์ : {purposeText}
                                                 </div>
                                               </div>
                                             </div>
@@ -1533,12 +1560,12 @@ export default function App() {
                 </div>
                 </div>
 
-                <div className="flex justify-center">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto w-full items-start">
                   
-                  {/* Booking submission form */}
-                  <div className="w-full max-w-xl space-y-4">
+                  {/* Left Column: Booking submission form */}
+                  <div className="w-full space-y-4">
                     <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                      <h4 className="font-bold text-slate-800 text-sm border-b border-slate-50 pb-2 flex items-center gap-1.5">
+                      <h4 className="font-bold text-slate-800 text-[18px] border-b border-slate-50 pb-2 flex items-center gap-1.5">
                         <Plus className="w-4 h-4 text-indigo-600" />
                         จองห้องจัดรายการ MEDIA CENTER
                       </h4>
@@ -1661,6 +1688,140 @@ export default function App() {
                     </form>
                   </div>
 
+                  {/* Right Column: รายการ จองห้องจัดรายการของฉัน */}
+                  <div className="w-full space-y-4">
+                    <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-5 shadow-lg space-y-4 text-slate-100">
+                      <div className="flex items-center justify-between border-b border-[#27272a] pb-3">
+                        <h4 className="font-extrabold text-[#e0e0e0] text-[18px] flex items-center gap-2">
+                          <BookOpen className="w-[18px] h-[18px] text-orange-500" />
+                          รายการ จองห้องจัดรายการของฉัน
+                        </h4>
+                        <span className="bg-orange-500/15 text-orange-400 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-orange-500/30">
+                          {myBookings.length} รายการ
+                        </span>
+                      </div>
+
+                      {/* Filter Search Input */}
+                      <div>
+                        <input 
+                          type="text" 
+                          value={myBookingFilter}
+                          onChange={(e) => setMyBookingFilter(e.target.value)}
+                          placeholder="🔍 ค้นหาด้วยรหัสนักศึกษา / ชื่อ / รายวิชา..."
+                          className="w-full bg-[#09090b] border border-[#27272a] rounded-xl px-3.5 py-2 text-xs font-medium text-[#A1A1AA] focus:text-white focus:outline-none focus:border-orange-500 transition-all placeholder:text-zinc-500 shadow-inner"
+                        />
+                      </div>
+
+                      {/* Bookings List */}
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                        {myBookings.length === 0 ? (
+                          <div className="text-center py-8 px-4 bg-[#09090b]/50 rounded-xl border border-dashed border-[#27272a]">
+                            <BookOpen className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                            <p className="text-xs font-bold text-zinc-300">ยังไม่มีรายการจองห้องจัดรายการของคุณ</p>
+                            <p className="text-[11px] text-[#A1A1AA] mt-1">
+                              กรอกข้อมูลในแบบฟอร์มทางซ้าย แล้วส่งคำขอจองห้องเพื่อเริ่มต้น
+                            </p>
+                          </div>
+                        ) : (
+                          myBookings.map((b) => {
+                            let rawPurpose = b.bookingPurpose || b.purpose || "";
+                            if (b.purpose && !b.bookingPurpose) {
+                              const parenMatch = b.purpose.match(/\((.*?)\)/);
+                              if (parenMatch) {
+                                rawPurpose = parenMatch[1].trim();
+                              } else {
+                                rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
+                              }
+                            }
+                            let cleanPurpose = rawPurpose
+                              .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+                              .replace(/^\((.*)\)$/, '$1')
+                              .trim();
+                            const purposeDisplay = cleanPurpose || rawPurpose || "จัดรายการ";
+
+                            return (
+                              <div 
+                                key={b.id} 
+                                className="bg-[#171717] border border-[#27272a] hover:border-orange-500/40 rounded-xl p-3.5 space-y-2.5 transition-all shadow-sm"
+                              >
+                                {/* Top Row: Room Badge (Orange for Room 1, Blue for Room 2) + Status Badge */}
+                                <div className="flex items-center justify-between gap-2">
+                                  {b.roomName?.includes("1") ? (
+                                    <span className="bg-orange-500/15 text-orange-400 border border-orange-500/40 text-[14px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
+                                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                                      {b.roomName}
+                                    </span>
+                                  ) : (
+                                    <span className="bg-[#161f39] text-[#4a90e2] border border-[#478feb] text-[14px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
+                                      <span className="w-2 h-2 rounded-full bg-[#4a90e2] animate-pulse" />
+                                      {b.roomName}
+                                    </span>
+                                  )}
+
+                                  {b.status === 'approved' && (
+                                    <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3" /> อนุมัติแล้ว
+                                    </span>
+                                  )}
+                                  {b.status === 'pending' && (
+                                    <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                      <Clock className="w-3 h-3" /> รออนุมัติ
+                                    </span>
+                                  )}
+                                  {b.status === 'rejected' && (
+                                    <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" /> ไม่อนุมัติ
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Subject Name (20px, Bold: Orange for Room 1, Blue for Room 2) + Time Slot */}
+                                <div className="flex items-center justify-between pt-1 border-t border-[#27272a]/80">
+                                  <span className={`font-extrabold text-[20px] tracking-tight ${
+                                    b.roomName?.includes("1") ? "text-[#f19a58]" : "text-[#4a90e2]"
+                                  }`}>
+                                    {b.subject || "BRS311"}
+                                  </span>
+                                  <span className="font-mono font-bold text-[#A1A1AA] bg-[#18181b] border border-[#27272a] px-2 py-0.5 rounded text-[13px]">
+                                    {b.timeSlot}
+                                  </span>
+                                </div>
+
+                                {/* Details (15.5px, Light Gray #A1A1AA) */}
+                                <div className="space-y-1 text-[15.5px] text-[#A1A1AA] pt-1 border-t border-[#27272a]/50">
+                                  <div className="flex items-center justify-between">
+                                    <span>📅 วันที่: <strong className="text-zinc-100 font-bold">{b.date}</strong></span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span>👤 รหัสนักศึกษา: <strong className="text-zinc-100 font-bold">{b.studentIdInput || b.studentId || '-'}</strong> ({b.studentName || '-'})</span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="truncate max-w-[280px]" title={purposeDisplay}>
+                                      🎯 วัตถุประสงค์: <strong className="text-zinc-100 font-bold">{purposeDisplay}</strong>
+                                    </span>
+                                    {b.status === 'pending' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (window.confirm('คุณต้องการยกเลิกคำขอจองห้องนี้ใช่หรือไม่?')) {
+                                            deleteBooking(b.id);
+                                          }
+                                        }}
+                                        className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded transition-colors font-bold flex items-center gap-1 text-[12px] shrink-0"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" /> ยกเลิก
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
 
               </motion.div>
@@ -1669,15 +1830,6 @@ export default function App() {
         )}
       </main>
 
-      {/* 4. Footer */}
-      <footer className="bg-white border-t border-slate-100 py-6 mt-12 bg-slate-50/70">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-1.5">
-          <p className="text-slate-500 text-xs leading-normal">
-            © 2026 BU CA Media Support Panel. พัฒนาโดยใช้เทคโนโลยี React, Tailwind v4 และ Google Firestore Spark Plan (No-Cost tier)<br />
-            สลับโหมดผู้ใช้เพื่อทำการทดสอบฟังก์ชันแลกเปลี่ยนข้อมูลด่วน คำตอบสั่นแจ้งเตือน และรายงานสรุป Excel สำหรับนักจัดสัมมนาได้อิสระ
-          </p>
-        </div>
-      </footer>
 
       {/* Lightbox Image Preview Modal */}
       {previewImageUrl && (

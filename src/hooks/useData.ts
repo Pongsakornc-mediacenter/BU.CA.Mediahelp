@@ -178,22 +178,24 @@ export function useData() {
 
   // Sync Bookings
   useEffect(() => {
-    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
-    const shouldUseFirebase = isFirebaseConfigured && db && !isMockSession;
+    const isRealAuthSession = auth && auth.currentUser && currentUser && currentUser.uid === auth.currentUser.uid;
+    const shouldUseFirebase = isFirebaseConfigured && db && isRealAuthSession;
 
     if (shouldUseFirebase) {
       const unsubscribe = onSnapshot(collection(db, 'bookings'), async (snapshot) => {
         if (snapshot.empty) {
-          for (const book of DEFAULT_BOOKINGS) {
-            const { id, ...data } = book;
-            try {
-              await setDoc(doc(db, 'bookings', id), {
-                ...data,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              });
-            } catch (e) {
-              console.warn("Could not write default booking to Firestore:", e);
+          if (currentUser?.role === 'admin') {
+            for (const book of DEFAULT_BOOKINGS) {
+              const { id, ...data } = book;
+              try {
+                await setDoc(doc(db, 'bookings', id), {
+                  ...data,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                });
+              } catch (e) {
+                console.warn("Could not write default booking to Firestore:", e);
+              }
             }
           }
           setBookings(DEFAULT_BOOKINGS);
@@ -267,7 +269,7 @@ export function useData() {
             }
           }
           
-          if (hasUpdated) {
+          if (hasUpdated && currentUser?.role === 'admin') {
             setDoc(doc(db, 'configs', 'room_images'), updatedData)
               .then(() => console.log("Successfully upgraded room images in Firestore to 1920px (HD)"))
               .catch(err => console.warn("Failed to save high-res room images:", err));
@@ -275,11 +277,18 @@ export function useData() {
           
           setRoomImages(updatedData);
         } else {
-          // If doesn't exist, create it with default
-          setDoc(doc(db, 'configs', 'room_images'), {
-            "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
-            "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
-          }).catch(err => console.warn("Failed to write default room images:", err));
+          // If doesn't exist, create it with default if admin
+          if (currentUser?.role === 'admin') {
+            setDoc(doc(db, 'configs', 'room_images'), {
+              "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
+              "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
+            }).catch(err => console.warn("Failed to write default room images:", err));
+          } else {
+            setRoomImages({
+              "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
+              "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
+            });
+          }
         }
       }, (error) => {
         console.error("Room images sync error:", error);
@@ -327,7 +336,7 @@ export function useData() {
         setRoomImages(updatedLocal);
       }
     }
-  }, []);
+  }, [currentUser]);
 
   const updateRoomImages = async (newImages: { [key: string]: string | string[] }) => {
     // Optimistic update: instantly update local state and localStorage
@@ -346,22 +355,24 @@ export function useData() {
 
   // Sync Programs
   useEffect(() => {
-    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
-    const shouldUseFirebase = isFirebaseConfigured && db && !isMockSession;
+    const isRealAuthSession = auth && auth.currentUser && currentUser && currentUser.uid === auth.currentUser.uid;
+    const shouldUseFirebase = isFirebaseConfigured && db && isRealAuthSession;
 
     if (shouldUseFirebase) {
       const unsubscribe = onSnapshot(collection(db, 'programs'), async (snapshot) => {
         if (snapshot.empty) {
-          for (const prog of DEFAULT_PROGRAMS) {
-            const { id, ...data } = prog;
-            try {
-              await setDoc(doc(db, 'programs', id), {
-                ...data,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              });
-            } catch (e) {
-              console.warn("Could not write default program to Firestore:", e);
+          if (currentUser?.role === 'admin') {
+            for (const prog of DEFAULT_PROGRAMS) {
+              const { id, ...data } = prog;
+              try {
+                await setDoc(doc(db, 'programs', id), {
+                  ...data,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                });
+              } catch (e) {
+                console.warn("Could not write default program to Firestore:", e);
+              }
             }
           }
           setPrograms(DEFAULT_PROGRAMS);
@@ -396,17 +407,26 @@ export function useData() {
   // Auth synchronization (Firebase or Local Sandbox)
   useEffect(() => {
     if (isFirebaseConfigured && auth) {
-      const unsubscribe = onAuthStateChanged(auth, (user: any) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user: any) => {
         if (user) {
-          // Any email ending with @bu.ac.th is an Admin/Professor, and @bumail.net is a Student
           const email = user.email || '';
-          const isAdminRole = email.endsWith('@bu.ac.th');
+          if (!email.endsWith('@bu.ac.th')) {
+            try {
+              await fbSignOut(auth);
+            } catch (e) {
+              console.error(e);
+            }
+            setCurrentUser(null);
+            setLoading(false);
+            alert("⚠️ ระบบนี้สงวนสิทธิ์เฉพาะอาจารย์และเจ้าหน้าที่ (@bu.ac.th) เท่านั้นในการเข้าใช้งาน");
+            return;
+          }
           
           const profile: UserProfile = {
             uid: user.uid,
             name: user.displayName || user.email.split('@')[0],
             email: user.email,
-            role: isAdminRole ? 'admin' : 'student',
+            role: 'admin',
             joinedAt: new Date().toISOString()
           };
           setCurrentUser(profile);
@@ -419,7 +439,12 @@ export function useData() {
     } else {
       // Local session loading
       const localSession = getLocalStorageItem('bu_ca_current_user', null);
-      setCurrentUser(localSession);
+      if (localSession && !localSession.email?.endsWith('@bu.ac.th')) {
+        localStorage.removeItem('bu_ca_current_user');
+        setCurrentUser(null);
+      } else {
+        setCurrentUser(localSession);
+      }
       setLoading(false);
     }
   }, []);
@@ -559,10 +584,10 @@ export function useData() {
         const result = await signInWithPopup(auth, googleProvider);
         const email = result.user?.email || '';
 
-        // Domain restriction verification
-        if (domainRestriction && !email.endsWith('@bumail.net') && !email.endsWith('@bu.ac.th')) {
+        // Domain restriction verification: strictly @bu.ac.th
+        if (domainRestriction && !email.endsWith('@bu.ac.th')) {
           await fbSignOut(auth);
-          throw new Error('ระบบนี้สงวนสิทธิ์เฉพาะโดเมน @bumail.net หรือ @bu.ac.th เท่านั้นเพื่อความปลอดภัย');
+          throw new Error('ระบบนี้สงวนสิทธิ์เฉพาะอาจารย์และเจ้าหน้าที่ (@bu.ac.th) เท่านั้นในการเข้าสู่ระบบ');
         }
         return true;
       } catch (error: any) {
@@ -572,10 +597,10 @@ export function useData() {
             "💡 วิธีแก้ไขและทดสอบ:\n" +
             "1. ให้คลิกที่ไอคอน \"เปิดในแท็บใหม่ / Open in new tab\" (สัญลักษณ์ลูกศรเฉียงขึ้น ที่มุมขวาบนสุดของพรีวิวแอปนี้ในหน้าจอ AI Studio) เพื่อเข้าใช้งานแบบเต็มหน้าจอจริง\n" +
             "2. อนุญาตให้เบราว์เซอร์ปลดบล็อกป๊อปอัป (Pop-up) สำหรับโดเมนเว็บนี้\n" +
-            "3. หรือหากต้องการเพียงสำรวจและทดสอบฟังก์ชันต่างๆ สามารถกดเลือกบัญชีจำลองด้านล่าง \"นักศึกษาจำลอง\" หรือ \"อาจารย์พงศกร (Admin)\" เพื่อเข้าใช้งานได้อย่างครบถ้วนทันทีค่ะ"
+            "3. หรือหากต้องการเพียงสำรวจและทดสอบฟังก์ชันต่างๆ สามารถลงชื่อเข้าใช้งานด้วยบัญชี @bu.ac.th ค่ะ"
           );
         } else if (error.code === 'auth/cancelled-popup-request') {
-          alert("⚠️ มีป๊อปอัปเข้าสู่ระบบซ้อนกันอยู่ ขอแนะนำให้กดรีเฟรชหน้าเว็บนี้ (F5) แล้วลองลงชื่อเข้าใช้งานอีกครั้ง หรือทดสอบด้วยระบบจำลองด้านล่างได้ทันทีค่ะ");
+          alert("⚠️ มีป๊อปอัปเข้าสู่ระบบซ้อนกันอยู่ ขอแนะนำให้กดรีเฟรชหน้าเว็บนี้ (F5) แล้วลองลงชื่อเข้าใช้งานอีกครั้ง");
         } else {
           alert(error.message || 'การยืนยันตัวตนล้มเหลว');
           throw error;
@@ -583,23 +608,22 @@ export function useData() {
         return false;
       }
     } else {
-      alert("ไม่พบการตั้งค่า Firebase: ระบบจะเริ่มต้นในโหมดนักศึกษาจำลอง สามารถสลับบัญชีที่หน้าจอได้ตลอดเวลา");
-      loginAsMockUser('somchai@bumail.net', 'บุญช่วย ถ่ายสวย (นักศึกษา)');
+      alert("ไม่พบการตั้งค่า Firebase: ระบบจะเริ่มต้นในโหมดอาจารย์/เจ้าหน้าที่จำลอง (@bu.ac.th)");
+      loginAsMockUser('pongsakorn.c@bu.ac.th', 'อาจารย์พงศกร (Admin)');
     }
   };
 
   const loginAsMockUser = (email: string, displayName: string) => {
-    // Check if domain restrictions match
-    if (!email.endsWith('@bumail.net') && !email.endsWith('@bu.ac.th')) {
-      alert("กรุณาใช้อีเมล @bumail.net หรือ @bu.ac.th เท่านั้น!");
+    // Check if domain restrictions match: strictly @bu.ac.th
+    if (!email.endsWith('@bu.ac.th')) {
+      alert("กรุณาใช้อีเมล @bu.ac.th สำหรับอาจารย์/เจ้าหน้าที่ เท่านั้น!");
       return;
     }
-    const role = email.endsWith('@bu.ac.th') ? 'admin' : 'student';
     const profile: UserProfile = {
       uid: email.replace(/[@.]/g, '_'),
       name: displayName,
       email: email,
-      role: role,
+      role: 'admin',
       joinedAt: new Date().toISOString()
     };
     saveLocalStorageItem('bu_ca_current_user', profile);
