@@ -25,7 +25,24 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 import { db, auth, isFirebaseConfigured, googleProvider, handleFirestoreError, OperationType } from '../firebase';
-import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, RoomBooking, BroadcastProgram } from '../types';
+import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, RoomBooking, BroadcastProgram, Course } from '../types';
+
+export const DEFAULT_COURSES: Course[] = [
+  { id: "course-1", code: "BRS311", name: "การจัดรายการวิทยุกระจายเสียง" },
+  { id: "course-2", code: "CA102", name: "เทคโนโลยีสื่อสารมวลชน" },
+  { id: "course-3", code: "BC101", name: "พื้นฐานการสื่อสาร" },
+  { id: "course-4", code: "OTHER", name: "งานอื่นๆ / คลาสเรียนพิเศษ" },
+];
+
+export function getCourseLabel(course: Course): string {
+  if (!course.code || course.code.toUpperCase() === 'OTHER' || course.code === 'งานอื่นๆ') {
+    return course.name;
+  }
+  if (course.name.startsWith(course.code)) {
+    return course.name;
+  }
+  return `${course.code} - ${course.name}`;
+}
 
 export const AVAILABLE_STUDIO_ROOMS = [
   "Studio A: สตูดิโอโทรทัศน์เสมือนจริง (Virtual TV Studio)",
@@ -152,11 +169,12 @@ export function useData() {
   const [lastNotification, setLastNotification] = useState<string | null>(null);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
   const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [roomImages, setRoomImages] = useState<{ [key: string]: string | string[] }>({
-    "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
-    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"],
-    "ห้องยูทูป 1": ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=85&w=1920"],
-    "ห้องยูทูป 2": ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"]
+    "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=90&w=2560"],
+    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=90&w=2560"],
+    "ห้องยูทูป 1": ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=90&w=2560"],
+    "ห้องยูทูป 2": ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=90&w=2560"]
   });
 
 
@@ -341,6 +359,44 @@ export function useData() {
         }
         setRoomImages(updatedLocal);
       }
+    }
+  }, [currentUser]);
+
+  // Sync Courses from Firestore / LocalStorage
+  useEffect(() => {
+    const shouldUseFirebase = isFirebaseConfigured && db;
+
+    if (shouldUseFirebase) {
+      const unsubscribe = onSnapshot(collection(db, 'courses'), async (snapshot) => {
+        if (snapshot.empty) {
+          for (const c of DEFAULT_COURSES) {
+            try {
+              await setDoc(doc(db, 'courses', c.id), {
+                code: c.code,
+                name: c.name,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              });
+            } catch (e) {
+              console.warn("Could not seed default course to Firestore:", e);
+            }
+          }
+          setCourses(DEFAULT_COURSES);
+        } else {
+          const list = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+          })) as Course[];
+          setCourses(list);
+          saveLocalStorageItem('bu_ca_courses', list);
+        }
+      }, (error) => {
+        console.warn("Firestore courses subscription error:", error);
+        setCourses(getLocalStorageItem('bu_ca_courses', DEFAULT_COURSES));
+      });
+      return () => unsubscribe();
+    } else {
+      setCourses(getLocalStorageItem('bu_ca_courses', DEFAULT_COURSES));
     }
   }, [currentUser]);
 
@@ -1200,6 +1256,76 @@ export function useData() {
     }
   };
 
+  const addCourse = async (code: string, name: string) => {
+    const newCourse: Course = {
+      id: `course-${Date.now()}`,
+      code: code.trim(),
+      name: name.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setCourses(prev => {
+      const updated = [...prev, newCourse];
+      saveLocalStorageItem('bu_ca_courses', updated);
+      return updated;
+    });
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'courses', newCourse.id), {
+          code: newCourse.code,
+          name: newCourse.name,
+          createdAt: newCourse.createdAt,
+          updatedAt: newCourse.updatedAt
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `courses/${newCourse.id}`);
+      }
+    }
+  };
+
+  const updateCourse = async (id: string, code: string, name: string) => {
+    setCourses(prev => {
+      const updated = prev.map(c => c.id === id ? {
+        ...c,
+        code: code.trim(),
+        name: name.trim(),
+        updatedAt: new Date().toISOString()
+      } : c);
+      saveLocalStorageItem('bu_ca_courses', updated);
+      return updated;
+    });
+
+    if (db) {
+      try {
+        await updateDoc(doc(db, 'courses', id), {
+          code: code.trim(),
+          name: name.trim(),
+          updatedAt: new Date().toISOString()
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `courses/${id}`);
+      }
+    }
+  };
+
+  const deleteCourse = async (id: string) => {
+    setCourses(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      saveLocalStorageItem('bu_ca_courses', updated);
+      return updated;
+    });
+
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'courses', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `courses/${id}`);
+      }
+    }
+  };
+
   return {
     currentUser,
     tickets,
@@ -1220,6 +1346,10 @@ export function useData() {
     isFirebaseConfigured,
     bookings,
     programs,
+    courses,
+    addCourse,
+    updateCourse,
+    deleteCourse,
     createBooking,
     updateBookingStatus,
     deleteBooking,

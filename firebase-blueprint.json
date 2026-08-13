@@ -94,6 +94,19 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "studentId", "studentName", "studentEmail", "programName", "hosts", "category", "roomName", "date", "timeSlot", "status", "createdAt", "updatedAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Course/subject definition for studio room bookings and schedules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "description": "Course code e.g. BRS311" },
+        "name": { "type": "string", "description": "Course name e.g. การจัดรายการวิทยุกระจายเสียง" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "name"]
     }
   },
   "firestore": {
@@ -104,6 +117,10 @@
     "/classes/{classId}": {
       "schema": { "$ref": "ClassSession" },
       "description": "Session records of active classroom modules"
+    },
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Collection of available courses/subjects for room booking"
     },
     "/tickets/{ticketId}": {
       "schema": "Ticket",

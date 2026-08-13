@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart, 
@@ -42,10 +43,11 @@ import {
   Edit2,
   Image as ImageIcon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
-import { Ticket, AttendanceRecord, HelpCategory, ClassSession, RoomBooking, BroadcastProgram } from '../types';
-import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS } from '../hooks/useData';
+import { Ticket, AttendanceRecord, HelpCategory, ClassSession, RoomBooking, BroadcastProgram, Course } from '../types';
+import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCourseLabel } from '../hooks/useData';
 import { DataSummaryDashboard } from './DataSummaryDashboard';
 
 const getRoomTheme = (room: string) => {
@@ -124,6 +126,7 @@ interface AdminDashboardProps {
   onDeleteProgram: (id: string) => Promise<void>;
   onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string) => Promise<void>;
   roomImages?: { [key: string]: string | string[] };
+  courses?: Course[];
   activeTabProp?: 'student_schedule' | 'summary';
   onTabChangeProp?: (tab: 'student_schedule' | 'summary') => void;
 }
@@ -143,6 +146,7 @@ export default function AdminDashboard({
   onDeleteProgram,
   onCreateBooking,
   roomImages = {},
+  courses = [],
   activeTabProp,
   onTabChangeProp
 }: AdminDashboardProps) {
@@ -218,6 +222,65 @@ export default function AdminDashboard({
     }
     return true;
   });
+
+  // Teacher Class Booking Modal States
+  const [isTeacherModalOpen, setIsTeacherModalOpen] = useState<boolean>(false);
+  const [teacherRoom, setTeacherRoom] = useState<string>("ห้องจัดรายการ 1");
+  const [teacherDate, setTeacherDate] = useState<string>(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [teacherTimeSlot, setTeacherTimeSlot] = useState<string>("09:00 - 16:00");
+  const [teacherSubject, setTeacherSubject] = useState<string>("BRS311 - การจัดรายการวิทยุกระจายเสียง");
+  const [teacherName, setTeacherName] = useState<string>("");
+  const [submittingTeacherBooking, setSubmittingTeacherBooking] = useState<boolean>(false);
+
+  const handleTeacherBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacherSubject.trim()) {
+      alert("กรุณาระบุรหัสวิชา / กลุ่มเรียน (Section)");
+      return;
+    }
+    if (!onCreateBooking) return;
+    setSubmittingTeacherBooking(true);
+    try {
+      const instructorName = teacherName.trim() || currentUserEmail.split('@')[0] || "อาจารย์ผู้สอน";
+      await onCreateBooking(
+        teacherRoom,
+        teacherDate,
+        teacherTimeSlot,
+        `${teacherSubject.trim()} (สำหรับการเรียนการสอนอาจารย์)`,
+        "TEACHER",
+        "-",
+        instructorName
+      );
+
+      setIsTeacherModalOpen(false);
+      setActiveScheduleRoom(teacherRoom);
+      setScheduleBaseDate(teacherDate);
+      setTeacherSubject("BRS311 - การจัดรายการวิทยุกระจายเสียง");
+      alert("🎓 บันทึกการจองห้องสำหรับอาจารย์สอนเรียบร้อยแล้ว! ข้อมูลปูเต็มช่วงเวลาในตารางทันที");
+    } catch (err) {
+      console.error("Teacher booking error:", err);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setSubmittingTeacherBooking(false);
+    }
+  };
+
+  const [selectedScheduleBookingModal, setSelectedScheduleBookingModal] = useState<{
+    room: string;
+    subject: string;
+    slot: string;
+    studentId: string;
+    studentName?: string;
+    phone: string;
+    purpose: string;
+    roomThemeText: string;
+  } | null>(null);
 
   // Helper to retrieve the week's dates (Monday to Saturday) based on a given date (YYYY-MM-DD)
   const getWeekDates = (dateStr: string) => {
@@ -1549,8 +1612,8 @@ export default function AdminDashboard({
           </div>
 
           {/* Top Banner Image Preview */}
-          <div className="w-full max-w-5xl mx-auto pt-1 flex-1 flex flex-col">
-            <div className="w-full h-[480px] sm:h-[520px] md:h-[550px] lg:h-[580px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
+          <div className="w-full max-w-6xl mx-auto pt-1 flex-1 flex flex-col">
+            <div className="w-full h-[570px] sm:h-[590px] md:h-[635px] lg:h-[680px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
               {(() => {
                 const val = roomImages?.[activeScheduleRoom];
                 let images: string[] = [];
@@ -1563,13 +1626,16 @@ export default function AdminDashboard({
                 if (images.length === 0) {
                   images = [
                     activeScheduleRoom === "ห้องจัดรายการ 1"
-                      ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"
-                      : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"
+                      ? "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=90&w=2560"
+                      : "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=90&w=2560"
                   ];
                 }
 
                 const currentImgIdx = Math.min(activeImageIdx, images.length - 1);
-                const currentImg = images[currentImgIdx] || images[0];
+                let currentImg = images[currentImgIdx] || images[0];
+                if (currentImg && currentImg.includes("images.unsplash.com")) {
+                  currentImg = currentImg.replace(/w=\d+/, 'w=2560').replace(/q=\d+/, 'q=90');
+                }
 
                 return (
                   <>
@@ -1577,7 +1643,7 @@ export default function AdminDashboard({
                       src={currentImg} 
                       alt={activeScheduleRoom}
                       referrerPolicy="no-referrer"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                      className="absolute inset-0 w-full h-full object-contain mx-auto transition-transform duration-700 hover:scale-105"
                     />
                     <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none flex items-end justify-center pb-2.5">
                       <p className="text-white text-xs sm:text-sm font-extrabold tracking-wide drop-shadow-md">
@@ -1639,7 +1705,7 @@ export default function AdminDashboard({
           {/* LEFT COLUMN: Booking Form (lg:col-span-4) */}
           <div className="lg:col-span-4 w-full">
             <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 text-slate-800">
-              <h4 className="font-extrabold text-slate-800 text-xl pt-5 pl-0.5 h-[31px] border-b border-slate-100 pb-2.5 flex items-center gap-2">
+              <h4 className="font-extrabold text-slate-800 text-[18px] pt-5 pl-0.5 h-[31px] border-b border-slate-100 pb-2.5 flex items-center gap-2" style={{ fontSize: '18px' }}>
                 <Plus className="w-5 h-5 text-indigo-600" />
                 แบบฟอร์มจองห้องจัดรายการ
               </h4>
@@ -1848,203 +1914,265 @@ export default function AdminDashboard({
                     ];
 
                     return (
-                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors">
-                        <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100">
-                          <div className={`text-[11px] uppercase font-extrabold ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
-                          <div className="text-[9px] text-slate-400 font-semibold mt-0.5">{dayInfo.displayDate}</div>
+                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[86px]">
+                        <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[86px] max-h-[86px] w-[13%] align-middle box-border">
+                          <div className="flex flex-col justify-center items-center h-full w-full overflow-hidden">
+                            <div className={`text-[11px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
+                            <div className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate w-full">{dayInfo.displayDate}</div>
+                          </div>
                         </td>
 
-                      {slots.map((slot) => {
-                        const b = findBookingForCell(activeScheduleRoom, dayInfo.dateStr, slot);
+                      {(() => {
+                        const renderedCells: React.ReactNode[] = [];
+                        let i = 0;
+                        while (i < slots.length) {
+                          const slot = slots[i];
+                          const b = findBookingForCell(activeScheduleRoom, dayInfo.dateStr, slot);
 
-                        if (b) {
-                          const isApproved = b.status === "approved";
-                          const roomTheme = getRoomTheme(activeScheduleRoom);
+                          if (b) {
+                            // Calculate span if same booking spans multiple consecutive slots
+                            let spanCount = 1;
+                            const bookingKey = b.id || (b.date + '_' + b.roomName + '_' + b.timeSlot + '_' + b.studentId);
+                            
+                            while (i + spanCount < slots.length) {
+                              const nextB = findBookingForCell(activeScheduleRoom, dayInfo.dateStr, slots[i + spanCount]);
+                              if (nextB) {
+                                const nextKey = nextB.id || (nextB.date + '_' + nextB.roomName + '_' + nextB.timeSlot + '_' + nextB.studentId);
+                                if (nextKey === bookingKey) {
+                                  spanCount++;
+                                  continue;
+                                }
+                              }
+                              break;
+                            }
 
-                          return (
-                            <td 
-                              key={slot} 
-                              className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group"
-                            >
-                              {(() => {
-                                let displaySubject = b.subject || "";
-                                let displayPurpose = b.bookingPurpose || "";
-                                if (!displaySubject && b.purpose) {
-                                  if (b.purpose.includes("(")) {
-                                    const match = b.purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                                    if (match) {
-                                      displaySubject = match[1].trim();
-                                      displayPurpose = match[2].trim();
-                                    } else {
-                                      displaySubject = b.purpose;
-                                    }
+                            const isTeacherBooking = b.userType === "TEACHER" || (b.purpose && b.purpose.includes("สำหรับการเรียนการสอนอาจารย์"));
+
+                            if (isTeacherBooking || spanCount > 1) {
+                              // MERGED CELL (Teacher / Multi-slot booking)
+                              let displaySubject = b.subject || b.purpose || "วิชาสำหรับการเรียนการสอน";
+                              displaySubject = displaySubject.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/, '').trim();
+
+                              const instructorName = b.studentName || b.studentIdInput || "อาจารย์ผู้สอน";
+                              let slotSpanText = b.timeSlot || `${slots[i].split('-')[0].trim()} - ${slots[i + spanCount - 1].split('-')[1].trim()}`;
+                              if (slotSpanText.includes("09:00 - 16:00") || slotSpanText.includes("9.00 - 16.00")) {
+                                slotSpanText = "09:00 - 16:00 (เหมาทั้งวัน)";
+                              } else if (slotSpanText.includes("09:00 - 12:00") || slotSpanText.includes("9.00 - 12.00")) {
+                                slotSpanText = "09:00 - 12:00 (คาบเช้า)";
+                              } else if (slotSpanText.includes("13:00 - 16:00") || slotSpanText.includes("13.00 - 16.00")) {
+                                slotSpanText = "13:00 - 16:00 (คาบบ่าย)";
+                              }
+
+                              const purposeText = b.purpose ? b.purpose.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/, '').trim() : "สำหรับการเรียนการสอนอาจารย์";
+
+                              renderedCells.push(
+                                <td
+                                  key={`${slot}_span_${i}`}
+                                  colSpan={spanCount}
+                                  className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[86px] max-h-[86px] box-border"
+                                >
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedScheduleBookingModal({
+                                        room: activeScheduleRoom,
+                                        subject: displaySubject,
+                                        slot: slotSpanText,
+                                        studentId: "อาจารย์ผู้สอน",
+                                        studentName: instructorName,
+                                        phone: b.phone && b.phone !== "-" ? b.phone : "อาจารย์ผู้สอน",
+                                        purpose: purposeText || "สำหรับการเรียนการสอนอาจารย์",
+                                        roomThemeText: "text-purple-400"
+                                      });
+                                    }}
+                                    className="relative p-2 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-center items-center h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
+                                  >
+                                    {/* Left thick accent gradient line */}
+                                    <div className="absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl bg-gradient-to-b from-purple-400 via-indigo-400 to-blue-500" />
+
+                                    <div className="flex flex-col items-center justify-center w-full min-w-0 px-2 overflow-hidden">
+                                      <div className="flex items-center gap-1.5 font-black text-xs sm:text-sm text-purple-200 truncate w-full justify-center">
+                                        <span className="text-[14px] h-[20px] shrink-0 flex items-center justify-center">🎓</span>
+                                        <span className="truncate">{displaySubject}</span>
+                                      </div>
+                                      <div className="font-bold text-[11px] sm:text-xs text-[#ef8840] truncate w-full mt-0.5">
+                                        อาจารย์ผู้สอน: {instructorName}
+                                      </div>
+                                      <div className="inline-flex items-center gap-1 bg-purple-900/70 border border-purple-400/40 text-purple-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full mt-1 shadow-sm">
+                                        <span>⏱️ {slotSpanText}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              );
+
+                              i += spanCount;
+                            } else {
+                              // STANDARD SINGLE-SLOT STUDENT BOOKING
+                              const roomTheme = getRoomTheme(activeScheduleRoom);
+                              let displaySubject = b.subject || "";
+                              let displayPurpose = b.bookingPurpose || "";
+                              if (!displaySubject && b.purpose) {
+                                if (b.purpose.includes("(")) {
+                                  const match = b.purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
+                                  if (match) {
+                                    displaySubject = match[1].trim();
+                                    displayPurpose = match[2].trim();
                                   } else {
                                     displaySubject = b.purpose;
                                   }
-                                }
-
-                                // Match code and title
-                                let subjectCode = "BRS311";
-                                let subjectTitle = "";
-                                if (displaySubject) {
-                                  const codeMatch = displaySubject.match(/^([A-Za-z]{2,4}\d{3,4})[\s:-]*(.*)$/);
-                                  if (codeMatch) {
-                                    subjectCode = codeMatch[1].toUpperCase();
-                                    subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
-                                  } else {
-                                    if (displaySubject.length <= 8) {
-                                      subjectCode = displaySubject;
-                                      subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
-                                    } else {
-                                      subjectCode = "WORK";
-                                      subjectTitle = displaySubject;
-                                    }
-                                  }
                                 } else {
-                                  subjectCode = "BRS311";
-                                  subjectTitle = displayPurpose || "ฝึกจัดรายการ";
+                                  displaySubject = b.purpose;
                                 }
+                              }
 
-                                // Format Booker details
-                                const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
-                                let phoneMasked = "";
-                                if (b.phone) {
-                                  const cleanPhone = b.phone.trim();
-                                  if (cleanPhone.length >= 8) {
-                                    phoneMasked = cleanPhone.slice(0, cleanPhone.length - 4) + "xxxx";
-                                  } else {
-                                    phoneMasked = cleanPhone;
-                                  }
+                              let subjectCode = "BRS311";
+                              let subjectTitle = "";
+                              if (displaySubject) {
+                                const codeMatch = displaySubject.match(/^([A-Za-z]{2,4}\d{3,4})[\s:-]*(.*)$/);
+                                if (codeMatch) {
+                                  subjectCode = codeMatch[1].toUpperCase();
+                                  subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
                                 } else {
-                                  phoneMasked = b.studentIdInput ? (b.studentIdInput.length > 4 ? b.studentIdInput.slice(0, 4) + "xxxx" : b.studentIdInput) : "";
-                                }
-                                
-                                const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
-                                const accentColorClass = roomTheme.text;
-                                const barColorClass = roomTheme.bg;
-                                const borderOutlineClass = roomTheme.borderOutline;
-                                const footerTextColorClass = roomTheme.text;
-
-                                const cardSubject = subjectCode || displaySubject || "BRS 311";
-                                const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
-                                const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
-
-                                let rawPurpose = b.bookingPurpose || displayPurpose || "";
-                                if (!rawPurpose && b.purpose) {
-                                  const parenMatch = b.purpose.match(/\((.*?)\)/);
-                                  if (parenMatch) {
-                                    rawPurpose = parenMatch[1].trim();
+                                  if (displaySubject.length <= 8) {
+                                    subjectCode = displaySubject;
+                                    subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
                                   } else {
-                                    rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
+                                    subjectCode = "WORK";
+                                    subjectTitle = displaySubject;
                                   }
                                 }
-                                if (!rawPurpose) {
-                                  rawPurpose = subjectTitle || "จัดรายการ";
+                              } else {
+                                subjectCode = "BRS311";
+                                subjectTitle = displayPurpose || "ฝึกจัดรายการ";
+                              }
+
+                              const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
+                              let phoneMasked = "";
+                              if (b.phone) {
+                                const cleanPhone = b.phone.trim();
+                                if (cleanPhone.length >= 8) {
+                                  phoneMasked = cleanPhone.slice(0, cleanPhone.length - 4) + "xxxx";
+                                } else {
+                                  phoneMasked = cleanPhone;
                                 }
-                                let cleanPurpose = rawPurpose
-                                  .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
-                                  .replace(/^\((.*)\)$/, '$1')
-                                  .trim();
+                              } else {
+                                phoneMasked = b.studentIdInput ? (b.studentIdInput.length > 4 ? b.studentIdInput.slice(0, 4) + "xxxx" : b.studentIdInput) : "";
+                              }
 
-                                const purposeText = cleanPurpose || rawPurpose || "จัดรายการ";
+                              const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
+                              const accentColorClass = roomTheme.text;
+                              const barColorClass = roomTheme.bg;
+                              const borderOutlineClass = roomTheme.borderOutline;
 
-                                return (
-                                  <>
-                                    {/* Visible Compact Card */}
-                                    <div 
-                                      className={`relative p-2.5 pl-3.5 rounded-xl border border-solid text-left flex flex-col justify-between h-full min-h-[80px] transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 ${borderOutlineClass}`}
-                                    >
-                                      {/* Left Thick Rounded Accent Bar */}
-                                      <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
+                              const cardSubject = subjectCode || displaySubject || "BRS 311";
+                              const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
+                              const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
 
-                                      <div className="flex flex-col gap-0.5 w-full overflow-hidden">
-                                        {/* Header: Subject Code */}
-                                        <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}>
-                                          {subjectCode}
-                                        </div>
+                              let rawPurpose = b.bookingPurpose || displayPurpose || "";
+                              if (!rawPurpose && b.purpose) {
+                                const parenMatch = b.purpose.match(/\((.*?)\)/);
+                                if (parenMatch) {
+                                  rawPurpose = parenMatch[1].trim();
+                                } else {
+                                  rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
+                                }
+                              }
+                              if (!rawPurpose) {
+                                rawPurpose = subjectTitle || "จัดรายการ";
+                              }
+                              let cleanPurpose = rawPurpose
+                                .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+                                .replace(/^\((.*)\)$/, '$1')
+                                .trim();
 
-                                        {/* Subject Title */}
-                                        <div 
-                                          className="font-bold text-xs sm:text-[12.5px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-snug mt-0.5 truncate transition-colors" 
-                                          title={subjectTitle}
-                                        >
-                                          {subjectTitle}
-                                        </div>
+                              const purposeText = cleanPurpose || rawPurpose || "จัดรายการ";
+
+                              renderedCells.push(
+                                <td 
+                                  key={slot} 
+                                  className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[86px] max-h-[86px] w-[14.5%] box-border"
+                                >
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedScheduleBookingModal({
+                                        room: activeScheduleRoom,
+                                        subject: cardSubject,
+                                        slot: cleanSlot,
+                                        studentId: studentIdStr,
+                                        studentName: b.studentNameInput || b.studentName,
+                                        phone: b.phone || '-',
+                                        purpose: purposeText,
+                                        roomThemeText: roomTheme.text
+                                      });
+                                    }}
+                                    className={`relative p-2 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
+                                  >
+                                    <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
+                                    <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
+                                      <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate w-full whitespace-nowrap overflow-hidden text-ellipsis ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}>
+                                        {subjectCode}
                                       </div>
-
-                                      {/* Separator line */}
                                       <div 
-                                        className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-1 transition-colors" 
-                                      />
-
-                                      {/* Booker Name & Contact details */}
-                                      <div 
-                                        className={`text-[10px] font-bold ${footerTextColorClass} group-hover:!text-[#ffffff] truncate leading-none transition-colors`}
-                                        title={footerText}
+                                        className="font-bold text-xs sm:text-[12.5px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-snug mt-0.5 truncate w-full whitespace-nowrap overflow-hidden text-ellipsis transition-colors" 
+                                        title={subjectTitle}
                                       >
-                                        {footerText}
+                                        {subjectTitle}
                                       </div>
                                     </div>
-
-                                    {/* Hover Details Card Popup */}
-                                    <div 
-                                      className="absolute left-1/2 -translate-x-1/2 bottom-[85%] mb-2 w-[265px] pointer-events-none opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-200 z-50 bg-[#18181a] border border-[#3f3f46] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.95)] p-3.5 text-left flex flex-col force-text-white"
-                                    >
-                                      {/* Header: Room Name */}
-                                      <div className="font-black text-[20px] leading-tight tracking-wide">
-                                        {activeScheduleRoom}
-                                      </div>
-
-                                      {/* Solid White Divider Line */}
-                                      <div className="h-[2px] w-full my-2.5 bg-white" style={{ backgroundColor: '#ffffff' }} />
-
-                                      {/* Subject / Time */}
-                                      <div className="font-extrabold text-[16px] leading-tight tracking-tight mb-1">
-                                        {cardSubject} / {cleanSlot}
-                                      </div>
-
-                                      {/* Student ID */}
-                                      <div className="font-extrabold text-[15px] leading-tight tracking-tight mb-3">
-                                        รหัสนักศึกษา {studentIdStr}
-                                      </div>
-
-                                      {/* Bottom Gray Box */}
-                                      <div className="rounded-xl p-3 shadow-sm min-h-[48px] flex flex-col justify-center bg-[#8e8e93]">
-                                        <div className="font-extrabold text-[14px] leading-snug break-words">
-                                          วัตถุประสงค์ : {purposeText}
-                                        </div>
-                                      </div>
+                                    <div className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-0.5 transition-colors shrink-0" />
+                                    <div className="font-semibold text-[10px] sm:text-[11px] text-[#9CA3AF] group-hover:!text-[#ffffff] truncate w-full whitespace-nowrap overflow-hidden text-ellipsis transition-colors">
+                                      {footerText}
                                     </div>
-                                  </>
-                                );
-                              })()}
-                            </td>
-                          );
+                                  </div>
+                                </td>
+                              );
+
+                              i++;
+                            }
+                          } else {
+                            // EMPTY SLOT
+                            renderedCells.push(
+                              <td 
+                                key={slot} 
+                                className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[86px] max-h-[86px] w-[14.5%] box-border"
+                              >
+                                <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden">
+                                  <div className="relative flex items-center justify-center select-none w-full gap-1 overflow-hidden truncate">
+                                    <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300 shrink-0">🗓️</span>
+                                    <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors truncate">
+                                      ว่าง
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                            i++;
+                          }
                         }
 
-                        // Empty/Free Slot
-                        return (
-                          <td 
-                            key={slot} 
-                            className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
-                          >
-                            {/* Empty card container that matches the booked card dimensions and style */}
-                            <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-full min-h-[80px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
-                              <div className="relative flex items-center justify-center select-none w-full gap-1">
-                                <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
-                                <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
-                                  ว่าง
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                        );
-                      })}
+                        return renderedCells;
+                      })()}
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Bottom-Right Teacher Booking Accent Button */}
+          <div className="flex justify-end mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setTeacherRoom(activeScheduleRoom);
+                setIsTeacherModalOpen(true);
+              }}
+              className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white font-black text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg border border-purple-400/30 transition-all duration-200 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95"
+            >
+              🎓 จองห้องสำหรับอาจารย์สอน
+            </button>
           </div>
 
         </div>
@@ -2252,6 +2380,237 @@ export default function AdminDashboard({
         </div>
       </div>
     )}
+
+    {/* Modal Dialog for Schedule Booking Details */}
+    {selectedScheduleBookingModal && createPortal(
+      <div 
+        onClick={() => setSelectedScheduleBookingModal(null)}
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+      >
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-[360px] sm:max-w-[400px] cursor-default bg-[#18181a] border border-[#3f3f46] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] p-5 text-left flex flex-col animate-in zoom-in-95 duration-200"
+          style={{ color: '#E5E7EB' }}
+        >
+          {/* Header: Room Name & Close Button */}
+          <div className="flex items-center justify-between gap-2">
+            <div className={`font-black text-[22px] leading-tight tracking-wide ${selectedScheduleBookingModal.roomThemeText}`}>
+              {selectedScheduleBookingModal.room}
+            </div>
+            <button 
+              onClick={() => setSelectedScheduleBookingModal(null)}
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+              title="ปิด"
+              style={{ color: '#E5E7EB' }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Solid White/Light Divider Line */}
+          <div className="h-[2px] w-full my-3 bg-[#3f3f46]" />
+
+          {/* Details List */}
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="font-extrabold text-[15px] sm:text-[16px] leading-snug">
+              <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>วิชา / ช่วงเวลา</span>
+              <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.subject} / {selectedScheduleBookingModal.slot}</span>
+            </div>
+
+            <div className="font-extrabold text-[15px] leading-snug">
+              <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>รหัสนักศึกษา</span>
+              <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.studentId}</span>
+            </div>
+
+            {selectedScheduleBookingModal.studentName && (
+              <div className="font-extrabold text-[15px] leading-snug">
+                <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>ชื่อ-นามสกุล</span>
+                <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.studentName}</span>
+              </div>
+            )}
+
+            <div className="font-extrabold text-[15px] leading-snug">
+              <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>เบอร์โทรศัพท์</span>
+              <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.phone}</span>
+            </div>
+          </div>
+
+          {/* Bottom Purpose Box */}
+          <div className="rounded-xl p-3.5 shadow-sm min-h-[52px] flex flex-col justify-center bg-[#2a2a2e] border border-[#3f3f46]">
+            <span className="text-xs font-semibold mb-1" style={{ color: '#9CA3AF' }}>วัตถุประสงค์การใช้งาน</span>
+            <div className="font-extrabold text-[14px] leading-snug break-words" style={{ color: '#E5E7EB' }}>
+              {selectedScheduleBookingModal.purpose}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Teacher Class Booking Modal */}
+    <AnimatePresence>
+      {isTeacherModalOpen && (
+        <div 
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto cursor-pointer"
+          onClick={() => setIsTeacherModalOpen(false)}
+        >
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="relative w-full max-w-lg bg-[#18181a] border border-[#3f3f46] rounded-2xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.95)] cursor-default my-auto text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header & Close Button */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#3f3f46]">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎓</span>
+                <h3 className="text-lg font-black text-purple-400 font-display">
+                  จองห้องสำหรับอาจารย์สอน
+                </h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsTeacherModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer font-bold"
+                title="ปิด"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form Inputs */}
+            <form onSubmit={handleTeacherBookingSubmit} className="mt-4 space-y-4">
+              {/* 1. ห้องจัดรายการ */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  1. ห้องจัดรายการ
+                </label>
+                <select
+                  value={teacherRoom}
+                  onChange={(e) => setTeacherRoom(e.target.value)}
+                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold"
+                >
+                  <option value="ห้องจัดรายการ 1">ห้องจัดรายการ 1</option>
+                  <option value="ห้องจัดรายการ 2">ห้องจัดรายการ 2</option>
+                  <option value="ห้องยูทูป 1">ห้องยูทูป 1</option>
+                  <option value="ห้องยูทูป 2">ห้องยูทูป 2</option>
+                </select>
+              </div>
+
+              {/* 2. วันที่ต้องการสอน */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  2. วันที่ต้องการสอน
+                </label>
+                <input
+                  type="date"
+                  value={teacherDate}
+                  onChange={(e) => setTeacherDate(e.target.value)}
+                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold"
+                  required
+                />
+              </div>
+
+              {/* 3. รูปแบบช่วงเวลา */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1.5">
+                  3. รูปแบบช่วงเวลา
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { label: "คาบเช้า", sub: "09:00 - 12:00", value: "09:00 - 12:00", highlighted: false },
+                    { label: "คาบบ่าย", sub: "13:00 - 16:00", value: "13:00 - 16:00", highlighted: false },
+                    { label: "เหมาทั้งวัน", sub: "09:00 - 16:00", value: "09:00 - 16:00", highlighted: true }
+                  ].map((opt) => {
+                    const isSelected = teacherTimeSlot === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setTeacherTimeSlot(opt.value)}
+                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center relative ${
+                          isSelected
+                            ? opt.highlighted
+                              ? "bg-gradient-to-r from-purple-600/40 via-indigo-600/40 to-blue-600/40 border-purple-400 text-white font-black shadow-md ring-2 ring-purple-500/50"
+                              : "bg-purple-600/30 border-purple-500 text-purple-200 font-bold shadow-sm"
+                            : opt.highlighted
+                              ? "bg-[#232030] border-purple-500/40 text-purple-300 hover:bg-[#2e2a3f] font-semibold"
+                              : "bg-[#27272a] border-[#3f3f46] text-slate-300 hover:bg-[#323238]"
+                        }`}
+                      >
+                        {opt.highlighted && (
+                          <span className="absolute -top-2 right-2 text-[9px] font-black bg-purple-600 text-white px-1.5 py-0.2 rounded-full shadow">
+                            แนะนำ
+                          </span>
+                        )}
+                        <span className="text-xs font-extrabold">{opt.label}</span>
+                        <span className="text-[10px] opacity-80 mt-0.5">{opt.sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. รหัสวิชา / กลุ่มเรียน (Section) */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  4. รหัสวิชา / กลุ่มเรียน (Section) <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={teacherSubject}
+                  onChange={(e) => setTeacherSubject(e.target.value)}
+                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold cursor-pointer"
+                  required
+                >
+                  {courses.length > 0 ? (
+                    courses.map((c) => {
+                      const lbl = getCourseLabel(c);
+                      return (
+                        <option key={c.id} value={lbl}>
+                          {lbl}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <option value="BRS311 - การจัดรายการวิทยุกระจายเสียง">BRS311 - การจัดรายการวิทยุกระจายเสียง</option>
+                      <option value="CA102 - เทคโนโลยีสื่อสารมวลชน">CA102 - เทคโนโลยีสื่อสารมวลชน</option>
+                      <option value="BC101 - พื้นฐานการสื่อสาร">BC101 - พื้นฐานการสื่อสาร</option>
+                      <option value="งานอื่นๆ / คลาสเรียนพิเศษ">งานอื่นๆ / คลาสเรียนพิเศษ</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* 5. ชื่ออาจารย์ผู้สอน */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  5. ชื่ออาจารย์ผู้สอน
+                </label>
+                <input
+                  type="text"
+                  value={teacherName}
+                  onChange={(e) => setTeacherName(e.target.value)}
+                  placeholder={currentUserEmail.split('@')[0] || "เช่น อ.พงศกร"}
+                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-semibold"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={submittingTeacherBooking}
+                className="w-full h-11 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black rounded-xl text-sm transition-all shadow-lg shadow-purple-600/25 cursor-pointer mt-2 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submittingTeacherBooking ? "กำลังบันทึกข้อมูล..." : "⚡ บันทึกการจองปูเต็มตาราง"}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
 
   </div>
 );

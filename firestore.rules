@@ -159,6 +159,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Courses Collection
+    match /courses/{courseId} {
+      allow read, list: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
     // Broadcast Programs Collection
     match /programs/{programId} {
       allow read, list: if isSignedIn();
