@@ -31,12 +31,17 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Trash2
+  Trash2,
+  User,
+  ChevronDown,
+  FileSpreadsheet,
+  BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData } from './hooks/useData';
 import CameraWorkbench from './components/CameraWorkbench';
 import AdminDashboard from './components/AdminDashboard';
+import { DataSummaryDashboard } from './components/DataSummaryDashboard';
 import { HelpCategory } from './types';
 
 const compressImage = (file: File): Promise<string> => {
@@ -65,6 +70,56 @@ const compressImage = (file: File): Promise<string> => {
     };
     reader.onerror = (err) => reject(err);
   });
+};
+
+const getRoomTheme = (room: string) => {
+  switch (room) {
+    case "ห้องจัดรายการ 1":
+      return {
+        text: "text-[#ef8840]",
+        bg: "bg-[#ef8840]",
+        bgLight: "bg-[#ef8840]/10",
+        bgHoverLight: "hover:bg-[#ef8840]/20",
+        borderOutline: "border-[#ef8840]/30",
+        borderLight: "border-[#ef8840]/20",
+      };
+    case "ห้องจัดรายการ 2":
+      return {
+        text: "text-[#4a90e2]",
+        bg: "bg-[#4a90e2]",
+        bgLight: "bg-[#4a90e2]/10",
+        bgHoverLight: "hover:bg-[#4a90e2]/20",
+        borderOutline: "border-[#4a90e2]/30",
+        borderLight: "border-[#4a90e2]/20",
+      };
+    case "ห้องยูทูป 1":
+      return {
+        text: "text-rose-500",
+        bg: "bg-rose-600",
+        bgLight: "bg-rose-600/10",
+        bgHoverLight: "hover:bg-rose-600/20",
+        borderOutline: "border-rose-500/30",
+        borderLight: "border-rose-500/20",
+      };
+    case "ห้องยูทูป 2":
+      return {
+        text: "text-purple-500",
+        bg: "bg-purple-600",
+        bgLight: "bg-purple-600/10",
+        bgHoverLight: "hover:bg-purple-600/20",
+        borderOutline: "border-purple-500/30",
+        borderLight: "border-purple-500/20",
+      };
+    default:
+      return {
+        text: "text-[#ef8840]",
+        bg: "bg-[#ef8840]",
+        bgLight: "bg-[#ef8840]/10",
+        bgHoverLight: "hover:bg-[#ef8840]/20",
+        borderOutline: "border-[#ef8840]/30",
+        borderLight: "border-[#ef8840]/20",
+      };
+  }
 };
 
 export default function App() {
@@ -98,14 +153,15 @@ export default function App() {
     updateRoomImages
   } = useData();
 
-  // Admin view toggle for student simulation view switcher (Requested Feature)
-  const [isAdminViewingAsStudent, setIsAdminViewingAsStudent] = useState(false);
-
   // Room Settings States
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [tempRoom1Images, setTempRoom1Images] = useState<string[]>(["", "", "", "", ""]);
   const [tempRoom2Images, setTempRoom2Images] = useState<string[]>(["", "", "", "", ""]);
-  const [activeRoomSettingsTab, setActiveRoomSettingsTab] = useState<"ห้องจัดรายการ 1" | "ห้องจัดรายการ 2">("ห้องจัดรายการ 1");
+  const [tempYoutube1Images, setTempYoutube1Images] = useState<string[]>(["", "", "", "", ""]);
+  const [tempYoutube2Images, setTempYoutube2Images] = useState<string[]>(["", "", "", "", ""]);
+  const [activeRoomSettingsTab, setActiveRoomSettingsTab] = useState<"ห้องจัดรายการ 1" | "ห้องจัดรายการ 2" | "ห้องยูทูป 1" | "ห้องยูทูป 2">("ห้องจัดรายการ 1");
   const [uploadTargetIdx, setUploadTargetIdx] = useState<number | null>(null);
   const settingsFileRef = React.useRef<HTMLInputElement>(null);
 
@@ -132,6 +188,8 @@ export default function App() {
 
       setTempRoom1Images(getArray(roomImages["ห้องจัดรายการ 1"], "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"));
       setTempRoom2Images(getArray(roomImages["ห้องจัดรายการ 2"], "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"));
+      setTempYoutube1Images(getArray(roomImages["ห้องยูทูป 1"], "https://images.unsplash.com/photo-1616469829941-c7200edec809?q=85&w=1920"));
+      setTempYoutube2Images(getArray(roomImages["ห้องยูทูป 2"], "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"));
     }
   }, [roomImages]);
 
@@ -153,8 +211,20 @@ export default function App() {
             next[uploadTargetIdx] = compressed;
             return next;
           });
-        } else {
+        } else if (activeRoomSettingsTab === "ห้องจัดรายการ 2") {
           setTempRoom2Images((prev) => {
+            const next = [...prev];
+            next[uploadTargetIdx] = compressed;
+            return next;
+          });
+        } else if (activeRoomSettingsTab === "ห้องยูทูป 1") {
+          setTempYoutube1Images((prev) => {
+            const next = [...prev];
+            next[uploadTargetIdx] = compressed;
+            return next;
+          });
+        } else if (activeRoomSettingsTab === "ห้องยูทูป 2") {
+          setTempYoutube2Images((prev) => {
             const next = [...prev];
             next[uploadTargetIdx] = compressed;
             return next;
@@ -169,8 +239,18 @@ export default function App() {
     }
   };
 
-  // Active view states for Student
-  const [studentTab, setStudentTab] = useState<'workbench' | 'helpdesk' | 'booking'>('workbench');
+  // Active view states
+  const [studentTab, setStudentTab] = useState<'workbench' | 'booking' | 'summary'>('booking');
+  const [adminTab, setAdminTab] = useState<'student_schedule' | 'summary'>('student_schedule');
+
+  const handleOpenSummaryView = () => {
+    if (currentUser?.role === 'admin') {
+      setAdminTab('summary');
+    } else {
+      setStudentTab('summary');
+    }
+    setIsProfileDropdownOpen(false);
+  };
   
   // Student Booking states
   const [bookingRoom, setBookingRoom] = useState("ห้องจัดรายการ 1");
@@ -405,7 +485,6 @@ export default function App() {
     setTicketDesc("");
     setTicketImages([]);
     setTicketCategory('camera');
-    setStudentTab('helpdesk');
     setSubmittingTicket(false);
 
     // Call creation asynchronously in the background so the UI is free and responsive instantly!
@@ -597,19 +676,9 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setLastNotification(null)}
-                  className="bg-indigo-800 hover:bg-indigo-750 text-indigo-300 text-[10px] font-bold px-3 py-1 rounded-lg transition-colors"
-                >
-                  รับทราบ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentTab('helpdesk');
-                    setLastNotification(null);
-                  }}
                   className="bg-white text-indigo-900 text-[10px] font-bold px-3 py-1 rounded-lg transition-colors"
                 >
-                  เปิดดูคำตอบ
+                  รับทราบ
                 </button>
               </div>
             </div>
@@ -637,22 +706,19 @@ export default function App() {
 
           <div className="flex items-center gap-2">
             {currentUser ? (
-              <div className="flex items-center gap-3">
-                {currentUser.role === 'admin' && (
-                  <button
-                    type="button"
-                    onClick={() => setIsAdminViewingAsStudent(!isAdminViewingAsStudent)}
-                    id="admin_student_view_toggle"
-                    className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all border flex items-center gap-1.5 ${
-                      isAdminViewingAsStudent
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500 shadow-sm'
-                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-100'
-                    }`}
-                  >
-                    <GraduationCap className="w-3.5 h-3.5" />
-                    {isAdminViewingAsStudent ? '🔄 สลับกลับโหมดอาจารย์' : '👁️ สลับมุมมองนักศึกษา'}
-                  </button>
-                )}
+              <div className="flex items-center gap-2.5">
+                {/* Data Summary Button next to Settings */}
+                <button
+                  type="button"
+                  onClick={handleOpenSummaryView}
+                  id="data_summary_btn"
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl transition-all border border-emerald-200/70 flex items-center gap-1.5 cursor-pointer shadow-xs text-xs font-bold"
+                  title="สรุปข้อมูล"
+                >
+                  <BarChart3 className="w-4 h-4 text-emerald-600" />
+                  <span className="hidden sm:inline">สรุปข้อมูล</span>
+                </button>
+
                 {currentUser.email === 'pongsakorn.c@bu.ac.th' && (
                   <button
                     type="button"
@@ -664,19 +730,136 @@ export default function App() {
                     <Settings className="w-4 h-4" />
                   </button>
                 )}
-                <div className="hidden sm:block text-right">
-                  <span className="text-slate-800 text-xs font-bold block">{currentUser.name}</span>
-                  <span className="text-slate-400 text-[9px] block font-mono">{currentUser.email}</span>
+
+                {/* Profile Menu Dropdown */}
+                <div className="relative" id="profile_menu_dropdown_container">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    id="profile_dropdown_trigger_btn"
+                    className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 transition-all cursor-pointer shadow-sm"
+                    title="เมนูโปรไฟล์"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                      {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                    </div>
+                    <div className="hidden sm:block text-left pr-1">
+                      <span className="text-slate-800 text-xs font-bold block leading-tight">{currentUser.name}</span>
+                      <span className="text-slate-400 text-[9px] block font-mono leading-tight">
+                        {currentUser.role === 'admin' ? 'อาจารย์ผู้ดูแล' : currentUser.email}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu Content */}
+                  <AnimatePresence>
+                    {isProfileDropdownOpen && (
+                      <>
+                        {/* Invisible Backdrop to close on click outside */}
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setIsProfileDropdownOpen(false)} 
+                        />
+
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden text-left"
+                        >
+                          {/* User Info Header */}
+                          <div className="p-3.5 bg-slate-50/80 border-b border-slate-100">
+                            <p className="text-xs font-bold text-slate-800 truncate">{currentUser.name}</p>
+                            <p className="text-[10px] text-slate-500 font-mono truncate">{currentUser.email}</p>
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <span className="bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                                {currentUser.role === 'admin' ? 'อาจารย์ผู้ดูแล (ADMIN)' : 'นักศึกษา / ผู้ใช้งาน'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Menu Options */}
+                          <div className="p-1.5 space-y-1">
+                            {/* Data Summary Button */}
+                            <button
+                              type="button"
+                              onClick={handleOpenSummaryView}
+                              id="profile_dropdown_summary_btn"
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-emerald-600 hover:bg-emerald-50/80 rounded-xl transition-all text-left cursor-pointer group"
+                            >
+                              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 transition-colors">
+                                <BarChart3 className="w-4 h-4" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="leading-tight">สรุปข้อมูล</span>
+                                <span className="text-[9.5px] font-normal text-slate-400">รายงานสรุปข้อมูลเเละสถิติระบบ</span>
+                              </div>
+                            </button>
+
+                            {/* Feature 6: Excel / CSV Report Download */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileDropdownOpen(false);
+                                downloadAttendanceReportCSV();
+                              }}
+                              id="profile_dropdown_export_excel_btn"
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/80 rounded-xl transition-all text-left cursor-pointer group"
+                            >
+                              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 transition-colors">
+                                <FileSpreadsheet className="w-4 h-4" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="leading-tight">ออกรายงาน Excel / CSV</span>
+                                <span className="text-[9.5px] font-normal text-slate-400">สรุปสถิติการใช้งานรายภาคเรียน</span>
+                              </div>
+                            </button>
+
+                            {/* Settings Option for Admin */}
+                            {currentUser.email === 'pongsakorn.c@bu.ac.th' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsProfileDropdownOpen(false);
+                                  setIsRoomSettingsOpen(true);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/80 rounded-xl transition-all text-left cursor-pointer group"
+                              >
+                                <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+                                  <Settings className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="leading-tight">ตั้งค่ารูปภาพห้องจัดรายการ</span>
+                                  <span className="text-[9.5px] font-normal text-slate-400">จัดการรูปภาพบรรยากาศห้อง</span>
+                                </div>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="h-[1px] bg-slate-100 my-0.5" />
+
+                          {/* Logout */}
+                          <div className="p-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileDropdownOpen(false);
+                                logout();
+                              }}
+                              id="profile_dropdown_sign_out_btn"
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all text-left cursor-pointer"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              <span>ออกจากระบบ</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <button
-                  type="button"
-                  onClick={logout}
-                  id="sign_out_header_btn"
-                  className="bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 p-2 rounded-xl transition-all border border-slate-100"
-                  title="ออกจากระบบ"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
               </div>
             ) : (
               <span className="text-slate-400 text-xs font-mono">กรุณาเข้าสู่ระบบด้านล่าง</span>
@@ -739,7 +922,7 @@ export default function App() {
               </button>
             </div>
           </div>
-        ) : (currentUser.role === 'admin' && !isAdminViewingAsStudent) ? (
+        ) : currentUser.role === 'admin' ? (
           /* =======================================================
              ADMINISTRATIVE INSTRUCTOR WORKSPACE
              ======================================================= */
@@ -758,6 +941,8 @@ export default function App() {
             onDeleteProgram={deleteProgram}
             onCreateBooking={createBooking}
             roomImages={roomImages}
+            activeTabProp={adminTab}
+            onTabChangeProp={setAdminTab}
           />
         ) : (
           /* =======================================================
@@ -766,12 +951,40 @@ export default function App() {
           <div className="space-y-6" id="student_workspace_root">
             
             {/* Student Navigation Tabs */}
-            <div className="flex bg-white p-1 rounded-xl border border-slate-100 shadow-sm/50" id="student_segment_tabs">
+            <div className="flex bg-white p-1 rounded-xl border border-slate-100 shadow-sm/50 gap-1" id="student_segment_tabs">
+              <button
+                type="button"
+                onClick={() => setStudentTab('booking')}
+                id="tab_booking_btn"
+                className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  studentTab === 'booking'
+                    ? 'bg-slate-800 text-white shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-50'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-orange-500" />
+                จองห้องจัดรายการ MEDIA CENTER
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStudentTab('summary')}
+                id="tab_summary_btn"
+                className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  studentTab === 'summary'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 text-emerald-500" />
+                สรุปข้อมูล & รายงานสถิติ
+              </button>
+
               <button
                 type="button"
                 onClick={() => setStudentTab('workbench')}
                 id="tab_workbench_btn"
-                className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   studentTab === 'workbench'
                     ? 'bg-slate-800 text-white shadow-sm'
                     : 'text-slate-500 hover:bg-slate-50'
@@ -780,22 +993,24 @@ export default function App() {
                 <Sliders className="w-4 h-4" />
                 การตั้งค่า กล้องพื้นฐาน
               </button>
-
-              <button
-                type="button"
-                onClick={() => setStudentTab('booking')}
-                id="tab_booking_btn"
-                className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  studentTab === 'booking'
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-slate-50'
-                }`}
-              >
-                <BookOpen className="w-4 h-4" />
-                จองห้องสตูดิโอ & ตารางออกอากาศ
-              </button>
             </div>
 
+            {/* TAB: DATA SUMMARY PAGE VIEW */}
+            {studentTab === 'summary' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <DataSummaryDashboard
+                  bookings={bookings}
+                  tickets={tickets}
+                  attendance={attendance}
+                  onDownloadReport={downloadAttendanceReportCSV}
+                  onBack={() => setStudentTab('booking')}
+                />
+              </motion.div>
+            )}
             {/* TAB 1: WORKBENCH */}
             {studentTab === 'workbench' && (
               <motion.div
@@ -807,315 +1022,13 @@ export default function App() {
               </motion.div>
             )}
 
-            {/* TAB 2: HELPDESK */}
-            {studentTab === 'helpdesk' && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="grid grid-cols-1 md:grid-cols-12 gap-6"
-              >
-                {/* Submit New Ticket Form - 5 Cols */}
-                <div className="md:col-span-5 space-y-4">
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 mb-4 font-display">
-                      <HelpCircle className="w-5 h-5 text-indigo-600" />
-                      เปิดเคสขอคำแนะนำใหม่
-                    </h3>
-
-                    <form onSubmit={handleTicketSubmit} className="space-y-4">
-                      {/* Category Selector */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1">อุปกรณ์ที่เป็นปัญหา:</label>
-                        <select
-                          value={ticketCategory}
-                          id="category_picker"
-                          onChange={(e) => setTicketCategory(e.target.value as HelpCategory)}
-                          className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
-                        >
-                          <option value="camera">กล้อง / เลนส์ (Camera Setup)</option>
-                          <option value="microphone">ระบบบันทึกเสียงและไมค์ (Microphone/Audio)</option>
-                          <option value="lighting">การจัดการไฟและฉากสตูดิโอ (Lighting/Studio)</option>
-                          <option value="editing">ซอฟต์แวร์ตัดต่อหรือซอร์ฟแวร์ที่เกี่ยวข้อง (Editing)</option>
-                          <option value="other">เรื่องอื่นๆ / ปัญหาทั่วไป</option>
-                        </select>
-                      </div>
-
-                      {/* Title */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1">หัวข้อสั้นระบุปัญหา:</label>
-                        <input
-                          type="text"
-                          value={ticketTitle}
-                          id="ticket_title_input"
-                          onChange={(e) => setTicketTitle(e.target.value)}
-                          placeholder="เช่น เปิดรูรับแสง f1.8 แต่กล้องไม่ยอมให้ปรับ"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
-                          maxLength={150}
-                        />
-                      </div>
-
-                      {/* Description */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1">อธิบายสภาพปัญหาและรุ่นของอุปกรณ์:</label>
-                        <textarea
-                          rows={4}
-                          value={ticketDesc}
-                          id="ticket_desc_input"
-                          onChange={(e) => setTicketDesc(e.target.value)}
-                          placeholder="อธิบายพฤติกรรม อาการ หรือรายละเอียดของปัญหา เพื่ออาจารย์จะวิเคราะห์ได้อย่างแม่นยำขึ้น..."
-                          className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 resize-none"
-                          maxLength={2000}
-                        />
-                      </div>
-
-                      {/* Photo Attachment (Feature 10: Image submission base64) */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1">อัปโหลดภาพถ่ายอุปกรณ์หรือหน้าจอที่ขัดข้อง (สูงสุด 5 รูป):</label>
-                        <div className="flex items-center gap-3">
-                          <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg cursor-pointer transition-colors border border-slate-200 flex items-center gap-1.5 shrink-0">
-                            <FileImage className="w-4 h-4 text-slate-500" />
-                            เลือกรูปภาพปัญหากล้อง (สูงสุด 5 รูป)
-                            <input
-                              key={ticketImages.length === 0 ? "empty" : "has-images"}
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              id="camera_attachment_input"
-                              onChange={handleImageUpload}
-                              className="hidden"
-                            />
-                          </label>
-                          <p className="text-[10px] text-slate-400 truncate">
-                            {ticketImages.length > 0 
-                              ? `✓ แนบรูปภาพอุปกรณ์สำเร็จ ${ticketImages.length}/5 รูป` 
-                              : 'รองรับภาพถ่ายหน้ากล้องและแสงไฟ'}
-                          </p>
-                        </div>
-                        {ticketImages.length > 0 && (
-                          <div className="grid grid-cols-5 gap-2 mt-3">
-                            {ticketImages.map((imgSrc, index) => (
-                              <div key={index} className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 aspect-square flex items-center justify-center group shadow-sm">
-                                <img src={imgSrc} alt={`Attachment draft ${index + 1}`} className="max-h-full object-contain" referrerPolicy="no-referrer" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteImage(index)}
-                                  className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md transition-colors"
-                                  title="ลบรูปภาพนี้"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        type="submit"
-                        id="submit_ticket_btn"
-                        disabled={submittingTicket}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-slate-300 text-white text-xs font-bold py-2.5 rounded-xl shadow-md shadow-indigo-600/10 transition-colors"
-                      >
-                        {submittingTicket ? 'กำลังยื่นเรื่องช่วยเหลือ...' : 'ส่งเคสส่งอาจารย์ (Open Support Case)'}
-                      </button>
-                    </form>
-                  </div>
-                </div>
-
-                {/* Tickets list - 7 Cols */}
-                <div className="md:col-span-7 space-y-4">
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm min-h-[400px]">
-                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 mb-3 font-display">
-                      <MessageSquare className="w-5 h-5 text-indigo-600" />
-                      เคสขอความช่วยเหลือและประวัติการคุยของคุณ
-                    </h3>
-                    <p className="text-slate-500 text-xs mb-4">
-                      แสดงรายการคำร้องที่ส่งปรึกษา อัปเดตคำตอบและการให้ความเห็นพึงพอใจการบริการ
-                    </p>
-
-                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                      {tickets.filter(t => t.studentEmail === currentUser?.email).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
-                          <AlertCircle className="w-12 h-12 text-slate-200 mb-2" />
-                          <span>ยังไม่มีประวัติการส่งเคสขอความช่วยเหลืออุปกรณ์แต่อย่างใด</span>
-                        </div>
-                      ) : (
-                        tickets
-                          .filter(t => t.studentEmail === currentUser?.email)
-                          .map((ticket) => {
-                            const isShowing = activeStudentTicketId === ticket.id;
-                            return (
-                              <div
-                                key={ticket.id}
-                                id={`ticket_card_${ticket.id}`}
-                                className="bg-slate-50/55 hover:bg-slate-50 border border-slate-100/80 rounded-2xl p-4 transition-all"
-                              >
-                                <div className="flex justify-between items-start gap-3">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md px-1.5 py-0.5">
-                                        {getCategoryLabel(ticket.category).toUpperCase()}
-                                      </span>
-                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                                        ticket.status === 'pending'
-                                          ? 'bg-amber-50 text-amber-700 border border-amber-100'
-                                          : ticket.status === 'answered'
-                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                          : 'bg-slate-100 text-slate-500'
-                                      }`}>
-                                        {ticket.status === 'pending' ? 'รอคำตอบ' : ticket.status === 'answered' ? 'อาจารย์ตอบแล้ว' : 'ปิดเคสเรียบร้อย'}
-                                      </span>
-                                    </div>
-                                    <h4 className="font-bold text-slate-800 text-sm">{ticket.title}</h4>
-                                    <p className="text-slate-500 text-xs whitespace-pre-wrap">{ticket.description}</p>
-                                    
-                                    {ticket.imageUrl && (
-                                      <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1 font-semibold">
-                                        📷 แนบไฟล์รูปประกอบเรียบร้อย
-                                      </div>
-                                    )}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setActiveStudentTicketId(isShowing ? null : ticket.id);
-                                    }}
-                                    className="text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg px-3 py-1.5 font-bold shrink-0 transition-colors"
-                                  >
-                                    {isShowing ? 'ย่อคำตอบ' : 'เปิดแชทคำตอบ'}
-                                  </button>
-                                </div>
-
-                                {/* Replies Stream section */}
-                                {isShowing && (
-                                  <div className="mt-3.5 pl-3 border-l-2 border-indigo-600 space-y-3 bg-slate-50/70 p-3.5 rounded-xl flex flex-col">
-                                    {/* Chat dialog logs */}
-                                    <div className="space-y-3.5 max-h-72 overflow-y-auto mb-2 p-1">
-                                      {(!ticket.messages || ticket.messages.length === 0) ? (
-                                        <>
-                                          {/* Fallback backward compatibility */}
-                                          <div className="flex gap-2.5 items-start max-w-[85%]">
-                                            <div className="bg-white border border-slate-200/65 rounded-2xl rounded-tl-none p-3 shadow-sm text-xs text-slate-800 leading-normal">
-                                              <span className="text-[10px] text-slate-400 font-bold block mb-1">หัวข้อเริ่มเคสโดย {ticket.studentName}:</span>
-                                              <p className="whitespace-pre-wrap font-medium">{ticket.description}</p>
-                                            </div>
-                                          </div>
-                                          {ticket.replyText && (
-                                            <div className="flex gap-2.5 items-start max-w-[85%] ml-auto flex-row-reverse">
-                                              <div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none p-3 shadow-md shadow-indigo-600/5 text-xs leading-normal">
-                                                <span className="text-[10px] text-indigo-200 font-bold block mb-1">คำแนะนำโดย {ticket.repliedBy || 'อาจารย์'} (อาจารย์):</span>
-                                                <p className="whitespace-pre-wrap font-medium">{ticket.replyText}</p>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </>
-                                      ) : (
-                                        ticket.messages.map((msg, idx) => {
-                                          const isMe = msg.senderId === currentUser?.uid || msg.senderRole === 'student';
-                                          return (
-                                            <div key={msg.id || idx} className={`flex gap-2.5 items-start max-w-[85%] ${isMe ? '' : 'ml-auto flex-row-reverse'}`}>
-                                              <div className={`rounded-2xl p-3 shadow-sm text-xs leading-normal ${
-                                                isMe 
-                                                  ? 'bg-white border border-slate-200/65 text-slate-850 rounded-tl-none' 
-                                                  : 'bg-indigo-600 text-white rounded-tr-none text-left'
-                                              }`}>
-                                                <span className={`text-[10px] font-bold block mb-1 ${
-                                                  isMe ? 'text-slate-400' : 'text-indigo-200'
-                                                }`}>
-                                                  {msg.senderName} ({msg.senderRole === 'admin' ? 'ผู้สอน' : 'คุณ'}):
-                                                </span>
-                                                <p className="whitespace-pre-wrap font-medium">{msg.text}</p>
-
-                                                {/* Render attachments for student's first message */}
-                                                {isMe && idx === 0 && ((ticket.imageUrls && ticket.imageUrls.length > 0) || ticket.imageUrl) && (
-                                                  <div className="mt-2 text-left">
-                                                    <div className="grid grid-cols-2 gap-1.5 max-w-md">
-                                                      {(ticket.imageUrls && ticket.imageUrls.length > 0 ? ticket.imageUrls : [ticket.imageUrl]).filter(Boolean).map((imgUrl, imgIdx) => (
-                                                        <div key={imgIdx} className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
-                                                          <img 
-                                                            src={imgUrl} 
-                                                            alt={`My Attachment ${imgIdx + 1}`} 
-                                                            referrerPolicy="no-referrer"
-                                                            className="max-h-40 object-contain w-full cursor-zoom-in"
-                                                            onClick={() => setPreviewImageUrl(imgUrl)}
-                                                          />
-                                                        </div>
-                                                      ))}
-                                                    </div>
-                                                    <div className="text-[9px] text-slate-400 font-semibold mt-1">
-                                                      📷 ภาพถ่ายแนบประกอบที่บันทึกไว้ ({ticket.imageUrls?.length || 1} รูป)
-                                                    </div>
-                                                  </div>
-                                                )}
-
-                                                <span className={`text-[8px] block text-right mt-1 font-mono ${
-                                                  isMe ? 'text-slate-400' : 'text-indigo-300'
-                                                }`}>
-                                                  {new Date(msg.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          );
-                                        })
-                                      )}
-                                    </div>
-
-                                    {ticket.status !== 'closed' ? (
-                                      <form 
-                                        onSubmit={async (e) => {
-                                          e.preventDefault();
-                                          const form = e.currentTarget;
-                                          const input = form.elements.namedItem('studentChatInput') as HTMLInputElement;
-                                          if (!input || !input.value.trim()) return;
-                                          const val = input.value.trim();
-                                          input.value = "";
-                                          try {
-                                            await sendTicketMessage(ticket.id, val);
-                                          } catch (error) {
-                                            console.error("Failed to send message", error);
-                                          }
-                                        }}
-                                        className="flex gap-2 border-t border-slate-200/65 pt-3"
-                                      >
-                                        <input
-                                          name="studentChatInput"
-                                          type="text"
-                                          placeholder="พิมพ์คำถาม ข้อมูลเพิ่มเติม หรือโต้ตอบผู้สอนที่นี่..."
-                                          className="flex-1 bg-white border border-slate-200 focus:outline-none focus:border-indigo-600 rounded-xl px-3.5 py-2 text-xs"
-                                        />
-                                        <button
-                                          type="submit"
-                                          className="bg-indigo-600 hover:bg-indigo-750 active:bg-indigo-800 text-white rounded-xl px-4 py-2 text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
-                                        >
-                                          <span>ส่งแชท</span>
-                                          <Send className="w-3 h-3" />
-                                        </button>
-                                      </form>
-                                    ) : (
-                                      <div className="bg-slate-100 border border-slate-200 text-slate-500 rounded-xl p-2.5 text-center text-xs font-bold">
-                                        🔒 ตั๋วคำร้องนี้ปิดเสร็จสิ้นเรียบร้อยแล้ว ได้คะแนนความพึงพอใจเรียบร้อย
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
             {/* TAB 3: DYNAMIC ROOMS BOOKING & SHOWS PROGRAMMING PORTAL */}
             {studentTab === 'booking' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-3 text-white"
+                className="space-y-4 text-white"
                 id="booking_tab_root"
               >
                 
@@ -1126,55 +1039,83 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Centered Dark Header Section with Room selectors */}
-                <div className="bg-[#111115] border border-[#2d2d34] p-3 sm:p-4 rounded-[20px] shadow-2xl text-center space-y-2">
-                  <div className="text-center space-y-1">
-                    <h4 className={`text-base sm:text-lg font-extrabold ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"} tracking-tight font-display flex items-center justify-center gap-1.5`}>
-                      📅 ตารางห้องจัดรายการ
-                    </h4>
-                    <p className="text-slate-400 text-[11px] max-w-xl mx-auto leading-tight">
-                      กรุณาตรวจสอบตารางการจองด้านล่างเพื่อตรวจสอบคิวที่ว่างก่อนกรอกแบบฟอร์มจองห้องจัดรายการต่อ
-                    </p>
+                {/* 1. TOP SECTION: Header & Atmosphere Image Banner */}
+                <div className="space-y-3">
+                  {/* Centered Dark Header Section with Room selectors */}
+                  <div className="bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-[20px] shadow-2xl text-center space-y-2.5">
+                    <div className="text-center space-y-1">
+                      <h4 className={`text-base sm:text-lg font-extrabold ${getRoomTheme(activeScheduleRoom).text} tracking-tight font-display flex items-center justify-center gap-1.5`}>
+                        📅 ตารางห้องจัดรายการ MEDIA CENTER
+                      </h4>
+                      <p className="text-slate-400 text-[11px] max-w-xl mx-auto leading-tight">
+                        กรุณาตรวจสอบตารางการจองด้านล่างเพื่อตรวจสอบคิวที่ว่างก่อนกรอกแบบฟอร์มจองห้องจัดรายการต่อ
+                      </p>
+                    </div>
+
+                    {/* Room selectors */}
+                    <div className="flex max-w-2xl mx-auto bg-[#0a0a0c] border border-[#2d2d34] rounded-xl overflow-hidden shadow-inner p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveScheduleRoom("ห้องจัดรายการ 1");
+                          setBookingRoom("ห้องจัดรายการ 1");
+                        }}
+                        className={`flex-1 py-1.5 text-center text-xs sm:text-sm font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1 ${
+                          activeScheduleRoom === "ห้องจัดรายการ 1"
+                            ? "bg-[#ef8840] text-white shadow-md"
+                            : "hover:bg-white/5 text-slate-400"
+                        }`}
+                      >
+                        🎙️ ห้องจัดรายการ 1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveScheduleRoom("ห้องจัดรายการ 2");
+                          setBookingRoom("ห้องจัดรายการ 2");
+                        }}
+                        className={`flex-1 py-1.5 text-center text-xs sm:text-sm font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1 ${
+                          activeScheduleRoom === "ห้องจัดรายการ 2"
+                            ? "bg-[#4a90e2] text-white shadow-md"
+                            : "hover:bg-white/5 text-slate-400"
+                        }`}
+                      >
+                        🎧 ห้องจัดรายการ 2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveScheduleRoom("ห้องยูทูป 1");
+                          setBookingRoom("ห้องยูทูป 1");
+                        }}
+                        className={`flex-1 py-1.5 text-center text-xs sm:text-sm font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1 ${
+                          activeScheduleRoom === "ห้องยูทูป 1"
+                            ? "bg-rose-600 text-white shadow-md"
+                            : "hover:bg-white/5 text-slate-400"
+                        }`}
+                      >
+                        📹 ห้องยูทูป 1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveScheduleRoom("ห้องยูทูป 2");
+                          setBookingRoom("ห้องยูทูป 2");
+                        }}
+                        className={`flex-1 py-1.5 text-center text-xs sm:text-sm font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1 ${
+                          activeScheduleRoom === "ห้องยูทูป 2"
+                            ? "bg-purple-600 text-white shadow-md"
+                            : "hover:bg-white/5 text-slate-400"
+                        }`}
+                      >
+                        🎬 ห้องยูทูป 2
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Room selectors (tabs like in the user's Excel mockup) */}
-                  <div className="flex max-w-md mx-auto bg-[#0a0a0c] border border-[#2d2d34] rounded-xl overflow-hidden shadow-inner p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveScheduleRoom("ห้องจัดรายการ 1");
-                        setBookingRoom("ห้องจัดรายการ 1");
-                      }}
-                      className={`flex-1 py-1.5 text-center text-[16px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeScheduleRoom === "ห้องจัดรายการ 1"
-                          ? "bg-[#ef8840] text-white shadow-md"
-                          : "hover:bg-white/5 text-slate-400"
-                      }`}
-                    >
-                      🎙️ ห้องจัดรายการ 1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveScheduleRoom("ห้องจัดรายการ 2");
-                        setBookingRoom("ห้องจัดรายการ 2");
-                      }}
-                      className={`flex-1 py-1.5 text-center text-[16px] font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeScheduleRoom === "ห้องจัดรายการ 2"
-                          ? "bg-[#4a90e2] text-white shadow-md"
-                          : "hover:bg-white/5 text-slate-400"
-                      }`}
-                    >
-                      🎧 ห้องจัดรายการ 2
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-                  
-                  {/* LEFT COLUMN: Room Image Preview (Fills height to match table on desktop) */}
-                  <div className="lg:col-span-5 flex flex-col justify-start">
-                    <div className="w-full max-w-md md:max-w-xl lg:max-w-none mx-auto aspect-[3/2] bg-[#111115] border border-[#2d2d34] rounded-[16px] overflow-hidden shadow-2xl relative group">
+                  {/* Top Center Horizontal Atmosphere Banner */}
+                  <div className="w-full max-w-5xl mx-auto">
+                    <div className="w-full h-[480px] sm:h-[520px] md:h-[550px] lg:h-[580px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
                       {(() => {
                         const val = roomImages?.[activeScheduleRoom];
                         let images: string[] = [];
@@ -1203,8 +1144,12 @@ export default function App() {
                               referrerPolicy="no-referrer"
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                             />
-                            {/* Elegant overlay gradient at bottom */}
-                            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#111115]/80 to-transparent pointer-events-none" />
+                            {/* Overlay gradient at bottom */}
+                            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none flex items-end justify-center pb-2.5">
+                              <p className="text-white text-xs sm:text-sm font-extrabold tracking-wide drop-shadow-md">
+                                📷 บรรยากาศ {activeScheduleRoom} (Atmospheric Preview)
+                              </p>
+                            </div>
                             
                             {/* Navigation Arrows */}
                             {images.length > 1 && (
@@ -1215,9 +1160,9 @@ export default function App() {
                                     e.stopPropagation();
                                     setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
                                   }}
-                                  className="absolute left-2.5 top-1/2 -translate-y-1/2 bg-white/75 hover:bg-white/90 text-slate-800 rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in backdrop-blur-[2px]"
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer backdrop-blur-xs"
                                 >
-                                  <ChevronLeft className="w-4 h-4" />
+                                  <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
                                   type="button"
@@ -1225,16 +1170,16 @@ export default function App() {
                                     e.stopPropagation();
                                     setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
                                   }}
-                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-white/75 hover:bg-white/90 text-slate-800 rounded-full p-2 transition-all shadow-md z-10 cursor-pointer animate-fade-in backdrop-blur-[2px]"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-all shadow-md z-10 cursor-pointer backdrop-blur-xs"
                                 >
-                                  <ChevronRight className="w-4 h-4" />
+                                  <ChevronRight className="w-5 h-5" />
                                 </button>
                               </>
                             )}
 
                             {/* Indicator Dots */}
                             {images.length > 1 && (
-                              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full z-10">
+                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full z-10">
                                 {images.map((_, idx) => (
                                   <button
                                     key={idx}
@@ -1243,8 +1188,8 @@ export default function App() {
                                       e.stopPropagation();
                                       setActiveImageIdx(idx);
                                     }}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                      idx === currentImgIdx ? "bg-[#ef8840] scale-125" : "bg-white/60 hover:bg-white"
+                                    className={`w-2 h-2 rounded-full transition-all ${
+                                      idx === currentImgIdx ? "bg-orange-500 scale-125" : "bg-white/60 hover:bg-white"
                                     }`}
                                   />
                                 ))}
@@ -1254,571 +1199,429 @@ export default function App() {
                         );
                       })()}
                     </div>
-                    {/* Caption underneath the image */}
-                    <div className="pt-1.5 text-center">
-                      <p className="text-[#cdcfd3] text-[11.5px] font-bold tracking-wide">
-                        มุมมองบรรยากาศห้อง/สถานที่จอง (Atmospheric Preview)
-                      </p>
-                    </div>
                   </div>
-
-                  {/* RIGHT COLUMN: Table representation (lg:col-span-7) */}
-                  <div className="lg:col-span-7 bg-[#111115] border border-[#2d2d34] p-3 rounded-[16px] shadow-2xl space-y-3">
-                  {/* Navigation controls for weeks */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const base = new Date(scheduleBaseDate);
-                          base.setDate(base.getDate() - 7);
-                          const yyyy = base.getFullYear();
-                          const mm = String(base.getMonth() + 1).padStart(2, '0');
-                          const dd = String(base.getDate()).padStart(2, '0');
-                          setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
-                        }}
-                        className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-[#ffffff] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        ◀ สัปดาห์ก่อนหน้า
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const base = new Date();
-                          const yyyy = base.getFullYear();
-                          const mm = String(base.getMonth() + 1).padStart(2, '0');
-                          const dd = String(base.getDate()).padStart(2, '0');
-                          const todayStr = `${yyyy}-${mm}-${dd}`;
-                          setScheduleBaseDate(todayStr);
-                          setBookingDate(todayStr);
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
-                          activeScheduleRoom === "ห้องจัดรายการ 1"
-                            ? "bg-[#ef8840]/10 hover:bg-[#ef8840]/20 text-[#ef8840] border-[#ef8840]/20"
-                            : "bg-[#4a90e2]/10 hover:bg-[#4a90e2]/20 text-[#4a90e2] border-[#4a90e2]/20"
-                        }`}
-                      >
-                        วันนี้ / สัปดาห์นี้
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const base = new Date(scheduleBaseDate);
-                          base.setDate(base.getDate() + 7);
-                          const yyyy = base.getFullYear();
-                          const mm = String(base.getMonth() + 1).padStart(2, '0');
-                          const dd = String(base.getDate()).padStart(2, '0');
-                          setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
-                        }}
-                        className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-[#ffffff] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        สัปดาห์ถัดไป ▶
-                      </button>
-                    </div>
-
-                    <div className="text-xs text-[#ffffff] font-bold bg-[#16161a] px-3 py-1.5 rounded-lg border border-[#2d2d34] flex items-center gap-1.5">
-                      📅 สัปดาห์ประจำวันที่: <span className={`font-extrabold ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"}`}>{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
-                    </div>
-                  </div>
-
-                  {/* Main Grid Table representation */}
-                  <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
-                    <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
-                      <thead>
-                        {/* Elegant dark grey row for วิชา */}
-                        <tr className="border-b border-[#2d2d34]">
-                          <th colSpan={7} className={`py-3 bg-[#111113] ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"} font-extrabold text-xs sm:text-sm tracking-wide shadow-sm`}>
-                            📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
-                          </th>
-                        </tr>
-                        {/* Table Headers in unified slate dark styling for professional contrast */}
-                        <tr className="bg-[#16161a] text-[#ffffff] font-bold border-b border-[#2d2d34]">
-                          <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[13%]">วัน / เวลา</th>
-                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">9.00 - 10.00</th>
-                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">10.00 - 11.00</th>
-                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">11.00 - 12.00</th>
-                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">13.00 - 14.00</th>
-                          <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">14.00 - 15.00</th>
-                          <th className="py-2.5 px-2 text-[#ffffff] font-extrabold w-[14.5%]">15.00 - 16.00</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getWeekDates(scheduleBaseDate).map((dayInfo) => {
-                          const slots = [
-                            "9.00 - 10.00",
-                            "10.00 - 11.00",
-                            "11.00 - 12.00",
-                            "13.00 - 14.00",
-                            "14.00 - 15.00",
-                            "15.00 - 16.00"
-                          ];
-
-                          return (
-                            <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors">
-                              {/* Day Name and Date */}
-                              <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100">
-                                <div className={`text-[11px] uppercase font-extrabold ${activeScheduleRoom === "ห้องจัดรายการ 1" ? "text-[#ef8840]" : "text-[#4a90e2]"}`}>{dayInfo.dayName}</div>
-                                <div className="text-[9px] text-slate-400 font-semibold mt-0.5">{dayInfo.displayDate}</div>
-                              </td>
-
-                              {/* Slots */}
-                              {slots.map((slot) => {
-                                // Look up if there's an approved or pending booking for this cell
-                                const b = findBookingForCell(activeScheduleRoom, dayInfo.dateStr, slot);
-
-                                if (b) {
-                                  const isApproved = b.status === "approved";
-                                  const isRoom1 = activeScheduleRoom === "ห้องจัดรายการ 1";
-
-                                  return (
-                                    <td 
-                                      key={slot} 
-                                      className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group"
-                                    >
-                                      {(() => {
-                                        let displaySubject = b.subject || "";
-                                        let displayPurpose = b.bookingPurpose || "";
-                                        if (!displaySubject && b.purpose) {
-                                          if (b.purpose.includes("(")) {
-                                            const match = b.purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                                            if (match) {
-                                              displaySubject = match[1].trim();
-                                              displayPurpose = match[2].trim();
-                                            } else {
-                                              displaySubject = b.purpose;
-                                            }
-                                          } else {
-                                            displaySubject = b.purpose;
-                                          }
-                                        }
-
-                                        // Match code and title
-                                        let subjectCode = "BRS311";
-                                        let subjectTitle = "";
-                                        if (displaySubject) {
-                                          const codeMatch = displaySubject.match(/^([A-Za-z]{2,4}\d{3,4})[\s:-]*(.*)$/);
-                                          if (codeMatch) {
-                                            subjectCode = codeMatch[1].toUpperCase();
-                                            subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
-                                          } else {
-                                            if (displaySubject.length <= 8) {
-                                              subjectCode = displaySubject;
-                                              subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
-                                            } else {
-                                              subjectCode = "WORK";
-                                              subjectTitle = displaySubject;
-                                            }
-                                          }
-                                        } else {
-                                          subjectCode = "BRS311";
-                                          subjectTitle = displayPurpose || "ฝึกจัดรายการ";
-                                        }
-
-                                        // Format Booker details
-                                        const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
-                                        let phoneMasked = "";
-                                        if (b.phone) {
-                                          const cleanPhone = b.phone.trim();
-                                          if (cleanPhone.length >= 8) {
-                                            phoneMasked = cleanPhone.slice(0, cleanPhone.length - 4) + "xxxx";
-                                          } else {
-                                            phoneMasked = cleanPhone;
-                                          }
-                                        } else {
-                                          phoneMasked = b.studentIdInput ? (b.studentIdInput.length > 4 ? b.studentIdInput.slice(0, 4) + "xxxx" : b.studentIdInput) : "";
-                                        }
-                                        
-                                        const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
-                                        const accentColorClass = isRoom1 ? "text-[#ef8840]" : "text-[#4a90e2]";
-                                        const barColorClass = isRoom1 ? "bg-[#ef8840]" : "bg-[#4a90e2]";
-                                        const borderOutlineClass = isRoom1 ? "border-[#ef8840]/30" : "border-[#4a90e2]/30";
-                                        const footerTextColorClass = isRoom1 ? "text-[#ef8840]" : "text-[#4a90e2]";
-
-                                        const cardSubject = subjectCode || displaySubject || "BRS 311";
-                                        const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
-                                        const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
-
-                                        let rawPurpose = b.bookingPurpose || displayPurpose || "";
-                                        if (!rawPurpose && b.purpose) {
-                                          const parenMatch = b.purpose.match(/\((.*?)\)/);
-                                          if (parenMatch) {
-                                            rawPurpose = parenMatch[1].trim();
-                                          } else {
-                                            rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
-                                          }
-                                        }
-                                        if (!rawPurpose) {
-                                          rawPurpose = subjectTitle || "จัดรายการ";
-                                        }
-                                        let cleanPurpose = rawPurpose
-                                          .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
-                                          .replace(/^\((.*)\)$/, '$1')
-                                          .trim();
-
-                                        const purposeText = cleanPurpose || rawPurpose || "จัดรายการ";
-
-                                        return (
-                                          <>
-                                            {/* Visible Compact Card */}
-                                            <div 
-                                              className={`relative p-3 pl-4 rounded-xl border border-solid text-left flex flex-col justify-between h-full min-h-[82px] transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 ${borderOutlineClass}`}
-                                            >
-                                              {/* Left Thick Rounded Accent Bar */}
-                                              <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
-
-                                              <div className="flex flex-col gap-0.5 w-full overflow-hidden">
-                                                {/* Header: Subject Code */}
-                                                <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}>
-                                                  {subjectCode}
-                                                </div>
-
-                                                {/* Subject Title */}
-                                                <div 
-                                                  className="font-bold text-xs sm:text-[13px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-snug mt-0.5 truncate transition-colors" 
-                                                  title={subjectTitle}
-                                                >
-                                                  {subjectTitle}
-                                                </div>
-                                              </div>
-
-                                              {/* Separator line */}
-                                              <div 
-                                                className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-1.5 transition-colors" 
-                                              />
-
-                                              {/* Booker Name & Contact details */}
-                                              <div 
-                                                className={`text-[10.5px] font-bold ${footerTextColorClass} group-hover:!text-[#ffffff] truncate leading-none transition-colors`}
-                                                title={footerText}
-                                              >
-                                                {footerText}
-                                              </div>
-                                            </div>
-
-                                            {/* Hover Details Card Popup */}
-                                            <div 
-                                              className="absolute left-1/2 -translate-x-1/2 bottom-[85%] mb-2 w-[265px] pointer-events-none opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-200 z-50 bg-[#18181a] border border-[#3f3f46] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.95)] p-3.5 text-left flex flex-col force-text-white"
-                                            >
-                                              {/* Header: Room Name */}
-                                              <div className="font-black text-[20px] leading-tight tracking-wide">
-                                                {activeScheduleRoom}
-                                              </div>
-
-                                              {/* Solid White Divider Line */}
-                                              <div className="h-[2px] w-full my-2.5 bg-white" style={{ backgroundColor: '#ffffff' }} />
-
-                                              {/* Subject / Time */}
-                                              <div className="font-extrabold text-[16px] leading-tight tracking-tight mb-1">
-                                                {cardSubject} / {cleanSlot}
-                                              </div>
-
-                                              {/* Student ID */}
-                                              <div className="font-extrabold text-[15px] leading-tight tracking-tight mb-3">
-                                                รหัสนักศึกษา {studentIdStr}
-                                              </div>
-
-                                              {/* Bottom Gray Box */}
-                                              <div className="rounded-xl p-3 shadow-sm min-h-[48px] flex flex-col justify-center bg-[#8e8e93]">
-                                                <div className="font-extrabold text-[14px] leading-snug break-words">
-                                                  วัตถุประสงค์ : {purposeText}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </>
-                                        );
-                                      })()}
-                                    </td>
-                                  );
-                                }
-
-                                // Empty/Free Slot
-                                return (
-                                  <td 
-                                    key={slot} 
-                                    className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
-                                  >
-                                    {/* Empty card container that matches the booked card dimensions and style */}
-                                    <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-full min-h-[82px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
-                                      <div className="relative flex items-center justify-center select-none w-full gap-1">
-                                        <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
-                                        <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
-                                          ว่าง
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-
-                </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto w-full items-start">
+                {/* 2. MAIN CONTENT SECTION: Two-Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                   
-                  {/* Left Column: Booking submission form */}
-                  <div className="w-full space-y-4">
-                    <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                      <h4 className="font-bold text-slate-800 text-[18px] border-b border-slate-50 pb-2 flex items-center gap-1.5">
-                        <Plus className="w-4 h-4 text-indigo-600" />
-                        จองห้องจัดรายการ MEDIA CENTER
+                  {/* LEFT COLUMN: Booking Form (lg:col-span-4) */}
+                  <div className="lg:col-span-4 w-full">
+                    <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 text-slate-800">
+                      <h4 className="font-extrabold text-slate-800 text-xl pt-5 pl-0.5 h-[31px] border-b border-slate-100 pb-2.5 flex items-center gap-2">
+                        <Plus className="w-5 h-5 text-indigo-600" />
+                        แบบฟอร์มจองห้องจัดรายการ
                       </h4>
 
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">1. เลือกห้องจัดรายการ</label>
+                        <label className="text-[15px] font-bold text-slate-700 block mb-1">1. เลือกห้องจัดรายการ</label>
                         <select
                           value={bookingRoom}
                           onChange={(e) => {
                             setBookingRoom(e.target.value);
                             setActiveScheduleRoom(e.target.value);
                           }}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-850 focus:bg-white focus:outline-none transition-all font-bold"
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] text-slate-850 focus:bg-white focus:outline-none transition-all font-bold"
                         >
-                          <option value="ห้องจัดรายการ 1">ห้องจัดรายการ 1</option>
-                          <option value="ห้องจัดรายการ 2">ห้องจัดรายการ 2</option>
+                          <option value="ห้องจัดรายการ 1">🎙️ ห้องจัดรายการ 1</option>
+                          <option value="ห้องจัดรายการ 2">🎧 ห้องจัดรายการ 2</option>
+                          <option value="ห้องยูทูป 1">📹 ห้องยูทูป 1</option>
+                          <option value="ห้องยูทูป 2">🎬 ห้องยูทูป 2</option>
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">2. วันที่ต้องการจอง</label>
-                          <input
-                            type="date"
-                            value={bookingDate}
-                            onChange={(e) => {
-                              setBookingDate(e.target.value);
-                              if (e.target.value) {
-                                setScheduleBaseDate(e.target.value);
-                              }
-                            }}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">3. ช่วงเวลา (Timeslot)</label>
-                          <select
-                            value={bookingSlot}
-                            onChange={(e) => setBookingSlot(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs focus:bg-white focus:outline-none transition-all font-mono font-medium text-slate-750"
-                          >
-                            <option value="09:00 - 10:00">09:00 - 10:00</option>
-                            <option value="10:00 - 11:00">10:00 - 11:00</option>
-                            <option value="11:00 - 12:00">11:00 - 12:00</option>
-                            <option value="13:00 - 14:00">13:00 - 14:00</option>
-                            <option value="14:00 - 15:00">14:00 - 15:00</option>
-                            <option value="15:00 - 16:00">15:00 - 16:00</option>
-                          </select>
-                        </div>
+                      <div>
+                        <label className="text-[15px] font-bold text-slate-700 block mb-1">2. วันที่ต้องการจอง</label>
+                        <input
+                          type="date"
+                          value={bookingDate}
+                          onChange={(e) => {
+                            setBookingDate(e.target.value);
+                            if (e.target.value) {
+                              setScheduleBaseDate(e.target.value);
+                            }
+                          }}
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-semibold"
+                        />
                       </div>
 
-                      <div className="space-y-3 pb-1 border-b border-slate-50">
+                      <div>
+                        <label className="text-[15px] font-bold text-slate-700 block mb-1">3. ช่วงเวลา (Timeslot)</label>
+                        <select
+                          value={bookingSlot}
+                          onChange={(e) => setBookingSlot(e.target.value)}
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none transition-all font-mono font-medium text-slate-800"
+                        >
+                          <option value="09:00 - 10:00">09:00 - 10:00</option>
+                          <option value="10:00 - 11:00">10:00 - 11:00</option>
+                          <option value="11:00 - 12:00">11:00 - 12:00</option>
+                          <option value="13:00 - 14:00">13:00 - 14:00</option>
+                          <option value="14:00 - 15:00">14:00 - 15:00</option>
+                          <option value="15:00 - 16:00">15:00 - 16:00</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-3 pb-1 border-b border-slate-100">
                         <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">4. รายวิชา</label>
+                          <label className="text-[15px] font-bold text-slate-700 block mb-1">4. รายวิชา</label>
                           <select
                             value={bookingSubject}
                             onChange={(e) => setBookingSubject(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
+                            className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
                           >
                             <option value="BRS311">BRS311</option>
                             <option value="งานอื่นๆ">งานอื่นๆ</option>
                           </select>
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">วัตถุประสงค์</label>
+                          <label className="text-[15px] font-bold text-slate-700 block mb-1">วัตถุประสงค์</label>
                           <textarea
-                            rows={2}
+                            rows={1}
                             value={bookingPurpose}
                             onChange={(e) => setBookingPurpose(e.target.value)}
                             placeholder="จัดรายการรายวิชาเรียน / ฝึกจัดรายการ"
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
+                            className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
                           />
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">5. ชื่อ-นามสกุล</label>
-                          <input
-                            type="text"
-                            value={bookingStudentName}
-                            onChange={(e) => setBookingStudentName(e.target.value)}
-                            placeholder="ชื่อ-นามสกุล"
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
-                          />
-                        </div>
+                      <div>
+                        <label className="text-[15px] font-bold text-slate-700 block mb-1">5. ชื่อ-นามสกุล</label>
+                        <input
+                          type="text"
+                          value={bookingStudentName}
+                          onChange={(e) => setBookingStudentName(e.target.value)}
+                          placeholder="ชื่อ-นามสกุล"
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-semibold"
+                        />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">6. รหัสนักศึกษา</label>
-                          <input
-                            type="text"
-                            maxLength={15}
-                            value={bookingStudentId}
-                            onChange={(e) => setBookingStudentId(e.target.value)}
-                            placeholder="รหัสนักศึกษา 10 หลัก"
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">7. เบอร์โทร</label>
-                          <input
-                            type="tel"
-                            maxLength={12}
-                            value={bookingPhone}
-                            onChange={(e) => setBookingPhone(e.target.value)}
-                            placeholder="เช่น 089XXXXXXX"
-                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-750 font-semibold"
-                          />
-                        </div>
+                      <div>
+                        <label className="text-[15px] font-bold text-slate-700 block mb-1">6. รหัสนักศึกษา</label>
+                        <input
+                          type="text"
+                          maxLength={15}
+                          value={bookingStudentId}
+                          onChange={(e) => setBookingStudentId(e.target.value)}
+                          placeholder="รหัสนักศึกษา 10 หลัก"
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[15px] font-bold text-slate-700 block mb-1">7. เบอร์โทร</label>
+                        <input
+                          type="tel"
+                          maxLength={12}
+                          value={bookingPhone}
+                          onChange={(e) => setBookingPhone(e.target.value)}
+                          placeholder="เช่น 089XXXXXXX"
+                          className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-semibold"
+                        />
                       </div>
 
                       <button
                         type="submit"
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold rounded-xl py-3 text-xs transition-colors shadow-md shadow-indigo-600/15"
+                        className="w-full h-[39px] bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold rounded-xl text-sm transition-colors shadow-md shadow-indigo-600/15 cursor-pointer mt-2 flex items-center justify-center"
                       >
                         ⚡ ส่งคำขอจองห้องจัดรายการ
                       </button>
                     </form>
                   </div>
 
-                  {/* Right Column: รายการ จองห้องจัดรายการของฉัน */}
-                  <div className="w-full space-y-4">
-                    <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-5 shadow-lg space-y-4 text-slate-100">
-                      <div className="flex items-center justify-between border-b border-[#27272a] pb-3">
-                        <h4 className="font-extrabold text-[#e0e0e0] text-[18px] flex items-center gap-2">
-                          <BookOpen className="w-[18px] h-[18px] text-orange-500" />
-                          รายการ จองห้องจัดรายการของฉัน
-                        </h4>
-                        <span className="bg-orange-500/15 text-orange-400 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-orange-500/30">
-                          {myBookings.length} รายการ
-                        </span>
+                  {/* RIGHT COLUMN: Weekly Schedule Calendar Grid (lg:col-span-8) */}
+                  <div className="lg:col-span-8 bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-2xl shadow-2xl space-y-3">
+                    {/* Navigation controls for weeks */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const base = new Date(scheduleBaseDate);
+                            base.setDate(base.getDate() - 7);
+                            const yyyy = base.getFullYear();
+                            const mm = String(base.getMonth() + 1).padStart(2, '0');
+                            const dd = String(base.getDate()).padStart(2, '0');
+                            setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
+                          }}
+                          className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-[#ffffff] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          ◀ สัปดาห์ก่อนหน้า
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const base = new Date();
+                            const yyyy = base.getFullYear();
+                            const mm = String(base.getMonth() + 1).padStart(2, '0');
+                            const dd = String(base.getDate()).padStart(2, '0');
+                            const todayStr = `${yyyy}-${mm}-${dd}`;
+                            setScheduleBaseDate(todayStr);
+                            setBookingDate(todayStr);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${getRoomTheme(activeScheduleRoom).bgLight} ${getRoomTheme(activeScheduleRoom).bgHoverLight} ${getRoomTheme(activeScheduleRoom).text} ${getRoomTheme(activeScheduleRoom).borderLight}`}
+                        >
+                          วันนี้ / สัปดาห์นี้
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const base = new Date(scheduleBaseDate);
+                            base.setDate(base.getDate() + 7);
+                            const yyyy = base.getFullYear();
+                            const mm = String(base.getMonth() + 1).padStart(2, '0');
+                            const dd = String(base.getDate()).padStart(2, '0');
+                            setScheduleBaseDate(`${yyyy}-${mm}-${dd}`);
+                          }}
+                          className="bg-[#16161a] hover:bg-[#1e1e24] border border-[#2d2d34] text-[#ffffff] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          สัปดาห์ถัดไป ▶
+                        </button>
                       </div>
 
-                      {/* Filter Search Input */}
-                      <div>
-                        <input 
-                          type="text" 
-                          value={myBookingFilter}
-                          onChange={(e) => setMyBookingFilter(e.target.value)}
-                          placeholder="🔍 ค้นหาด้วยรหัสนักศึกษา / ชื่อ / รายวิชา..."
-                          className="w-full bg-[#09090b] border border-[#27272a] rounded-xl px-3.5 py-2 text-xs font-medium text-[#A1A1AA] focus:text-white focus:outline-none focus:border-orange-500 transition-all placeholder:text-zinc-500 shadow-inner"
-                        />
+                      <div className="text-xs text-[#ffffff] font-bold bg-[#16161a] px-3 py-1.5 rounded-lg border border-[#2d2d34] flex items-center gap-1.5">
+                        📅 สัปดาห์ประจำวันที่: <span className={`font-extrabold ${getRoomTheme(activeScheduleRoom).text}`}>{getWeekDates(scheduleBaseDate)[0].displayDate} - {getWeekDates(scheduleBaseDate)[5].displayDate}</span>
                       </div>
+                    </div>
 
-                      {/* Bookings List */}
-                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                        {myBookings.length === 0 ? (
-                          <div className="text-center py-8 px-4 bg-[#09090b]/50 rounded-xl border border-dashed border-[#27272a]">
-                            <BookOpen className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                            <p className="text-xs font-bold text-zinc-300">ยังไม่มีรายการจองห้องจัดรายการของคุณ</p>
-                            <p className="text-[11px] text-[#A1A1AA] mt-1">
-                              กรอกข้อมูลในแบบฟอร์มทางซ้าย แล้วส่งคำขอจองห้องเพื่อเริ่มต้น
-                            </p>
-                          </div>
-                        ) : (
-                          myBookings.map((b) => {
-                            let rawPurpose = b.bookingPurpose || b.purpose || "";
-                            if (b.purpose && !b.bookingPurpose) {
-                              const parenMatch = b.purpose.match(/\((.*?)\)/);
-                              if (parenMatch) {
-                                rawPurpose = parenMatch[1].trim();
-                              } else {
-                                rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
-                              }
-                            }
-                            let cleanPurpose = rawPurpose
-                              .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
-                              .replace(/^\((.*)\)$/, '$1')
-                              .trim();
-                            const purposeDisplay = cleanPurpose || rawPurpose || "จัดรายการ";
+                    {/* Main Grid Table representation */}
+                    <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
+                      <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
+                        <thead>
+                          {/* Elegant dark grey row for วิชา */}
+                          <tr className="border-b border-[#2d2d34]">
+                            <th colSpan={7} className={`py-3 bg-[#111113] ${getRoomTheme(activeScheduleRoom).text} font-extrabold text-xs sm:text-sm tracking-wide shadow-sm`}>
+                              📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
+                            </th>
+                          </tr>
+                          {/* Table Headers in unified slate dark styling for professional contrast */}
+                          <tr className="bg-[#16161a] text-[#ffffff] font-bold border-b border-[#2d2d34]">
+                            <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[13%]">วัน / เวลา</th>
+                            <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">9.00 - 10.00</th>
+                            <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">10.00 - 11.00</th>
+                            <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">11.00 - 12.00</th>
+                            <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">13.00 - 14.00</th>
+                            <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">14.00 - 15.00</th>
+                            <th className="py-2.5 px-2 text-[#ffffff] font-extrabold w-[14.5%]">15.00 - 16.00</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getWeekDates(scheduleBaseDate).map((dayInfo) => {
+                            const slots = [
+                              "9.00 - 10.00",
+                              "10.00 - 11.00",
+                              "11.00 - 12.00",
+                              "13.00 - 14.00",
+                              "14.00 - 15.00",
+                              "15.00 - 16.00"
+                            ];
 
                             return (
-                              <div 
-                                key={b.id} 
-                                className="bg-[#171717] border border-[#27272a] hover:border-orange-500/40 rounded-xl p-3.5 space-y-2.5 transition-all shadow-sm"
-                              >
-                                {/* Top Row: Room Badge (Orange for Room 1, Blue for Room 2) + Status Badge */}
-                                <div className="flex items-center justify-between gap-2">
-                                  {b.roomName?.includes("1") ? (
-                                    <span className="bg-orange-500/15 text-orange-400 border border-orange-500/40 text-[14px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-                                      <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                                      {b.roomName}
-                                    </span>
-                                  ) : (
-                                    <span className="bg-[#161f39] text-[#4a90e2] border border-[#478feb] text-[14px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-                                      <span className="w-2 h-2 rounded-full bg-[#4a90e2] animate-pulse" />
-                                      {b.roomName}
-                                    </span>
-                                  )}
+                              <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors">
+                                {/* Day Name and Date */}
+                                <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100">
+                                  <div className={`text-[11px] uppercase font-extrabold ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
+                                  <div className="text-[9px] text-slate-400 font-semibold mt-0.5">{dayInfo.displayDate}</div>
+                                </td>
 
-                                  {b.status === 'approved' && (
-                                    <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                      <CheckCircle className="w-3 h-3" /> อนุมัติแล้ว
-                                    </span>
-                                  )}
-                                  {b.status === 'pending' && (
-                                    <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                      <Clock className="w-3 h-3" /> รออนุมัติ
-                                    </span>
-                                  )}
-                                  {b.status === 'rejected' && (
-                                    <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                      <AlertCircle className="w-3 h-3" /> ไม่อนุมัติ
-                                    </span>
-                                  )}
-                                </div>
+                                {/* Slots */}
+                                {slots.map((slot) => {
+                                  // Look up if there's an approved or pending booking for this cell
+                                  const b = findBookingForCell(activeScheduleRoom, dayInfo.dateStr, slot);
 
-                                {/* Subject Name (20px, Bold: Orange for Room 1, Blue for Room 2) + Time Slot */}
-                                <div className="flex items-center justify-between pt-1 border-t border-[#27272a]/80">
-                                  <span className={`font-extrabold text-[20px] tracking-tight ${
-                                    b.roomName?.includes("1") ? "text-[#f19a58]" : "text-[#4a90e2]"
-                                  }`}>
-                                    {b.subject || "BRS311"}
-                                  </span>
-                                  <span className="font-mono font-bold text-[#A1A1AA] bg-[#18181b] border border-[#27272a] px-2 py-0.5 rounded text-[13px]">
-                                    {b.timeSlot}
-                                  </span>
-                                </div>
+                                  if (b) {
+                                    const isApproved = b.status === "approved";
+                                    const roomTheme = getRoomTheme(activeScheduleRoom);
 
-                                {/* Details (15.5px, Light Gray #A1A1AA) */}
-                                <div className="space-y-1 text-[15.5px] text-[#A1A1AA] pt-1 border-t border-[#27272a]/50">
-                                  <div className="flex items-center justify-between">
-                                    <span>📅 วันที่: <strong className="text-zinc-100 font-bold">{b.date}</strong></span>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <span>👤 รหัสนักศึกษา: <strong className="text-zinc-100 font-bold">{b.studentIdInput || b.studentId || '-'}</strong> ({b.studentName || '-'})</span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="truncate max-w-[280px]" title={purposeDisplay}>
-                                      🎯 วัตถุประสงค์: <strong className="text-zinc-100 font-bold">{purposeDisplay}</strong>
-                                    </span>
-                                    {b.status === 'pending' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (window.confirm('คุณต้องการยกเลิกคำขอจองห้องนี้ใช่หรือไม่?')) {
-                                            deleteBooking(b.id);
-                                          }
-                                        }}
-                                        className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded transition-colors font-bold flex items-center gap-1 text-[12px] shrink-0"
+                                    return (
+                                      <td 
+                                        key={slot} 
+                                        className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group"
                                       >
-                                        <Trash2 className="w-3.5 h-3.5" /> ยกเลิก
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                                        {(() => {
+                                          let displaySubject = b.subject || "";
+                                          let displayPurpose = b.bookingPurpose || "";
+                                          if (!displaySubject && b.purpose) {
+                                            if (b.purpose.includes("(")) {
+                                              const match = b.purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
+                                              if (match) {
+                                                displaySubject = match[1].trim();
+                                                displayPurpose = match[2].trim();
+                                              } else {
+                                                displaySubject = b.purpose;
+                                              }
+                                            } else {
+                                              displaySubject = b.purpose;
+                                            }
+                                          }
+
+                                          // Match code and title
+                                          let subjectCode = "BRS311";
+                                          let subjectTitle = "";
+                                          if (displaySubject) {
+                                            const codeMatch = displaySubject.match(/^([A-Za-z]{2,4}\d{3,4})[\s:-]*(.*)$/);
+                                            if (codeMatch) {
+                                              subjectCode = codeMatch[1].toUpperCase();
+                                              subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
+                                            } else {
+                                              if (displaySubject.length <= 8) {
+                                                subjectCode = displaySubject;
+                                                subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
+                                              } else {
+                                                subjectCode = "WORK";
+                                                subjectTitle = displaySubject;
+                                              }
+                                            }
+                                          } else {
+                                            subjectCode = "BRS311";
+                                            subjectTitle = displayPurpose || "ฝึกจัดรายการ";
+                                          }
+
+                                          // Format Booker details
+                                          const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
+                                          let phoneMasked = "";
+                                          if (b.phone) {
+                                            const cleanPhone = b.phone.trim();
+                                            if (cleanPhone.length >= 8) {
+                                              phoneMasked = cleanPhone.slice(0, cleanPhone.length - 4) + "xxxx";
+                                            } else {
+                                              phoneMasked = cleanPhone;
+                                            }
+                                          } else {
+                                            phoneMasked = b.studentIdInput ? (b.studentIdInput.length > 4 ? b.studentIdInput.slice(0, 4) + "xxxx" : b.studentIdInput) : "";
+                                          }
+                                          
+                                          const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
+                                          const accentColorClass = roomTheme.text;
+                                          const barColorClass = roomTheme.bg;
+                                          const borderOutlineClass = roomTheme.borderOutline;
+                                          const footerTextColorClass = roomTheme.text;
+
+                                          const cardSubject = subjectCode || displaySubject || "BRS 311";
+                                          const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
+                                          const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
+
+                                          let rawPurpose = b.bookingPurpose || displayPurpose || "";
+                                          if (!rawPurpose && b.purpose) {
+                                            const parenMatch = b.purpose.match(/\((.*?)\)/);
+                                            if (parenMatch) {
+                                              rawPurpose = parenMatch[1].trim();
+                                            } else {
+                                              rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
+                                            }
+                                          }
+                                          if (!rawPurpose) {
+                                            rawPurpose = subjectTitle || "จัดรายการ";
+                                          }
+                                          let cleanPurpose = rawPurpose
+                                            .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+                                            .replace(/^\((.*)\)$/, '$1')
+                                            .trim();
+
+                                          const purposeText = cleanPurpose || rawPurpose || "จัดรายการ";
+
+                                          return (
+                                            <>
+                                              {/* Visible Compact Card */}
+                                              <div 
+                                                className={`relative p-2.5 pl-3.5 rounded-xl border border-solid text-left flex flex-col justify-between h-full min-h-[80px] transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 ${borderOutlineClass}`}
+                                              >
+                                                {/* Left Thick Rounded Accent Bar */}
+                                                <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
+
+                                                <div className="flex flex-col gap-0.5 w-full overflow-hidden">
+                                                  {/* Header: Subject Code */}
+                                                  <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}>
+                                                    {subjectCode}
+                                                  </div>
+
+                                                  {/* Subject Title */}
+                                                  <div 
+                                                    className="font-bold text-xs sm:text-[12.5px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-snug mt-0.5 truncate transition-colors" 
+                                                    title={subjectTitle}
+                                                  >
+                                                    {subjectTitle}
+                                                  </div>
+                                                </div>
+
+                                                {/* Separator line */}
+                                                <div 
+                                                  className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-1 transition-colors" 
+                                                />
+
+                                                {/* Booker Name & Contact details */}
+                                                <div 
+                                                  className={`text-[10px] font-bold ${footerTextColorClass} group-hover:!text-[#ffffff] truncate leading-none transition-colors`}
+                                                  title={footerText}
+                                                >
+                                                  {footerText}
+                                                </div>
+                                              </div>
+
+                                              {/* Hover Details Card Popup */}
+                                              <div 
+                                                className="absolute left-1/2 -translate-x-1/2 bottom-[85%] mb-2 w-[265px] pointer-events-none opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-200 z-50 bg-[#18181a] border border-[#3f3f46] rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.95)] p-3.5 text-left flex flex-col force-text-white"
+                                              >
+                                                {/* Header: Room Name */}
+                                                <div className={`font-black text-[20px] leading-tight tracking-wide ${roomTheme.text}`}>
+                                                  {activeScheduleRoom}
+                                                </div>
+
+                                                {/* Solid White Divider Line */}
+                                                <div className="h-[2px] w-full my-2.5 bg-white" style={{ backgroundColor: '#ffffff' }} />
+
+                                                {/* Subject / Time */}
+                                                <div className="font-extrabold text-[16px] leading-tight tracking-tight mb-1">
+                                                  {cardSubject} / {cleanSlot}
+                                                </div>
+
+                                                {/* Student ID */}
+                                                <div className="font-extrabold text-[15px] leading-tight tracking-tight mb-1">
+                                                  รหัสนักศึกษา {studentIdStr}
+                                                </div>
+
+                                                {/* Phone Number */}
+                                                <div className="font-extrabold text-[15px] leading-tight tracking-tight mb-3">
+                                                  เบอร์โทร {b.phone || '-'}
+                                                </div>
+
+                                                {/* Bottom Gray Box */}
+                                                <div className="rounded-xl p-3 shadow-sm min-h-[48px] flex flex-col justify-center bg-[#8e8e93]">
+                                                  <div className="font-extrabold text-[14px] leading-snug break-words">
+                                                    วัตถุประสงค์ : {purposeText}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </>
+                                          );
+                                        })()}
+                                      </td>
+                                    );
+                                  }
+
+                                  // Empty/Free Slot
+                                  return (
+                                    <td 
+                                      key={slot} 
+                                      className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center"
+                                    >
+                                      {/* Empty card container that matches the booked card dimensions and style */}
+                                      <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-full min-h-[80px] transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm">
+                                        <div className="relative flex items-center justify-center select-none w-full gap-1">
+                                          <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300">🗓️</span>
+                                          <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors">
+                                            ว่าง
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
                             );
-                          })
-                        )}
-                      </div>
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
@@ -1916,6 +1719,8 @@ export default function App() {
                     >
                       <option value="ห้องจัดรายการ 1">🎙️ ห้องจัดรายการ 1</option>
                       <option value="ห้องจัดรายการ 2">🎧 ห้องจัดรายการ 2</option>
+                      <option value="ห้องยูทูป 1">📹 ห้องยูทูป 1</option>
+                      <option value="ห้องยูทูป 2">🎬 ห้องยูทูป 2</option>
                     </select>
                   </div>
 
@@ -2029,7 +1834,7 @@ export default function App() {
       <AnimatePresence>
         {isRoomSettingsOpen && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#2f2f2f]/85 backdrop-blur-md p-4 overflow-y-auto"
             onClick={() => setIsRoomSettingsOpen(false)}
             id="room_settings_modal_backdrop"
           >
@@ -2067,11 +1872,11 @@ export default function App() {
                 </div>
 
                 {/* Tab Switcher inside Settings */}
-                <div className="flex bg-[#16161a] border border-[#2d2d34] p-1 rounded-xl gap-2">
+                <div className="flex bg-[#16161a] border border-[#2d2d34] p-1 rounded-xl gap-1.5 overflow-x-auto">
                   <button
                     type="button"
                     onClick={() => setActiveRoomSettingsTab("ห้องจัดรายการ 1")}
-                    className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-2 px-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1 shrink-0 ${
                       activeRoomSettingsTab === "ห้องจัดรายการ 1"
                         ? "bg-[#ef8840] text-white shadow-md font-black"
                         : "hover:bg-white/5 text-slate-400"
@@ -2082,13 +1887,35 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setActiveRoomSettingsTab("ห้องจัดรายการ 2")}
-                    className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-2 px-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1 shrink-0 ${
                       activeRoomSettingsTab === "ห้องจัดรายการ 2"
                         ? "bg-[#4a90e2] text-white shadow-md font-black"
                         : "hover:bg-white/5 text-slate-400"
                     }`}
                   >
                     🎧 ห้องจัดรายการ 2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveRoomSettingsTab("ห้องยูทูป 1")}
+                    className={`flex-1 py-2 px-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1 shrink-0 ${
+                      activeRoomSettingsTab === "ห้องยูทูป 1"
+                        ? "bg-rose-600 text-white shadow-md font-black"
+                        : "hover:bg-white/5 text-slate-400"
+                    }`}
+                  >
+                    📹 ห้องยูทูป 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveRoomSettingsTab("ห้องยูทูป 2")}
+                    className={`flex-1 py-2 px-2 text-[11px] font-extrabold rounded-lg transition-all flex items-center justify-center gap-1 shrink-0 ${
+                      activeRoomSettingsTab === "ห้องยูทูป 2"
+                        ? "bg-purple-600 text-white shadow-md font-black"
+                        : "hover:bg-white/5 text-slate-400"
+                    }`}
+                  >
+                    🎬 ห้องยูทูป 2
                   </button>
                 </div>
 
@@ -2108,9 +1935,28 @@ export default function App() {
                   </p>
 
                   <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-                    {(activeRoomSettingsTab === "ห้องจัดรายการ 1" ? tempRoom1Images : tempRoom2Images).map((currentUrl, idx) => {
-                      const accentColor = activeRoomSettingsTab === "ห้องจัดรายการ 1" ? "group-hover:text-[#ef8840] hover:border-[#ef8840]" : "group-hover:text-[#4a90e2] hover:border-[#4a90e2]";
-                      const borderFocus = activeRoomSettingsTab === "ห้องจัดรายการ 1" ? "focus:border-[#ef8840]/60" : "focus:border-[#4a90e2]/60";
+                    {(activeRoomSettingsTab === "ห้องจัดรายการ 1" 
+                      ? tempRoom1Images 
+                      : activeRoomSettingsTab === "ห้องจัดรายการ 2" 
+                        ? tempRoom2Images 
+                        : activeRoomSettingsTab === "ห้องยูทูป 1"
+                          ? tempYoutube1Images
+                          : tempYoutube2Images
+                    ).map((currentUrl, idx) => {
+                      const accentColor = activeRoomSettingsTab === "ห้องจัดรายการ 1"
+                        ? "group-hover:text-[#ef8840] hover:border-[#ef8840]"
+                        : activeRoomSettingsTab === "ห้องจัดรายการ 2"
+                          ? "group-hover:text-[#4a90e2] hover:border-[#4a90e2]"
+                          : activeRoomSettingsTab === "ห้องยูทูป 1"
+                            ? "group-hover:text-rose-500 hover:border-rose-500"
+                            : "group-hover:text-purple-500 hover:border-purple-500";
+                      const borderFocus = activeRoomSettingsTab === "ห้องจัดรายการ 1"
+                        ? "focus:border-[#ef8840]/60"
+                        : activeRoomSettingsTab === "ห้องจัดรายการ 2"
+                          ? "focus:border-[#4a90e2]/60"
+                          : activeRoomSettingsTab === "ห้องยูทูป 1"
+                            ? "focus:border-rose-500/60"
+                            : "focus:border-purple-500/60";
                       
                       return (
                         <div key={idx} className="flex items-center gap-3 bg-[#16161a] border border-[#2d2d34] p-2.5 rounded-xl hover:bg-[#1a1a20] transition-colors">
@@ -2159,8 +2005,20 @@ export default function App() {
                                     next[idx] = val;
                                     return next;
                                   });
-                                } else {
+                                } else if (activeRoomSettingsTab === "ห้องจัดรายการ 2") {
                                   setTempRoom2Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = val;
+                                    return next;
+                                  });
+                                } else if (activeRoomSettingsTab === "ห้องยูทูป 1") {
+                                  setTempYoutube1Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = val;
+                                    return next;
+                                  });
+                                } else if (activeRoomSettingsTab === "ห้องยูทูป 2") {
+                                  setTempYoutube2Images((prev) => {
                                     const next = [...prev];
                                     next[idx] = val;
                                     return next;
@@ -2183,8 +2041,20 @@ export default function App() {
                                     next[idx] = "";
                                     return next;
                                   });
-                                } else {
+                                } else if (activeRoomSettingsTab === "ห้องจัดรายการ 2") {
                                   setTempRoom2Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = "";
+                                    return next;
+                                  });
+                                } else if (activeRoomSettingsTab === "ห้องยูทูป 1") {
+                                  setTempYoutube1Images((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = "";
+                                    return next;
+                                  });
+                                } else if (activeRoomSettingsTab === "ห้องยูทูป 2") {
+                                  setTempYoutube2Images((prev) => {
                                     const next = [...prev];
                                     next[idx] = "";
                                     return next;
@@ -2220,15 +2090,21 @@ export default function App() {
                       // Filter out empty URLs or files
                       const filteredRoom1 = tempRoom1Images.filter(Boolean);
                       const filteredRoom2 = tempRoom2Images.filter(Boolean);
+                      const filteredYoutube1 = tempYoutube1Images.filter(Boolean);
+                      const filteredYoutube2 = tempYoutube2Images.filter(Boolean);
 
                       // Fall back to defaults if fully cleared
                       const finalRoom1 = filteredRoom1.length > 0 ? filteredRoom1 : ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"];
                       const finalRoom2 = filteredRoom2.length > 0 ? filteredRoom2 : ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"];
+                      const finalYoutube1 = filteredYoutube1.length > 0 ? filteredYoutube1 : ["https://images.unsplash.com/photo-1616469829941-c7200edec809?q=85&w=1920"];
+                      const finalYoutube2 = filteredYoutube2.length > 0 ? filteredYoutube2 : ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"];
 
                       // Fire the save action in the background
                       updateRoomImages({
                         "ห้องจัดรายการ 1": finalRoom1,
-                        "ห้องจัดรายการ 2": finalRoom2
+                        "ห้องจัดรายการ 2": finalRoom2,
+                        "ห้องยูทูป 1": finalYoutube1,
+                        "ห้องยูทูป 2": finalYoutube2
                       }).catch((err) => {
                         console.error("Failed to update room images:", err);
                       });

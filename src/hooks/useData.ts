@@ -154,7 +154,9 @@ export function useData() {
   const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
   const [roomImages, setRoomImages] = useState<{ [key: string]: string | string[] }>({
     "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
-    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
+    "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"],
+    "ห้องยูทูป 1": ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=85&w=1920"],
+    "ห้องยูทูป 2": ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"]
   });
 
 
@@ -281,12 +283,16 @@ export function useData() {
           if (currentUser?.role === 'admin') {
             setDoc(doc(db, 'configs', 'room_images'), {
               "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
-              "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
+              "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"],
+              "ห้องยูทูป 1": ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=85&w=1920"],
+              "ห้องยูทูป 2": ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"]
             }).catch(err => console.warn("Failed to write default room images:", err));
           } else {
             setRoomImages({
               "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=85&w=1920"],
-              "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"]
+              "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=85&w=1920"],
+              "ห้องยูทูป 1": ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=85&w=1920"],
+              "ห้องยูทูป 2": ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"]
             });
           }
         }
