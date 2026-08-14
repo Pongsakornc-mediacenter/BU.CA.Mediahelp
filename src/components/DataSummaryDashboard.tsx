@@ -463,10 +463,10 @@ export function DataSummaryDashboard({
 
               <div className="space-y-3">
                 {[
-                  { time: '09:00 - 10:30 น.', label: 'ช่วงเช้า 1', count: Math.ceil(totalBookings * 0.35), color: 'bg-emerald-500' },
-                  { time: '10:30 - 12:00 น.', label: 'ช่วงเช้า 2', count: Math.ceil(totalBookings * 0.25), color: 'bg-teal-500' },
-                  { time: '13:00 - 14:30 น.', label: 'ช่วงบ่าย 1 (Peak High)', count: Math.ceil(totalBookings * 0.45), color: 'bg-indigo-500' },
-                  { time: '14:30 - 16:00 น.', label: 'ช่วงบ่าย 2', count: Math.ceil(totalBookings * 0.20), color: 'bg-violet-500' }
+                  { time: '08:30 - 10:30 น.', label: 'ช่วงเช้า 1', count: Math.ceil(totalBookings * 0.35), color: 'bg-emerald-500' },
+                  { time: '10:30 - 12:30 น.', label: 'ช่วงเช้า 2', count: Math.ceil(totalBookings * 0.25), color: 'bg-teal-500' },
+                  { time: '13:00 - 15:00 น.', label: 'ช่วงบ่าย 1 (Peak High)', count: Math.ceil(totalBookings * 0.45), color: 'bg-indigo-500' },
+                  { time: '15:00 - 17:00 น.', label: 'ช่วงบ่าย 2', count: Math.ceil(totalBookings * 0.20), color: 'bg-violet-500' }
                 ].map((slot, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">

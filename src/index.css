@@ -57,10 +57,14 @@
 }
 
 /* Global Reset overrides for standard HTML controls in Dark Theme */
+html, body, button, input, select, textarea, table, th, td, div, span, p, h1, h2, h3, h4, h5, h6 {
+  font-family: "Netflix Sans", "IBM Plex Sans Thai", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
 body {
   background-color: #050505 !important;
   color: #e0e0e0 !important;
-  font-family: var(--font-sans);
+  font-family: "Netflix Sans", "IBM Plex Sans Thai", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 /* Form input adjustments to prevent styling leak in browsers */

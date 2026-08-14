@@ -83,6 +83,8 @@ export interface RoomBooking {
   studentId: string;
   studentName: string;
   studentEmail: string;
+  email?: string;
+  pinCode?: string;
   roomName: string;
   date: string; // YYYY-MM-DD
   timeSlot: string; // e.g. "09:00 - 12:00"

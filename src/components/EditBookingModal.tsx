@@ -26,15 +26,17 @@ const AVAILABLE_ROOMS = [
 ];
 
 const STANDARD_TIMESLOTS = [
-  { label: "09:00 - 10:00", value: "09:00 - 10:00" },
-  { label: "10:00 - 11:00", value: "10:00 - 11:00" },
-  { label: "11:00 - 12:00", value: "11:00 - 12:00" },
+  { label: "08:30 - 09:30", value: "08:30 - 09:30" },
+  { label: "09:30 - 10:30", value: "09:30 - 10:30" },
+  { label: "10:30 - 11:30", value: "10:30 - 11:30" },
+  { label: "11:30 - 12:30", value: "11:30 - 12:30" },
   { label: "13:00 - 14:00", value: "13:00 - 14:00" },
   { label: "14:00 - 15:00", value: "14:00 - 15:00" },
   { label: "15:00 - 16:00", value: "15:00 - 16:00" },
-  { label: "09:00 - 12:00 (คาบเช้า)", value: "09:00 - 12:00" },
-  { label: "13:00 - 16:00 (คาบบ่าย)", value: "13:00 - 16:00" },
-  { label: "09:00 - 16:00 (เหมาทั้งวัน)", value: "09:00 - 16:00" }
+  { label: "16:00 - 17:00", value: "16:00 - 17:00" },
+  { label: "08:30 - 12:30 (คาบเช้า)", value: "08:30 - 12:30" },
+  { label: "13:00 - 17:00 (คาบบ่าย)", value: "13:00 - 17:00" },
+  { label: "08:30 - 17:00 (เหมาทั้งวัน)", value: "08:30 - 17:00" }
 ];
 
 export const EditBookingModal: React.FC<EditBookingModalProps> = ({
@@ -47,7 +49,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 }) => {
   const [roomName, setRoomName] = useState<string>("ห้องจัดรายการ 1");
   const [date, setDate] = useState<string>("");
-  const [timeSlot, setTimeSlot] = useState<string>("09:00 - 10:00");
+  const [timeSlot, setTimeSlot] = useState<string>("08:30 - 09:30");
   const [customTimeSlot, setCustomTimeSlot] = useState<string>("");
   const [isCustomSlot, setIsCustomSlot] = useState<boolean>(false);
   const [selectedCourse, setSelectedCourse] = useState<string>("BRS311");
@@ -77,7 +79,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         setIsCustomSlot(true);
         setCustomTimeSlot(booking.timeSlot);
       } else {
-        setTimeSlot("09:00 - 10:00");
+        setTimeSlot("08:30 - 09:30");
         setIsCustomSlot(false);
       }
 
@@ -279,12 +281,12 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
                 >
                   <optgroup label="ช่วงเวลารายชั่วโมง (1 ชั่วโมง)">
-                    {STANDARD_TIMESLOTS.slice(0, 6).map(s => (
+                    {STANDARD_TIMESLOTS.slice(0, 8).map(s => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
                   </optgroup>
                   <optgroup label="ช่วงเวลาแบบบล็อก / อาจารย์">
-                    {STANDARD_TIMESLOTS.slice(6).map(s => (
+                    {STANDARD_TIMESLOTS.slice(8).map(s => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
                   </optgroup>

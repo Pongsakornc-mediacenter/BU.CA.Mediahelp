@@ -102,10 +102,14 @@ export const AVAILABLE_STUDIO_ROOMS = [
 ];
 
 export const AVAILABLE_TIMESLOTS = [
-  "ช่วงเช้า (09:00 - 12:00 น.)",
-  "ช่วงบ่าย (13:00 - 16:00 น.)",
-  "ช่วงเย็น (16:00 - 19:00 น.)",
-  "ช่วงค่ำ (19:00 - 22:00 น.)"
+  "08:30 - 09:30",
+  "09:30 - 10:30",
+  "10:30 - 11:30",
+  "11:30 - 12:30",
+  "13:00 - 14:00",
+  "14:00 - 15:00",
+  "15:00 - 16:00",
+  "16:00 - 17:00"
 ];
 
 // Default bookings for starting/demo purposes
@@ -115,9 +119,11 @@ export const DEFAULT_BOOKINGS: RoomBooking[] = [
     studentId: "somchai_bumail_net",
     studentName: "สมชาย บุญช่วย (นักศึกษาจำลอง)",
     studentEmail: "somchai@bumail.net",
+    email: "somchai@bumail.net",
+    pinCode: "1234",
     roomName: "ห้องจัดรายการ 1",
     date: "2026-06-12",
-    timeSlot: "09:00 - 11:00",
+    timeSlot: "08:30 - 10:30",
     purpose: "CA101 ฝึกจัดรายการสดยามเช้า",
     studentIdInput: "1660123456",
     phone: "081-234-5678",
@@ -130,6 +136,8 @@ export const DEFAULT_BOOKINGS: RoomBooking[] = [
     studentId: "wilai_bumail_net",
     studentName: "วิไลลักษณ์ เนตรตา (นักศึกษาจำลอง)",
     studentEmail: "wilai.n@bumail.net",
+    email: "wilai.n@bumail.net",
+    pinCode: "1234",
     roomName: "ห้องจัดรายการ 2",
     date: "2026-06-13",
     timeSlot: "13:00 - 15:00",
@@ -1165,7 +1173,17 @@ export function useData() {
     return { hasOverlap: false };
   };
 
-  const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string) => {
+  const createBooking = async (
+    roomName: string, 
+    date: string, 
+    timeSlot: string, 
+    purpose: string, 
+    studentIdInput?: string, 
+    phone?: string, 
+    studentNameInput?: string,
+    emailInput?: string,
+    pinCodeInput?: string
+  ) => {
     if (!currentUser) return;
 
     // Strict Overlap Validation Check
@@ -1188,10 +1206,15 @@ export function useData() {
       subject = purpose;
     }
 
+    const finalEmail = (emailInput && emailInput.trim()) || currentUser.email || "";
+    const finalPin = (pinCodeInput && pinCodeInput.trim()) || "1234";
+
     const bookingPayload: Omit<RoomBooking, 'id'> = {
       studentId: currentUser.uid,
       studentName: studentNameInput && studentNameInput.trim() ? studentNameInput.trim() : currentUser.name,
-      studentEmail: currentUser.email,
+      studentEmail: finalEmail,
+      email: finalEmail,
+      pinCode: finalPin,
       roomName,
       date,
       timeSlot,

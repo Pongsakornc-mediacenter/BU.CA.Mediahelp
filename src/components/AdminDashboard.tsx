@@ -51,6 +51,7 @@ import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCour
 import { DataSummaryDashboard } from './DataSummaryDashboard';
 import { EditBookingModal } from './EditBookingModal';
 import { DeleteBookingConfirmModal } from './DeleteBookingConfirmModal';
+import { VerifyBookingPinModal } from './VerifyBookingPinModal';
 
 const getRoomTheme = (room: string) => {
   switch (room) {
@@ -127,7 +128,7 @@ interface AdminDashboardProps {
   ) => Promise<void>;
   onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
   onDeleteProgram: (id: string) => Promise<void>;
-  onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string) => Promise<void>;
+  onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string, emailInput?: string, pinCodeInput?: string) => Promise<void>;
   roomImages?: { [key: string]: string | string[] };
   courses?: Course[];
   activeTabProp?: 'student_schedule' | 'summary';
@@ -191,15 +192,23 @@ export default function AdminDashboard({
 
   const [bookingRoom, setBookingRoom] = useState("ห้องจัดรายการ 1");
   const [bookingDate, setBookingDate] = useState("");
-  const [bookingSlot, setBookingSlot] = useState("09:00 - 10:00");
+  const [bookingSlot, setBookingSlot] = useState("08:30 - 09:30");
   const [bookingSubject, setBookingSubject] = useState("BRS311");
   const [bookingPurpose, setBookingPurpose] = useState("");
   const [bookingStudentName, setBookingStudentName] = useState("");
   const [bookingStudentId, setBookingStudentId] = useState("");
   const [bookingPhone, setBookingPhone] = useState("");
+  const [bookingEmail, setBookingEmail] = useState("");
+  const [bookingPinCode, setBookingPinCode] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [myBookingFilter, setMyBookingFilter] = useState("");
+
+  useEffect(() => {
+    if (currentUserEmail && !bookingEmail) {
+      setBookingEmail(currentUserEmail);
+    }
+  }, [currentUserEmail]);
 
   const myBookings = bookings.filter(b => {
     if (!b) return false;
@@ -237,10 +246,18 @@ export default function AdminDashboard({
     const dd = String(today.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   });
-  const [teacherTimeSlot, setTeacherTimeSlot] = useState<string>("09:00 - 16:00");
+  const [teacherTimeSlot, setTeacherTimeSlot] = useState<string>("08:30 - 17:00");
   const [teacherSubject, setTeacherSubject] = useState<string>("BRS311 - การจัดรายการวิทยุกระจายเสียง");
   const [teacherName, setTeacherName] = useState<string>("");
+  const [teacherEmail, setTeacherEmail] = useState<string>("");
+  const [teacherPinCode, setTeacherPinCode] = useState<string>("1234");
   const [submittingTeacherBooking, setSubmittingTeacherBooking] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (currentUserEmail && !teacherEmail) {
+      setTeacherEmail(currentUserEmail);
+    }
+  }, [currentUserEmail]);
 
   const handleTeacherBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,6 +265,14 @@ export default function AdminDashboard({
       alert("กรุณาระบุรหัสวิชา / กลุ่มเรียน (Section)");
       return;
     }
+    const finalEmail = teacherEmail.trim() || currentUserEmail || "pongsakorn.c@bu.ac.th";
+    const finalPin = teacherPinCode.trim() || "1234";
+
+    if (finalPin.length !== 4 || !/^\d{4}$/.test(finalPin)) {
+      alert("⚠️ กรุณากำหนดรหัส PIN เป็นตัวเลข 4 หลัก (เช่น 1234)");
+      return;
+    }
+
     if (!onCreateBooking) return;
     setSubmittingTeacherBooking(true);
     try {
@@ -259,13 +284,16 @@ export default function AdminDashboard({
         `${teacherSubject.trim()} (สำหรับการเรียนการสอนอาจารย์)`,
         "TEACHER",
         "-",
-        instructorName
+        instructorName,
+        finalEmail,
+        finalPin
       );
 
       setIsTeacherModalOpen(false);
       setActiveScheduleRoom(teacherRoom);
       setScheduleBaseDate(teacherDate);
       setTeacherSubject("BRS311 - การจัดรายการวิทยุกระจายเสียง");
+      setTeacherPinCode("1234");
       alert("🎓 บันทึกการจองห้องสำหรับอาจารย์สอนเรียบร้อยแล้ว! ข้อมูลปูเต็มช่วงเวลาในตารางทันที");
     } catch (err: any) {
       console.error("Teacher booking error:", err);
@@ -292,6 +320,11 @@ export default function AdminDashboard({
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [bookingToDelete, setBookingToDelete] = useState<RoomBooking | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+
+  // PIN Verification Modal State
+  const [isVerifyPinModalOpen, setIsVerifyPinModalOpen] = useState<boolean>(false);
+  const [pinActionType, setPinActionType] = useState<'edit' | 'delete'>('edit');
+  const [targetBookingForPin, setTargetBookingForPin] = useState<RoomBooking | null>(null);
 
   // Helper to retrieve the week's dates (Monday to Saturday) based on a given date (YYYY-MM-DD)
   const getWeekDates = (dateStr: string) => {
@@ -353,7 +386,7 @@ export default function AdminDashboard({
       const bTime = parseHours(b.timeSlot);
       if (bTime) {
         // Match if the cell's timeslot is completely within or overlaps with the booking timeslot
-        return cellTime.startMin >= bTime.startMin && cellTime.endMin <= bTime.endMin;
+        return Math.max(cellTime.startMin, bTime.startMin) < Math.min(cellTime.endMin, bTime.endMin);
       }
       const normalize = (str: string) => {
         let res = str.replace(/\./g, ':').trim();
@@ -391,6 +424,18 @@ export default function AdminDashboard({
       return;
     }
 
+    const finalEmail = bookingEmail.trim() || currentUserEmail || "";
+    if (!finalEmail) {
+      alert("⚠️ กรุณาระบุอีเมลผู้แจ้งจองเพื่อใช้สำหรับรับอีเมลยืนยันการจองและกู้คืน PIN");
+      return;
+    }
+
+    const finalPin = bookingPinCode.trim();
+    if (!finalPin || finalPin.length !== 4 || !/^\d{4}$/.test(finalPin)) {
+      alert("⚠️ กรุณากำหนดรหัส PIN กลุ่มเป็นตัวเลข 4 หลัก (เช่น 1234) สำหรับยืนยันตัวตนตอนแก้ไขหรือลบการจอง");
+      return;
+    }
+
     try {
       const combinedPurpose = `${bookingSubject.trim()} (${bookingPurpose.trim()})`;
       if (onCreateBooking) {
@@ -401,7 +446,9 @@ export default function AdminDashboard({
           combinedPurpose, 
           bookingStudentId.trim(), 
           bookingPhone.trim(),
-          bookingStudentName.trim()
+          bookingStudentName.trim(),
+          finalEmail,
+          finalPin
         );
         setIsBookingModalOpen(false);
         setBookingSubject("BRS311");
@@ -409,6 +456,7 @@ export default function AdminDashboard({
         setBookingStudentName("");
         setBookingStudentId("");
         setBookingPhone("");
+        setBookingPinCode("");
         setBookingSuccessMsg("🎉 ยืนยันการจองห้องจัดรายการเสร็จสิ้นเรียบร้อยแล้วค่ะ! ข้อมูลแสดงในตารางจัดรายการเรียบร้อยแล้ว");
         setTimeout(() => setBookingSuccessMsg(""), 6000);
       } else {
@@ -439,7 +487,7 @@ export default function AdminDashboard({
   const [isAddingProgram, setIsAddingProgram] = useState(false);
   const [newProgRoom, setNewProgRoom] = useState("ห้องจัดรายการ 1");
   const [newProgDate, setNewProgDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newProgSlot, setNewProgSlot] = useState("09:00 - 10:00");
+  const [newProgSlot, setNewProgSlot] = useState("08:30 - 09:30");
   const [newProgSubject, setNewProgSubject] = useState("");
   const [newProgPurpose, setNewProgPurpose] = useState("");
   const [newProgStudentId, setNewProgStudentId] = useState("");
@@ -1231,9 +1279,10 @@ export default function AdminDashboard({
                     onChange={(e) => setNewProgSlot(e.target.value)}
                     className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 font-mono"
                   >
-                    <option value="09:00 - 10:00">09:00 - 10:00</option>
-                    <option value="10:00 - 11:00">10:00 - 11:00</option>
-                    <option value="11:00 - 12:00">11:00 - 12:00</option>
+                    <option value="08:30 - 09:30">08:30 - 09:30</option>
+                    <option value="09:30 - 10:30">09:30 - 10:30</option>
+                    <option value="10:30 - 11:30">10:30 - 11:30</option>
+                    <option value="11:30 - 12:30">11:30 - 12:30</option>
                     <option value="13:00 - 14:00">13:00 - 14:00</option>
                     <option value="14:00 - 15:00">14:00 - 15:00</option>
                     <option value="15:00 - 16:00">15:00 - 16:00</option>
@@ -1654,12 +1703,14 @@ export default function AdminDashboard({
                   onChange={(e) => setBookingSlot(e.target.value)}
                   className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none transition-all font-mono font-medium text-slate-800"
                 >
-                  <option value="09:00 - 10:00">09:00 - 10:00</option>
-                  <option value="10:00 - 11:00">10:00 - 11:00</option>
-                  <option value="11:00 - 12:00">11:00 - 12:00</option>
+                  <option value="08:30 - 09:30">08:30 - 09:30</option>
+                  <option value="09:30 - 10:30">09:30 - 10:30</option>
+                  <option value="10:30 - 11:30">10:30 - 11:30</option>
+                  <option value="11:30 - 12:30">11:30 - 12:30</option>
                   <option value="13:00 - 14:00">13:00 - 14:00</option>
                   <option value="14:00 - 15:00">14:00 - 15:00</option>
                   <option value="15:00 - 16:00">15:00 - 16:00</option>
+                  <option value="16:00 - 17:00">16:00 - 17:00</option>
                 </select>
               </div>
 
@@ -1720,6 +1771,43 @@ export default function AdminDashboard({
                   placeholder="เช่น 089XXXXXXX"
                   className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-semibold"
                 />
+              </div>
+
+              <div>
+                <label className="text-[15px] font-bold text-slate-700 block mb-1">
+                  8. อีเมลผู้แจ้งจอง <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={bookingEmail}
+                  onChange={(e) => setBookingEmail(e.target.value)}
+                  required
+                  placeholder="เช่น user@bu.ac.th"
+                  className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-semibold"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  ✉️ สำหรับรับข้อมูลยืนยันและการกู้คืนรหัส PIN
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[15px] font-bold text-slate-700 block mb-1">
+                  9. กำหนดรหัส PIN กลุ่ม (4 หลัก) <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  value={bookingPinCode}
+                  onChange={(e) => setBookingPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  required
+                  placeholder="กำหนดรหัสตัวเลข 4 หลัก เช่น 1234"
+                  className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-800 font-mono font-bold tracking-widest"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  🔒 ตัวเลข 4 หลัก ใช้ยืนยันตัวตนเมื่อต้องการแก้ไขหรือยกเลิกการจอง
+                </p>
               </div>
 
               <button
@@ -1789,42 +1877,46 @@ export default function AdminDashboard({
             {/* Main Grid Table representation */}
             <div className="rounded-2xl overflow-hidden border border-orange-500/40 shadow-[0_0_18px_rgba(249,115,22,0.3)] ring-1 ring-orange-500/50 bg-[#0e0e11]">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
+                <table className="w-full min-w-[1080px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
                 <thead>
                   {/* Elegant dark grey row for วิชา */}
                   <tr className="border-b border-[#2d2d34]">
-                    <th colSpan={7} className={`py-3 bg-[#111113] ${getRoomTheme(activeScheduleRoom).text} font-extrabold text-xs sm:text-sm tracking-wide shadow-sm`}>
+                    <th colSpan={9} className={`py-3 bg-[#111113] ${getRoomTheme(activeScheduleRoom).text} font-extrabold text-xs sm:text-sm tracking-wide shadow-sm`}>
                       📚 รายวิชาเรียนประจำสัปดาห์ (Scheduled Class Subjects)
                     </th>
                   </tr>
                   {/* Table Headers in unified slate dark styling for professional contrast */}
                   <tr className="bg-[#16161a] text-[#ffffff] font-bold border-b border-[#2d2d34]">
-                    <th className="py-2.5 px-2 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[13%]">วัน / เวลา</th>
-                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">9.00 - 10.00</th>
-                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">10.00 - 11.00</th>
-                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">11.00 - 12.00</th>
-                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">13.00 - 14.00</th>
-                    <th className="py-2.5 px-2 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[14.5%]">14.00 - 15.00</th>
-                    <th className="py-2.5 px-2 text-[#ffffff] font-extrabold w-[14.5%]">15.00 - 16.00</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] bg-[#0e0e11] text-[#ffffff] font-extrabold w-[12%]">วัน / เวลา</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">08.30 - 09.30</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">09.30 - 10.30</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">10.30 - 11.30</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">11.30 - 12.30</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">13.00 - 14.00</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">14.00 - 15.00</th>
+                    <th className="py-2.5 px-1 border-r border-[#2d2d34] text-[#ffffff] font-extrabold w-[11%]">15.00 - 16.00</th>
+                    <th className="py-2.5 px-1 text-[#ffffff] font-extrabold w-[11%]">16.00 - 17.00</th>
                   </tr>
                 </thead>
                 <tbody>
                   {getWeekDates(scheduleBaseDate).map((dayInfo) => {
                     const slots = [
-                      "9.00 - 10.00",
-                      "10.00 - 11.00",
-                      "11.00 - 12.00",
-                      "13.00 - 14.00",
-                      "14.00 - 15.00",
-                      "15.00 - 16.00"
+                      "08:30 - 09:30",
+                      "09:30 - 10:30",
+                      "10:30 - 11:30",
+                      "11:30 - 12:30",
+                      "13:00 - 14:00",
+                      "14:00 - 15:00",
+                      "15:00 - 16:00",
+                      "16:00 - 17:00"
                     ];
 
                     return (
-                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[90px]">
-                        <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[90px] max-h-[90px] w-[13%] align-middle box-border">
+                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[94px]">
+                        <td className="py-1 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[94px] max-h-[94px] w-[12%] align-middle box-border">
                           <div className="flex flex-col justify-center items-center h-full w-full overflow-hidden">
-                            <div className={`text-[11px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
-                            <div className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate w-full">{dayInfo.displayDate}</div>
+                            <div className={`text-[12px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
+                            <div className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate w-full">{dayInfo.displayDate}</div>
                           </div>
                         </td>
 
@@ -1861,12 +1953,12 @@ export default function AdminDashboard({
 
                               const instructorName = b.studentName || b.studentIdInput || "อาจารย์ผู้สอน";
                               let slotSpanText = b.timeSlot || `${slots[i].split('-')[0].trim()} - ${slots[i + spanCount - 1].split('-')[1].trim()}`;
-                              if (slotSpanText.includes("09:00 - 16:00") || slotSpanText.includes("9.00 - 16.00")) {
-                                slotSpanText = "09:00 - 16:00 (เหมาทั้งวัน)";
-                              } else if (slotSpanText.includes("09:00 - 12:00") || slotSpanText.includes("9.00 - 12.00")) {
-                                slotSpanText = "09:00 - 12:00 (คาบเช้า)";
-                              } else if (slotSpanText.includes("13:00 - 16:00") || slotSpanText.includes("13.00 - 16.00")) {
-                                slotSpanText = "13:00 - 16:00 (คาบบ่าย)";
+                              if (slotSpanText.includes("08:30 - 17:00") || slotSpanText.includes("8.30 - 17.00") || slotSpanText.includes("09:00 - 16:00") || slotSpanText.includes("9.00 - 16.00")) {
+                                slotSpanText = "08:30 - 17:00 (เหมาทั้งวัน)";
+                              } else if (slotSpanText.includes("08:30 - 12:30") || slotSpanText.includes("8.30 - 12.30") || slotSpanText.includes("09:00 - 12:00") || slotSpanText.includes("9.00 - 12.00")) {
+                                slotSpanText = "08:30 - 12:30 (คาบเช้า)";
+                              } else if (slotSpanText.includes("13:00 - 17:00") || slotSpanText.includes("13.00 - 17.00") || slotSpanText.includes("13:00 - 16:00") || slotSpanText.includes("13.00 - 16.00")) {
+                                slotSpanText = "13:00 - 17:00 (คาบบ่าย)";
                               }
 
                               const purposeText = b.purpose ? b.purpose.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/, '').trim() : "สำหรับการเรียนการสอนอาจารย์";
@@ -1875,7 +1967,7 @@ export default function AdminDashboard({
                                 <td
                                   key={`${slot}_span_${i}`}
                                   colSpan={spanCount}
-                                  className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[90px] max-h-[90px] box-border"
+                                  className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[94px] max-h-[94px] box-border"
                                 >
                                   <div
                                     onClick={(e) => {
@@ -1892,21 +1984,31 @@ export default function AdminDashboard({
                                         booking: b
                                       });
                                     }}
-                                    className="relative p-2 pl-2.5 pt-1 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-center items-center h-[79px] min-h-[79px] max-h-[79px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
+                                    style={{ padding: '4px 8px 4px 10px' }}
+                                    className="relative px-2 py-1 pl-2.5 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-between items-center h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
                                   >
                                     {/* Left thick accent gradient line */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl bg-gradient-to-b from-purple-400 via-indigo-400 to-blue-500" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl bg-gradient-to-b from-purple-400 via-indigo-400 to-blue-500" />
 
-                                    <div className="flex flex-col items-center justify-center w-full min-w-0 px-2 overflow-hidden">
-                                      <div className="flex items-center gap-1.5 font-black text-xs sm:text-sm text-purple-200 truncate w-full justify-center">
-                                        <span className="text-[14px] h-[20px] shrink-0 flex items-center justify-center">🎓</span>
-                                        <span className="truncate">{displaySubject}</span>
+                                    <div className="flex flex-col items-center justify-between h-full w-full min-w-0 px-1 overflow-hidden">
+                                      <div 
+                                        className="flex items-center gap-1 font-black !text-[13px] text-purple-200 truncate w-full justify-center leading-[1.2]"
+                                        style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                      >
+                                        <span className="text-[13px] shrink-0">🎓</span>
+                                        <span className="truncate !text-[13px]" style={{ fontSize: '13px' }}>{displaySubject}</span>
                                       </div>
-                                      <div className="font-bold text-[11px] sm:text-xs text-[#ef8840] truncate w-full mt-0.5">
+                                      <div 
+                                        className="font-bold !text-[13px] text-[#ef8840] truncate w-full leading-[1.2]"
+                                        style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                      >
                                         อาจารย์ผู้สอน: {instructorName}
                                       </div>
-                                      <div className="inline-flex items-center gap-1 bg-purple-900/70 border border-purple-400/40 text-purple-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full mt-1 shadow-sm">
-                                        <span>⏱️ {slotSpanText}</span>
+                                      <div 
+                                        className="inline-flex items-center gap-1 bg-purple-900/70 border border-purple-400/40 text-purple-200 !text-[11px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
+                                        style={{ fontSize: '11px' }}
+                                      >
+                                        <span className="truncate">⏱️ {slotSpanText}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -1998,7 +2100,7 @@ export default function AdminDashboard({
                               renderedCells.push(
                                 <td 
                                   key={slot} 
-                                  className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[90px] max-h-[90px] w-[14.5%] box-border"
+                                  className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[94px] max-h-[94px] w-[11%] box-border"
                                 >
                                   <div 
                                     onClick={(e) => {
@@ -2015,22 +2117,30 @@ export default function AdminDashboard({
                                         booking: b
                                       });
                                     }}
-                                    className={`relative p-2 pl-2.5 pt-1 rounded-xl border border-solid text-left flex flex-col justify-between h-[79px] min-h-[79px] max-h-[79px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
+                                    style={{ padding: '4px 8px 4px 10px' }}
+                                    className={`relative px-2 py-1 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
                                   >
-                                    <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
+                                    <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl ${barColorClass}`} />
                                     <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
-                                      <div className={`font-extrabold text-[11px] sm:text-[12px] tracking-wider uppercase truncate w-full whitespace-nowrap overflow-hidden text-ellipsis ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}>
+                                      <div 
+                                        className={`font-extrabold !text-[13px] tracking-normal uppercase truncate w-full overflow-hidden text-ellipsis leading-[1.2] ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}
+                                        style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                      >
                                         {subjectCode}
                                       </div>
                                       <div 
-                                        className="font-bold text-xs sm:text-[12.5px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-snug mt-0.5 truncate w-full whitespace-nowrap overflow-hidden text-ellipsis transition-colors" 
+                                        className="font-medium !text-[13px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors" 
+                                        style={{ fontSize: '13px', lineHeight: '1.2' }}
                                         title={subjectTitle}
                                       >
                                         {subjectTitle}
                                       </div>
                                     </div>
                                     <div className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-0.5 transition-colors shrink-0" />
-                                    <div className="font-semibold text-[10px] sm:text-[11px] text-[#9CA3AF] group-hover:!text-[#ffffff] truncate w-full whitespace-nowrap overflow-hidden text-ellipsis transition-colors">
+                                    <div 
+                                      className="font-semibold !text-[13px] text-[#9CA3AF] group-hover:!text-[#ffffff] truncate w-full overflow-hidden text-ellipsis leading-[1.2] transition-colors"
+                                      style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                    >
                                       {footerText}
                                     </div>
                                   </div>
@@ -2044,9 +2154,9 @@ export default function AdminDashboard({
                             renderedCells.push(
                               <td 
                                 key={slot} 
-                                className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[90px] max-h-[90px] w-[14.5%] box-border"
+                                className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[94px] max-h-[94px] w-[11%] box-border"
                               >
-                                <div className="p-1 pt-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-[79px] min-h-[79px] max-h-[79px] w-full transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden">
+                                <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden">
                                   <div className="relative flex items-center justify-center select-none w-full gap-1 overflow-hidden truncate">
                                     <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300 shrink-0">🗓️</span>
                                     <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors truncate">
@@ -2158,12 +2268,14 @@ export default function AdminDashboard({
                           disabled
                           className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none transition-all font-mono font-bold text-slate-500 appearance-none cursor-default select-none"
                         >
-                          <option value="09:00 - 10:00">09:00 - 10:00</option>
-                          <option value="10:00 - 11:00">10:00 - 11:00</option>
-                          <option value="11:00 - 12:00">11:00 - 12:00</option>
+                          <option value="08:30 - 09:30">08:30 - 09:30</option>
+                          <option value="09:30 - 10:30">09:30 - 10:30</option>
+                          <option value="10:30 - 11:30">10:30 - 11:30</option>
+                          <option value="11:30 - 12:30">11:30 - 12:30</option>
                           <option value="13:00 - 14:00">13:00 - 14:00</option>
                           <option value="14:00 - 15:00">14:00 - 15:00</option>
                           <option value="15:00 - 16:00">15:00 - 16:00</option>
+                          <option value="16:00 - 17:00">16:00 - 17:00</option>
                         </select>
                       </div>
                     </div>
@@ -2230,6 +2342,39 @@ export default function AdminDashboard({
                           required
                           placeholder="เช่น 089XXXXXXX"
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-850 font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email & 4-digit PIN */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                          8. อีเมลผู้แจ้งจอง <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={bookingEmail}
+                          onChange={(e) => setBookingEmail(e.target.value)}
+                          required
+                          placeholder="เช่น user@bu.ac.th"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-850 font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                          9. กำหนดรหัส PIN (4 หลัก) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={4}
+                          value={bookingPinCode}
+                          onChange={(e) => setBookingPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          required
+                          placeholder="เช่น 1234"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-indigo-600 transition-all text-slate-850 font-mono font-bold tracking-widest"
                         />
                       </div>
                     </div>
@@ -2352,15 +2497,16 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          {/* Action Buttons: Edit & Delete */}
+          {/* Action Buttons: Edit & Delete (Protected by 4-digit PIN) */}
           {selectedScheduleBookingModal.booking && (
             <div className="flex gap-2.5 mt-4 pt-3 border-t border-[#3f3f46]">
               <button
                 type="button"
                 onClick={() => {
                   if (selectedScheduleBookingModal.booking) {
-                    setBookingToEdit(selectedScheduleBookingModal.booking);
-                    setIsEditModalOpen(true);
+                    setTargetBookingForPin(selectedScheduleBookingModal.booking);
+                    setPinActionType('edit');
+                    setIsVerifyPinModalOpen(true);
                     setSelectedScheduleBookingModal(null);
                   }
                 }}
@@ -2374,8 +2520,9 @@ export default function AdminDashboard({
                 type="button"
                 onClick={() => {
                   if (selectedScheduleBookingModal.booking) {
-                    setBookingToDelete(selectedScheduleBookingModal.booking);
-                    setIsDeleteModalOpen(true);
+                    setTargetBookingForPin(selectedScheduleBookingModal.booking);
+                    setPinActionType('delete');
+                    setIsVerifyPinModalOpen(true);
                     setSelectedScheduleBookingModal(null);
                   }
                 }}
@@ -2390,6 +2537,27 @@ export default function AdminDashboard({
       </div>,
       document.body
     )}
+
+    {/* Verify Booking PIN Modal */}
+    <VerifyBookingPinModal
+      isOpen={isVerifyPinModalOpen}
+      onClose={() => {
+        setIsVerifyPinModalOpen(false);
+        setTargetBookingForPin(null);
+      }}
+      booking={targetBookingForPin}
+      actionType={pinActionType}
+      onVerified={() => {
+        setIsVerifyPinModalOpen(false);
+        if (pinActionType === 'edit') {
+          setBookingToEdit(targetBookingForPin);
+          setIsEditModalOpen(true);
+        } else if (pinActionType === 'delete') {
+          setBookingToDelete(targetBookingForPin);
+          setIsDeleteModalOpen(true);
+        }
+      }}
+    />
 
     {/* Edit / Reschedule Booking Modal */}
     <EditBookingModal
@@ -2500,9 +2668,9 @@ export default function AdminDashboard({
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
-                    { label: "คาบเช้า", sub: "09:00 - 12:00", value: "09:00 - 12:00", highlighted: false },
-                    { label: "คาบบ่าย", sub: "13:00 - 16:00", value: "13:00 - 16:00", highlighted: false },
-                    { label: "เหมาทั้งวัน", sub: "09:00 - 16:00", value: "09:00 - 16:00", highlighted: true }
+                    { label: "คาบเช้า", sub: "08:30 - 12:30", value: "08:30 - 12:30", highlighted: false },
+                    { label: "คาบบ่าย", sub: "13:00 - 17:00", value: "13:00 - 17:00", highlighted: false },
+                    { label: "เหมาทั้งวัน", sub: "08:30 - 17:00", value: "08:30 - 17:00", highlighted: true }
                   ].map((opt) => {
                     const isSelected = teacherTimeSlot === opt.value;
                     return (
@@ -2576,6 +2744,39 @@ export default function AdminDashboard({
                   placeholder={currentUserEmail.split('@')[0] || "เช่น อ.พงศกร"}
                   className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-semibold"
                 />
+              </div>
+
+              {/* 6. อีเมลผู้แจ้งจอง & 7. รหัส PIN 4 หลัก */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">
+                    6. อีเมลผู้แจ้งจอง <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={teacherEmail}
+                    onChange={(e) => setTeacherEmail(e.target.value)}
+                    required
+                    placeholder="เช่น pongsakorn.c@bu.ac.th"
+                    className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">
+                    7. กำหนดรหัส PIN (4 หลัก) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    value={teacherPinCode}
+                    onChange={(e) => setTeacherPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    required
+                    placeholder="เช่น 1234"
+                    className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono font-bold tracking-widest"
+                  />
+                </div>
               </div>
 
               {/* Submit Button */}
