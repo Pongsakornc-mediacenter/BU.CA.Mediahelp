@@ -45,7 +45,9 @@ import CameraWorkbench from './components/CameraWorkbench';
 import AdminDashboard from './components/AdminDashboard';
 import { DataSummaryDashboard } from './components/DataSummaryDashboard';
 import { CourseManagementModal } from './components/CourseManagementModal';
-import { HelpCategory } from './types';
+import { EditBookingModal } from './components/EditBookingModal';
+import { DeleteBookingConfirmModal } from './components/DeleteBookingConfirmModal';
+import { HelpCategory, RoomBooking } from './types';
 
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -147,6 +149,7 @@ export default function App() {
     bookings,
     programs,
     createBooking,
+    updateBooking,
     updateBookingStatus,
     deleteBooking,
     createProgram,
@@ -311,7 +314,14 @@ export default function App() {
     phone: string;
     purpose: string;
     roomThemeText: string;
+    booking?: RoomBooking;
   } | null>(null);
+
+  // Edit / Delete Modals state
+  const [bookingToEdit, setBookingToEdit] = useState<RoomBooking | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [bookingToDelete, setBookingToDelete] = useState<RoomBooking | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Reset active image index when switching rooms
   React.useEffect(() => {
@@ -639,9 +649,6 @@ export default function App() {
       return;
     }
 
-    // Close the modal immediately for instant, responsive UI feedback
-    setIsBookingModalOpen(false);
-
     try {
       const combinedPurpose = `${bookingSubject.trim()} (${bookingPurpose.trim()})`;
       await createBooking(
@@ -653,6 +660,7 @@ export default function App() {
         bookingPhone.trim(),
         bookingStudentName.trim()
       );
+      setIsBookingModalOpen(false);
       setBookingSubject("BRS311");
       setBookingPurpose("");
       setBookingStudentName(currentUser?.name || "");
@@ -660,9 +668,9 @@ export default function App() {
       setBookingPhone("");
       setBookingSuccessMsg("🎉 ยืนยันการจองห้องจัดรายการเสร็จสิ้นเรียบร้อยแล้วค่ะ! ข้อมูลแสดงในตารางจัดรายการเรียบร้อยแล้ว");
       setTimeout(() => setBookingSuccessMsg(""), 6000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Booking error details:", err);
-      alert("เกิดข้อผิดพลาดในการยื่นระบบคำจอง");
+      alert(err?.message || "เกิดข้อผิดพลาดในการยื่นระบบคำจอง");
     }
   };
 
@@ -1021,6 +1029,7 @@ export default function App() {
             onDownloadReport={downloadAttendanceReportCSV}
             currentUserEmail={currentUser.email}
             onUpdateBookingStatus={updateBookingStatus}
+            onUpdateBooking={updateBooking}
             onDeleteBooking={deleteBooking}
             onCreateProgram={createProgram}
             onUpdateProgramStatus={updateProgramStatus}
@@ -1490,8 +1499,9 @@ export default function App() {
                     </div>
 
                     {/* Main Grid Table representation */}
-                    <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
-                      <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
+                    <div className="rounded-2xl overflow-hidden border border-orange-500/40 shadow-[0_0_18px_rgba(249,115,22,0.3)] ring-1 ring-orange-500/50 bg-[#0e0e11]">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
                         <thead>
                           {/* Elegant dark grey row for วิชา */}
                           <tr className="border-b border-[#2d2d34]">
@@ -1592,7 +1602,8 @@ export default function App() {
                                                   studentName: instructorName,
                                                   phone: b.phone && b.phone !== "-" ? b.phone : "อาจารย์ผู้สอน",
                                                   purpose: purposeText || "สำหรับการเรียนการสอนอาจารย์",
-                                                  roomThemeText: "text-purple-400"
+                                                  roomThemeText: "text-purple-400",
+                                                  booking: b
                                                 });
                                               }}
                                               className="relative p-2 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-center items-center h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
@@ -1714,7 +1725,8 @@ export default function App() {
                                                   studentName: b.studentNameInput || b.studentName,
                                                   phone: b.phone || '-',
                                                   purpose: purposeText,
-                                                  roomThemeText: roomTheme.text
+                                                  roomThemeText: roomTheme.text,
+                                                  booking: b
                                                 });
                                               }}
                                               className={`relative p-2 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
@@ -1769,6 +1781,7 @@ export default function App() {
                           })}
                         </tbody>
                       </table>
+                      </div>
                     </div>
 
                     {/* Bottom-Right Teacher Booking Accent Button */}
@@ -2342,10 +2355,79 @@ export default function App() {
                 {selectedScheduleBookingModal.purpose}
               </div>
             </div>
+
+            {/* Action Buttons: Edit & Delete */}
+            {selectedScheduleBookingModal.booking && (
+              <div className="flex gap-2.5 mt-4 pt-3 border-t border-[#3f3f46]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedScheduleBookingModal.booking) {
+                      setBookingToEdit(selectedScheduleBookingModal.booking);
+                      setIsEditModalOpen(true);
+                      setSelectedScheduleBookingModal(null);
+                    }
+                  }}
+                  className="flex-1 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 hover:text-orange-200 font-extrabold rounded-xl py-2 px-3 text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  <span>✏️</span>
+                  <span>แก้ไข / ย้ายวันเวลา</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedScheduleBookingModal.booking) {
+                      setBookingToDelete(selectedScheduleBookingModal.booking);
+                      setIsDeleteModalOpen(true);
+                      setSelectedScheduleBookingModal(null);
+                    }
+                  }}
+                  className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 hover:text-red-200 font-extrabold rounded-xl py-2 px-3 text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  <span>🗑️</span>
+                  <span>ยกเลิกการจอง (ลบ)</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>,
         document.body
       )}
+
+      {/* Edit / Reschedule Booking Modal */}
+      <EditBookingModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setBookingToEdit(null);
+        }}
+        booking={bookingToEdit}
+        courses={courses}
+        onSave={async (id, updates) => {
+          await updateBooking(id, updates);
+        }}
+        onAfterSaveSuccess={(newRoom, newDate) => {
+          setActiveScheduleRoom(newRoom);
+          setScheduleBaseDate(newDate);
+          setBookingDate(newDate);
+          alert(`✅ บันทึกการแก้ไขและย้ายเวลาสำเร็จ!\n\nห้อง: ${newRoom}\nวันที่: ${newDate}\n\nระบบอัปเดตตำแหน่งบนตารางและฐานข้อมูลเรียบร้อยแล้ว`);
+        }}
+      />
+
+      {/* Delete Booking Confirmation Modal */}
+      <DeleteBookingConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setBookingToDelete(null);
+        }}
+        booking={bookingToDelete}
+        onConfirmDelete={async (id) => {
+          await deleteBooking(id);
+          alert("🗑️ ยกเลิกและลบรายการจองสำเร็จ คืนช่องเวลาว่างบนตารางเรียบร้อยแล้ว");
+        }}
+      />
 
       {/* Teacher Class Booking Modal */}
       <AnimatePresence>

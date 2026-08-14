@@ -141,10 +141,10 @@ export function CourseManagementModal({
                 <BookOpen className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <h3 className="font-black flex items-center gap-2 text-[#d79fd7] text-[19px]">
                   ⚙️ จัดการรายวิชา (Course Management)
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-slate-400 mt-0.5 text-[14px]">
                   เพิ่ม แก้ไข และลบรายวิชาสำหรับตัวเลือกในแบบฟอร์มจองห้องจัดรายการและสตูดิโอ
                 </p>
               </div>
@@ -183,7 +183,7 @@ export function CourseManagementModal({
             
             {/* Form Section: Add New Course */}
             <div className="bg-[#1a1a22] border border-[#2d2d3a] p-4 rounded-xl shadow-inner">
-              <h4 className="text-xs font-extrabold text-purple-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <h4 className="font-extrabold text-purple-300 uppercase tracking-wider mb-3 flex items-center gap-1.5 text-[13px]">
                 <Plus className="w-4 h-4 text-purple-400" />
                 เพิ่มรายวิชาใหม่เข้าสู่ระบบ
               </h4>
@@ -198,7 +198,7 @@ export function CourseManagementModal({
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
                     placeholder="เช่น BRS311, CA102"
-                    className="w-full h-10 bg-[#0e0e12] border border-[#2e2e3a] rounded-xl px-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono font-bold"
+                    className="w-full h-10 bg-[#0e0e12] border border-[#2e2e3a] rounded-xl px-3 text-[13px] text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono font-bold"
                     required
                   />
                 </div>
@@ -212,7 +212,7 @@ export function CourseManagementModal({
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="เช่น การจัดรายการวิทยุกระจายเสียง"
-                    className="w-full h-10 bg-[#0e0e12] border border-[#2e2e3a] rounded-xl px-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-semibold"
+                    className="w-full h-10 bg-[#0e0e12] border border-[#2e2e3a] rounded-xl px-3 text-[13px] text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-semibold"
                     required
                   />
                 </div>
@@ -224,7 +224,7 @@ export function CourseManagementModal({
                     className="w-full h-10 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold rounded-xl text-xs transition-all shadow-md shadow-purple-600/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>{isSubmitting ? "กำลังบันทึก..." : "เพิ่มรายวิชา"}</span>
+                    <span className="text-[15px]">{isSubmitting ? "กำลังบันทึก..." : "เพิ่มรายวิชา"}</span>
                   </button>
                 </div>
               </form>
@@ -235,7 +235,7 @@ export function CourseManagementModal({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <BookMarked className="w-4 h-4 text-indigo-400" />
-                  <h4 className="text-xs font-bold text-slate-200">
+                  <h4 className="font-bold text-[#a7a7a7] text-[13px]">
                     รายการวิชาทั้งหมดในระบบ ({courses.length} วิชา)
                   </h4>
                 </div>
@@ -260,9 +260,9 @@ export function CourseManagementModal({
                     <thead>
                       <tr className="bg-[#1f1f2a] text-slate-400 text-[10.5px] uppercase tracking-wider border-b border-[#2c2c3a]">
                         <th className="py-2.5 px-3.5 w-12 text-center font-extrabold">#</th>
-                        <th className="py-2.5 px-3.5 w-36 font-extrabold">รหัสวิชา</th>
-                        <th className="py-2.5 px-3.5 font-extrabold">ชื่อรายวิชา</th>
-                        <th className="py-2.5 px-3.5 w-36 text-center font-extrabold">จัดการ</th>
+                        <th className="py-2.5 px-3.5 w-36 font-extrabold text-[13.5px]">รหัสวิชา</th>
+                        <th className="py-2.5 px-3.5 font-extrabold text-[13.5px]">ชื่อรายวิชา</th>
+                        <th className="py-2.5 px-3.5 w-36 text-center font-extrabold text-[12.5px]">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#262632]">
@@ -294,7 +294,7 @@ export function CourseManagementModal({
                                     className="w-full bg-[#0d0d11] border border-purple-500/70 rounded-lg px-2 py-1 text-xs text-purple-300 font-mono font-bold focus:outline-none"
                                   />
                                 ) : (
-                                  <span className="inline-block px-2 py-0.5 bg-purple-950/60 text-purple-300 border border-purple-800/40 rounded-md font-mono font-bold text-xs">
+                                  <span className="inline-block px-2 py-0.5 bg-purple-950/60 text-purple-300 border border-purple-800/40 rounded-md font-mono font-bold text-[14px]">
                                     {course.code}
                                   </span>
                                 )}
@@ -310,7 +310,7 @@ export function CourseManagementModal({
                                     className="w-full bg-[#0d0d11] border border-purple-500/70 rounded-lg px-2 py-1 text-xs text-white font-medium focus:outline-none"
                                   />
                                 ) : (
-                                  <span className="text-slate-200 font-semibold text-xs">
+                                  <span className="text-[#a7a7a7] font-semibold text-[14px]">
                                     {course.name}
                                   </span>
                                 )}
@@ -359,7 +359,7 @@ export function CourseManagementModal({
                                     </button>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center justify-center gap-1">
+                                  <div className="flex items-center justify-center gap-1 w-[190.922px] h-[38.3125px]">
                                     <button
                                       type="button"
                                       onClick={() => handleStartEdit(course)}
@@ -393,7 +393,7 @@ export function CourseManagementModal({
 
           {/* Footer */}
           <div className="p-3.5 sm:p-4 bg-[#111115] border-t border-[#2b2b36] flex items-center justify-between text-xs text-slate-500 shrink-0">
-            <span>ข้อมูลจะเชื่อมโยงกับฐานข้อมูล Firestore เรียลไทม์</span>
+            <span className="text-[14px]">ข้อมูลจะเชื่อมโยงกับฐานข้อมูล Firestore เรียลไทม์</span>
             <button
               type="button"
               onClick={onClose}

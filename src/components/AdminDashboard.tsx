@@ -49,6 +49,8 @@ import {
 import { Ticket, AttendanceRecord, HelpCategory, ClassSession, RoomBooking, BroadcastProgram, Course } from '../types';
 import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCourseLabel } from '../hooks/useData';
 import { DataSummaryDashboard } from './DataSummaryDashboard';
+import { EditBookingModal } from './EditBookingModal';
+import { DeleteBookingConfirmModal } from './DeleteBookingConfirmModal';
 
 const getRoomTheme = (room: string) => {
   switch (room) {
@@ -109,6 +111,7 @@ interface AdminDashboardProps {
   bookings: RoomBooking[];
   programs: BroadcastProgram[];
   onUpdateBookingStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
+  onUpdateBooking?: (id: string, updates: Partial<RoomBooking>) => Promise<void>;
   onDeleteBooking: (id: string) => Promise<void>;
   onCreateProgram: (
     programName: string, 
@@ -140,6 +143,7 @@ export default function AdminDashboard({
   bookings = [],
   programs = [],
   onUpdateBookingStatus,
+  onUpdateBooking,
   onDeleteBooking,
   onCreateProgram,
   onUpdateProgramStatus,
@@ -263,9 +267,9 @@ export default function AdminDashboard({
       setScheduleBaseDate(teacherDate);
       setTeacherSubject("BRS311 - การจัดรายการวิทยุกระจายเสียง");
       alert("🎓 บันทึกการจองห้องสำหรับอาจารย์สอนเรียบร้อยแล้ว! ข้อมูลปูเต็มช่วงเวลาในตารางทันที");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Teacher booking error:", err);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
+      alert(err?.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
     } finally {
       setSubmittingTeacherBooking(false);
     }
@@ -280,7 +284,14 @@ export default function AdminDashboard({
     phone: string;
     purpose: string;
     roomThemeText: string;
+    booking?: RoomBooking;
   } | null>(null);
+
+  // Edit / Delete Modals state
+  const [bookingToEdit, setBookingToEdit] = useState<RoomBooking | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [bookingToDelete, setBookingToDelete] = useState<RoomBooking | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Helper to retrieve the week's dates (Monday to Saturday) based on a given date (YYYY-MM-DD)
   const getWeekDates = (dateStr: string) => {
@@ -380,9 +391,6 @@ export default function AdminDashboard({
       return;
     }
 
-    // Close the modal immediately for instant, responsive UI feedback
-    setIsBookingModalOpen(false);
-
     try {
       const combinedPurpose = `${bookingSubject.trim()} (${bookingPurpose.trim()})`;
       if (onCreateBooking) {
@@ -395,6 +403,7 @@ export default function AdminDashboard({
           bookingPhone.trim(),
           bookingStudentName.trim()
         );
+        setIsBookingModalOpen(false);
         setBookingSubject("BRS311");
         setBookingPurpose("");
         setBookingStudentName("");
@@ -405,9 +414,9 @@ export default function AdminDashboard({
       } else {
         alert("ระบบหลักไม่พร้อมใช้งานฟังก์ชันการจองในขณะนี้");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Booking error details:", err);
-      alert("เกิดข้อผิดพลาดในการยื่นระบบคำจอง");
+      alert(err?.message || "เกิดข้อผิดพลาดในการยื่นระบบคำจอง");
     }
   };
 
@@ -1078,10 +1087,10 @@ export default function AdminDashboard({
             <div>
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 font-display">
                 <BookOpen className="w-5 h-5 text-indigo-600" />
-                รายการรออนุมัติ การจองห้องจัดรายการ
+                ตารางประวัติและรายการจองห้องจัดรายการ
               </h3>
               <p className="text-slate-500 text-xs mt-1">
-                ระบบจัดการและควบคุมคำเเนะนำพร้อมตรวจพิจารณาอนุมัติคำขอเข้าใช้งานพื้นที่จอง
+                ระบบบันทึกและจัดการประวัติการจองห้องปฏิบัติการมีเดียเซ็นเตอร์
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1093,7 +1102,7 @@ export default function AdminDashboard({
                 📥 ขอตัวอย่าง จองห้องจัดรายการ 2 (1 รายการ)
               </button>
               <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 font-mono text-xs text-slate-700">
-                <span>อนุมัติสะสม: {bookings.filter(b => b.status === 'approved').length} คำขอ</span>
+                <span>จำนวนการจองทั้งหมด: {bookings.length} รายการ</span>
               </div>
             </div>
           </div>
@@ -1108,147 +1117,43 @@ export default function AdminDashboard({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-550 font-bold bg-slate-50/50">
-                    <th className="py-3 px-4 font-display">ชื่อ-นักศึกษา</th>
-                    <th className="py-3 px-4 font-display">ห้อง</th>
-                    <th className="py-3 px-4 font-display">ช่วงเวลา</th>
-                    <th className="py-3 px-4 font-display">วิชา</th>
-                    <th className="py-3 px-4 font-display text-center">รออนุมัติ</th>
+                    <th className="py-3 px-4 font-display w-[30%]">ผู้ขอจอง / นักศึกษา</th>
+                    <th className="py-3 px-4 font-display w-[16%]">ห้อง</th>
+                    <th className="py-3 px-4 font-display w-[18%]">ช่วงเวลา</th>
+                    <th className="py-3 px-4 font-display w-[36%]">รายวิชา / วัตถุประสงค์</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {bookings.map((booking) => {
-                    const displayStatus = optimisticStatus[booking.id] || booking.status;
                     return (
                       <tr key={booking.id} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-slate-800">{booking.studentName}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{booking.studentEmail}</div>
-                          {booking.studentIdInput && booking.phone && (
-                            <div className="text-[10px] text-indigo-500 font-bold mt-0.5 font-mono">
-                              ID: {booking.studentIdInput} • โทร: {booking.phone}
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-800 text-sm">{booking.studentName}</div>
+                          <div className="text-xs text-slate-500 font-mono mt-0.5">{booking.studentEmail}</div>
+                          {(booking.studentIdInput || booking.phone) && (
+                            <div className="text-xs text-indigo-600 font-bold mt-1 font-mono">
+                              {booking.studentIdInput ? `ID: ${booking.studentIdInput}` : ''} 
+                              {booking.studentIdInput && booking.phone ? ' • ' : ''} 
+                              {booking.phone ? `โทร: ${booking.phone}` : ''}
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px]">
+                        <td className="py-3.5 px-4">
+                          <span className="bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs">
                             {booking.roomName}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-slate-700">{booking.timeSlot}</div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{booking.date}</div>
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-slate-800 text-xs">{booking.timeSlot}</div>
+                          <div className="text-xs text-slate-500 font-mono mt-0.5">📅 {booking.date}</div>
                         </td>
-                        <td className="py-3 px-4 max-w-[180px] truncate" title={booking.purpose}>
-                          <span className="font-medium text-slate-600">{booking.purpose}</span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {displayStatus === 'pending' || draftStatus[booking.id] !== undefined ? (
-                            <div className="flex items-center justify-center gap-2">
-                              {/* Approved Button */}
-                              <button
-                                type="button"
-                                onClick={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'approved' }))}
-                                className={`px-5 py-2 rounded-xl text-xs font-extrabold border transition-all select-none ${
-                                  (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : displayStatus) === 'approved'
-                                    ? 'bg-[#00c58d] border-[#00a877] text-black shadow-sm scale-105'
-                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-250'
-                                }`}
-                              >
-                                อนุมัติ
-                              </button>
-
-                              {/* Rejected Button */}
-                              <button
-                                type="button"
-                                onClick={() => setDraftStatus(prev => ({ ...prev, [booking.id]: 'rejected' }))}
-                                className={`px-5 py-2 rounded-xl text-xs font-extrabold border transition-all select-none ${
-                                  (draftStatus[booking.id] !== undefined ? draftStatus[booking.id] : displayStatus) === 'rejected'
-                                    ? 'bg-[#ff2d55] border-[#df183e] text-black shadow-sm scale-105'
-                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-250'
-                                }`}
-                              >
-                                ไม่อนุมัติ
-                              </button>
-
-                              {/* Confirm Button */}
-                              {draftStatus[booking.id] !== undefined ? (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const target = draftStatus[booking.id];
-                                    // Set optimistic status instantly to trigger UI transition immediately
-                                    setOptimisticStatus(prev => ({ ...prev, [booking.id]: target }));
-                                    // Clear draft status instantly to switch layout
-                                    setDraftStatus(prev => {
-                                      const next = { ...prev };
-                                      delete next[booking.id];
-                                      return next;
-                                    });
-                                    
-                                    try {
-                                      await onUpdateBookingStatus(booking.id, target);
-                                    } catch (error) {
-                                      console.error("Failed to update status on server", error);
-                                      // Revert optimistic state on failure
-                                      setOptimisticStatus(prev => {
-                                        const next = { ...prev };
-                                        delete next[booking.id];
-                                        return next;
-                                      });
-                                    }
-                                  }}
-                                  className="bg-[#f59e0b] hover:bg-[#d97706] border border-[#b45309] text-black font-extrabold px-5 py-2 rounded-xl text-xs transition-all shadow-md shrink-0"
-                                  title="คลิกเพื่อยืนยันคำขอ"
-                                >
-                                  ยืนยัน
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled
-                                  className="bg-slate-50 text-slate-350 border border-slate-100 px-5 py-2 rounded-xl text-xs font-bold opacity-35 cursor-not-allowed select-none"
-                                >
-                                  ยืนยัน
-                                </button>
-                              )}
-
-                              {draftStatus[booking.id] !== undefined && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setDraftStatus(prev => {
-                                      const next = { ...prev };
-                                      delete next[booking.id];
-                                      return next;
-                                    });
-                                  }}
-                                  className="bg-[#2d3748] hover:bg-[#1a202c] text-white font-extrabold px-5 py-2 rounded-xl text-xs transition-all shrink-0"
-                                >
-                                  ยกเลิก
-                                </button>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-3">
-                              {displayStatus === 'approved' ? (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#00c58d]/10 border border-[#00c58d]/30 text-[#00a877]">
-                                  <span className="w-2 h-2 rounded-full bg-[#00c58d] animate-pulse"></span>
-                                  อนุมัติแล้ว
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#ff2d55]/10 border border-[#ff2d55]/30 text-[#df183e]">
-                                  <span className="w-2 h-2 rounded-full bg-[#ff2d55]"></span>
-                                  ไม่อนุมัติ
-                                </span>
-                              )}
-                              
-                              <button
-                                type="button"
-                                onClick={() => setDraftStatus(prev => ({ ...prev, [booking.id]: displayStatus }))}
-                                className="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 hover:border-slate-300 border border-slate-200 transition-colors text-[11px] px-3 py-1.5 rounded-lg font-bold select-none"
-                              >
-                                แก้ไขสถานะ
-                              </button>
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-indigo-700 text-xs">
+                            {booking.subject || 'BRS311'}
+                          </div>
+                          {booking.purpose && (
+                            <div className="text-xs text-slate-600 mt-1 font-medium leading-relaxed">
+                              {booking.purpose}
                             </div>
                           )}
                         </td>
@@ -1539,7 +1444,7 @@ export default function AdminDashboard({
         )}
 
         {/* Centered Dark Header Section with Room selectors */}
-        <div className="bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-5 rounded-[20px] shadow-2xl text-center space-y-3 min-h-[650px] flex flex-col justify-between">
+        <div className="bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-5 rounded-[20px] shadow-2xl text-center space-y-3 min-h-[650px] h-[751px] flex flex-col justify-between">
           <div className="space-y-2">
             <div className="text-center space-y-1">
               <h4 className={`text-base sm:text-lg font-extrabold ${getRoomTheme(activeScheduleRoom).text} tracking-tight font-display flex items-center justify-center gap-1.5`}>
@@ -1613,7 +1518,7 @@ export default function AdminDashboard({
 
           {/* Top Banner Image Preview */}
           <div className="w-full max-w-6xl mx-auto pt-1 flex-1 flex flex-col">
-            <div className="w-full h-[570px] sm:h-[590px] md:h-[635px] lg:h-[680px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
+            <div className="w-full h-[623px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
               {(() => {
                 const val = roomImages?.[activeScheduleRoom];
                 let images: string[] = [];
@@ -1882,8 +1787,9 @@ export default function AdminDashboard({
             </div>
 
             {/* Main Grid Table representation */}
-            <div className="overflow-x-auto border border-[#2d2d34] rounded-xl shadow-2xl bg-[#0e0e11]">
-              <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
+            <div className="rounded-2xl overflow-hidden border border-orange-500/40 shadow-[0_0_18px_rgba(249,115,22,0.3)] ring-1 ring-orange-500/50 bg-[#0e0e11]">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[960px] border-collapse text-xs text-center table-fixed bg-[#0e0e11]">
                 <thead>
                   {/* Elegant dark grey row for วิชา */}
                   <tr className="border-b border-[#2d2d34]">
@@ -1914,8 +1820,8 @@ export default function AdminDashboard({
                     ];
 
                     return (
-                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[86px]">
-                        <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[86px] max-h-[86px] w-[13%] align-middle box-border">
+                      <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[90px]">
+                        <td className="py-1.5 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[90px] max-h-[90px] w-[13%] align-middle box-border">
                           <div className="flex flex-col justify-center items-center h-full w-full overflow-hidden">
                             <div className={`text-[11px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
                             <div className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate w-full">{dayInfo.displayDate}</div>
@@ -1969,7 +1875,7 @@ export default function AdminDashboard({
                                 <td
                                   key={`${slot}_span_${i}`}
                                   colSpan={spanCount}
-                                  className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[86px] max-h-[86px] box-border"
+                                  className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[90px] max-h-[90px] box-border"
                                 >
                                   <div
                                     onClick={(e) => {
@@ -1982,10 +1888,11 @@ export default function AdminDashboard({
                                         studentName: instructorName,
                                         phone: b.phone && b.phone !== "-" ? b.phone : "อาจารย์ผู้สอน",
                                         purpose: purposeText || "สำหรับการเรียนการสอนอาจารย์",
-                                        roomThemeText: "text-purple-400"
+                                        roomThemeText: "text-purple-400",
+                                        booking: b
                                       });
                                     }}
-                                    className="relative p-2 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-center items-center h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
+                                    className="relative p-2 pl-2.5 pt-1 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-center items-center h-[79px] min-h-[79px] max-h-[79px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
                                   >
                                     {/* Left thick accent gradient line */}
                                     <div className="absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl bg-gradient-to-b from-purple-400 via-indigo-400 to-blue-500" />
@@ -2091,7 +1998,7 @@ export default function AdminDashboard({
                               renderedCells.push(
                                 <td 
                                   key={slot} 
-                                  className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[86px] max-h-[86px] w-[14.5%] box-border"
+                                  className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[90px] max-h-[90px] w-[14.5%] box-border"
                                 >
                                   <div 
                                     onClick={(e) => {
@@ -2104,10 +2011,11 @@ export default function AdminDashboard({
                                         studentName: b.studentNameInput || b.studentName,
                                         phone: b.phone || '-',
                                         purpose: purposeText,
-                                        roomThemeText: roomTheme.text
+                                        roomThemeText: roomTheme.text,
+                                        booking: b
                                       });
                                     }}
-                                    className={`relative p-2 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
+                                    className={`relative p-2 pl-2.5 pt-1 rounded-xl border border-solid text-left flex flex-col justify-between h-[79px] min-h-[79px] max-h-[79px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
                                   >
                                     <div className={`absolute left-0 top-0 bottom-0 w-[5px] rounded-l-xl ${barColorClass}`} />
                                     <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
@@ -2136,9 +2044,9 @@ export default function AdminDashboard({
                             renderedCells.push(
                               <td 
                                 key={slot} 
-                                className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[86px] max-h-[86px] w-[14.5%] box-border"
+                                className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[90px] max-h-[90px] w-[14.5%] box-border"
                               >
-                                <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-[78px] min-h-[78px] max-h-[78px] w-full transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden">
+                                <div className="p-1 pt-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-[79px] min-h-[79px] max-h-[79px] w-full transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden">
                                   <div className="relative flex items-center justify-center select-none w-full gap-1 overflow-hidden truncate">
                                     <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300 shrink-0">🗓️</span>
                                     <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors truncate">
@@ -2159,6 +2067,7 @@ export default function AdminDashboard({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Bottom-Right Teacher Booking Accent Button */}
@@ -2442,10 +2351,81 @@ export default function AdminDashboard({
               {selectedScheduleBookingModal.purpose}
             </div>
           </div>
+
+          {/* Action Buttons: Edit & Delete */}
+          {selectedScheduleBookingModal.booking && (
+            <div className="flex gap-2.5 mt-4 pt-3 border-t border-[#3f3f46]">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedScheduleBookingModal.booking) {
+                    setBookingToEdit(selectedScheduleBookingModal.booking);
+                    setIsEditModalOpen(true);
+                    setSelectedScheduleBookingModal(null);
+                  }
+                }}
+                className="flex-1 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 hover:text-orange-200 font-extrabold rounded-xl py-2 px-3 text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+              >
+                <span>✏️</span>
+                <span>แก้ไข / ย้ายวันเวลา</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedScheduleBookingModal.booking) {
+                    setBookingToDelete(selectedScheduleBookingModal.booking);
+                    setIsDeleteModalOpen(true);
+                    setSelectedScheduleBookingModal(null);
+                  }
+                }}
+                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 hover:text-red-200 font-extrabold rounded-xl py-2 px-3 text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+              >
+                <span>🗑️</span>
+                <span>ยกเลิกการจอง (ลบ)</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>,
       document.body
     )}
+
+    {/* Edit / Reschedule Booking Modal */}
+    <EditBookingModal
+      isOpen={isEditModalOpen}
+      onClose={() => {
+        setIsEditModalOpen(false);
+        setBookingToEdit(null);
+      }}
+      booking={bookingToEdit}
+      courses={courses}
+      onSave={async (id, updates) => {
+        if (onUpdateBooking) {
+          await onUpdateBooking(id, updates);
+        }
+      }}
+      onAfterSaveSuccess={(newRoom, newDate) => {
+        setActiveScheduleRoom(newRoom);
+        setScheduleBaseDate(newDate);
+        setBookingDate(newDate);
+        alert(`✅ บันทึกการแก้ไขและย้ายเวลาสำเร็จ!\n\nห้อง: ${newRoom}\nวันที่: ${newDate}\n\nระบบอัปเดตตำแหน่งบนตารางและฐานข้อมูลเรียบร้อยแล้ว`);
+      }}
+    />
+
+    {/* Delete Booking Confirmation Modal */}
+    <DeleteBookingConfirmModal
+      isOpen={isDeleteModalOpen}
+      onClose={() => {
+        setIsDeleteModalOpen(false);
+        setBookingToDelete(null);
+      }}
+      booking={bookingToDelete}
+      onConfirmDelete={async (id) => {
+        await onDeleteBooking(id);
+        alert("🗑️ ยกเลิกและลบรายการจองสำเร็จ คืนช่องเวลาว่างบนตารางเรียบร้อยแล้ว");
+      }}
+    />
 
     {/* Teacher Class Booking Modal */}
     <AnimatePresence>

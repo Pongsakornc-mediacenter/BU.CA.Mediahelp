@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { RoomBooking, Ticket, AttendanceRecord } from '../types';
+import { calculateBookingDurationHours, formatHoursDisplay } from '../hooks/useData';
 
 interface DataSummaryDashboardProps {
   bookings: RoomBooking[];
@@ -76,11 +77,16 @@ export function DataSummaryDashboard({
   const youtube1Bookings = filteredBookings.filter(b => b.roomName === 'ห้องยูทูป 1');
   const youtube2Bookings = filteredBookings.filter(b => b.roomName === 'ห้องยูทูป 2');
 
-  const totalHours = totalBookings * 1.5; // Approximate average 1.5 hours per slot
-  const room1Hours = room1Bookings.length * 1.5;
-  const room2Hours = room2Bookings.length * 1.5;
-  const youtube1Hours = youtube1Bookings.length * 1.5;
-  const youtube2Hours = youtube2Bookings.length * 1.5;
+  // Helper to calculate total hours from a booking array
+  const calculateTotalHours = (bookingList: RoomBooking[]) => {
+    return bookingList.reduce((sum, b) => sum + calculateBookingDurationHours(b.timeSlot), 0);
+  };
+
+  const totalHours = calculateTotalHours(filteredBookings);
+  const room1Hours = calculateTotalHours(room1Bookings);
+  const room2Hours = calculateTotalHours(room2Bookings);
+  const youtube1Hours = calculateTotalHours(youtube1Bookings);
+  const youtube2Hours = calculateTotalHours(youtube2Bookings);
 
   // Course distribution
   const courseStats = useMemo(() => {
@@ -92,7 +98,7 @@ export function DataSummaryDashboard({
         map[subj] = { count: 0, hours: 0, students: new Set() };
       }
       map[subj].count += 1;
-      map[subj].hours += 1.5;
+      map[subj].hours += calculateBookingDurationHours(b.timeSlot);
       if (b.studentId || b.studentEmail) {
         map[subj].students.add(b.studentId || b.studentEmail);
       }
@@ -302,8 +308,8 @@ export function DataSummaryDashboard({
               <span className="text-2xl font-black text-slate-900 font-display">{totalBookings}</span>
               <span className="text-xs text-slate-500 font-medium">รายการ</span>
             </div>
-            <span className="text-[10px] text-emerald-600 font-bold block mt-1">
-              ✓ อนุมัติแล้ว {approvedBookings.length} รายการ
+            <span className="text-[10px] text-slate-500 font-semibold block mt-1">
+              ⏱️ รวม {formatHoursDisplay(totalHours)} ชม.
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
@@ -320,7 +326,7 @@ export function DataSummaryDashboard({
               <span className="text-xs text-slate-500 font-medium">คิวจอง</span>
             </div>
             <span className="text-[10px] text-slate-500 font-semibold block mt-1">
-              ⏱️ รวม ~{room1Hours.toFixed(1)} ชม.
+              ⏱️ รวม {formatHoursDisplay(room1Hours)} ชม.
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-100 text-[#ef8840] flex items-center justify-center shrink-0 font-bold text-xl">
@@ -337,7 +343,7 @@ export function DataSummaryDashboard({
               <span className="text-xs text-slate-500 font-medium">คิวจอง</span>
             </div>
             <span className="text-[10px] text-slate-500 font-semibold block mt-1">
-              ⏱️ รวม ~{room2Hours.toFixed(1)} ชม.
+              ⏱️ รวม {formatHoursDisplay(room2Hours)} ชม.
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 text-[#4a90e2] flex items-center justify-center shrink-0 font-bold text-xl">
@@ -354,7 +360,7 @@ export function DataSummaryDashboard({
               <span className="text-xs text-slate-500 font-medium">คิวจอง</span>
             </div>
             <span className="text-[10px] text-slate-500 font-semibold block mt-1">
-              ⏱️ รวม ~{youtube1Hours.toFixed(1)} ชม.
+              ⏱️ รวม {formatHoursDisplay(youtube1Hours)} ชม.
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0 font-bold text-xl">
@@ -371,7 +377,7 @@ export function DataSummaryDashboard({
               <span className="text-xs text-slate-500 font-medium">คิวจอง</span>
             </div>
             <span className="text-[10px] text-slate-500 font-semibold block mt-1">
-              ⏱️ รวม ~{youtube2Hours.toFixed(1)} ชม.
+              ⏱️ รวม {formatHoursDisplay(youtube2Hours)} ชม.
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0 font-bold text-xl">
@@ -504,7 +510,7 @@ export function DataSummaryDashboard({
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-black text-indigo-600 block">{item.count} ครั้ง</span>
-                      <span className="text-[10px] text-slate-400 font-mono">~{item.hours.toFixed(1)} ชม.</span>
+                      <span className="text-[10px] text-slate-400 font-mono">{formatHoursDisplay(item.hours)} ชม.</span>
                     </div>
                   </div>
                 ))}
@@ -539,7 +545,7 @@ export function DataSummaryDashboard({
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">ชั่วโมงเปิดใช้งานรวม</span>
-              <span className="text-2xl font-black text-slate-800 font-display block mt-1">~{room1Hours.toFixed(1)} ชม.</span>
+              <span className="text-2xl font-black text-slate-800 font-display block mt-1">{formatHoursDisplay(room1Hours)} ชม.</span>
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">วิชาที่มีการจองมากที่สุด</span>
@@ -554,11 +560,10 @@ export function DataSummaryDashboard({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200/80">
                   <tr>
-                    <th className="p-3">วันที่ / เวลา</th>
-                    <th className="p-3">ผู้ขอจอง</th>
-                    <th className="p-3">รหัสนักศึกษา</th>
-                    <th className="p-3">รายวิชา</th>
-                    <th className="p-3">สถานะ</th>
+                    <th className="p-3 w-[22%]">วันที่ / เวลา</th>
+                    <th className="p-3 w-[28%]">ผู้ขอจอง</th>
+                    <th className="p-3 w-[18%]">รหัสนักศึกษา</th>
+                    <th className="p-3 w-[32%]">รายวิชา</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -568,16 +573,11 @@ export function DataSummaryDashboard({
                       <td className="p-3 font-bold text-slate-800">{b.studentName}</td>
                       <td className="p-3 font-mono text-slate-500">{b.studentIdInput || b.studentId || '-'}</td>
                       <td className="p-3 font-semibold text-indigo-600">{b.subject || 'BRS311'}</td>
-                      <td className="p-3">
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                          อนุมัติแล้ว
-                        </span>
-                      </td>
                     </tr>
                   ))}
                   {room1Bookings.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องจัดรายการ 1</td>
+                      <td colSpan={4} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องจัดรายการ 1</td>
                     </tr>
                   )}
                 </tbody>
@@ -607,7 +607,7 @@ export function DataSummaryDashboard({
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">ชั่วโมงเปิดใช้งานรวม</span>
-              <span className="text-2xl font-black text-slate-800 font-display block mt-1">~{room2Hours.toFixed(1)} ชม.</span>
+              <span className="text-2xl font-black text-slate-800 font-display block mt-1">{formatHoursDisplay(room2Hours)} ชม.</span>
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">วิชาที่มีการจองมากที่สุด</span>
@@ -622,11 +622,10 @@ export function DataSummaryDashboard({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200/80">
                   <tr>
-                    <th className="p-3">วันที่ / เวลา</th>
-                    <th className="p-3">ผู้ขอจอง</th>
-                    <th className="p-3">รหัสนักศึกษา</th>
-                    <th className="p-3">รายวิชา</th>
-                    <th className="p-3">สถานะ</th>
+                    <th className="p-3 w-[22%]">วันที่ / เวลา</th>
+                    <th className="p-3 w-[28%]">ผู้ขอจอง</th>
+                    <th className="p-3 w-[18%]">รหัสนักศึกษา</th>
+                    <th className="p-3 w-[32%]">รายวิชา</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -636,16 +635,11 @@ export function DataSummaryDashboard({
                       <td className="p-3 font-bold text-slate-800">{b.studentName}</td>
                       <td className="p-3 font-mono text-slate-500">{b.studentIdInput || b.studentId || '-'}</td>
                       <td className="p-3 font-semibold text-blue-600">{b.subject || 'CA201'}</td>
-                      <td className="p-3">
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                          อนุมัติแล้ว
-                        </span>
-                      </td>
                     </tr>
                   ))}
                   {room2Bookings.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องจัดรายการ 2</td>
+                      <td colSpan={4} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องจัดรายการ 2</td>
                     </tr>
                   )}
                 </tbody>
@@ -675,7 +669,7 @@ export function DataSummaryDashboard({
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">ชั่วโมงเปิดใช้งานรวม</span>
-              <span className="text-2xl font-black text-slate-800 font-display block mt-1">~{youtube1Hours.toFixed(1)} ชม.</span>
+              <span className="text-2xl font-black text-slate-800 font-display block mt-1">{formatHoursDisplay(youtube1Hours)} ชม.</span>
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">วิชาที่มีการจองมากที่สุด</span>
@@ -690,11 +684,10 @@ export function DataSummaryDashboard({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200/80">
                   <tr>
-                    <th className="p-3">วันที่ / เวลา</th>
-                    <th className="p-3">ผู้ขอจอง</th>
-                    <th className="p-3">รหัสนักศึกษา</th>
-                    <th className="p-3">รายวิชา</th>
-                    <th className="p-3">สถานะ</th>
+                    <th className="p-3 w-[22%]">วันที่ / เวลา</th>
+                    <th className="p-3 w-[28%]">ผู้ขอจอง</th>
+                    <th className="p-3 w-[18%]">รหัสนักศึกษา</th>
+                    <th className="p-3 w-[32%]">รายวิชา</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -704,16 +697,11 @@ export function DataSummaryDashboard({
                       <td className="p-3 font-bold text-slate-800">{b.studentName}</td>
                       <td className="p-3 font-mono text-slate-500">{b.studentIdInput || b.studentId || '-'}</td>
                       <td className="p-3 font-semibold text-rose-600">{b.subject || 'BRS312'}</td>
-                      <td className="p-3">
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                          อนุมัติแล้ว
-                        </span>
-                      </td>
                     </tr>
                   ))}
                   {youtube1Bookings.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องยูทูป 1</td>
+                      <td colSpan={4} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องยูทูป 1</td>
                     </tr>
                   )}
                 </tbody>
@@ -743,7 +731,7 @@ export function DataSummaryDashboard({
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">ชั่วโมงเปิดใช้งานรวม</span>
-              <span className="text-2xl font-black text-slate-800 font-display block mt-1">~{youtube2Hours.toFixed(1)} ชม.</span>
+              <span className="text-2xl font-black text-slate-800 font-display block mt-1">{formatHoursDisplay(youtube2Hours)} ชม.</span>
             </div>
             <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
               <span className="text-xs text-slate-600 font-bold block">วิชาที่มีการจองมากที่สุด</span>
@@ -758,11 +746,10 @@ export function DataSummaryDashboard({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200/80">
                   <tr>
-                    <th className="p-3">วันที่ / เวลา</th>
-                    <th className="p-3">ผู้ขอจอง</th>
-                    <th className="p-3">รหัสนักศึกษา</th>
-                    <th className="p-3">รายวิชา</th>
-                    <th className="p-3">สถานะ</th>
+                    <th className="p-3 w-[22%]">วันที่ / เวลา</th>
+                    <th className="p-3 w-[28%]">ผู้ขอจอง</th>
+                    <th className="p-3 w-[18%]">รหัสนักศึกษา</th>
+                    <th className="p-3 w-[32%]">รายวิชา</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -772,16 +759,11 @@ export function DataSummaryDashboard({
                       <td className="p-3 font-bold text-slate-800">{b.studentName}</td>
                       <td className="p-3 font-mono text-slate-500">{b.studentIdInput || b.studentId || '-'}</td>
                       <td className="p-3 font-semibold text-purple-600">{b.subject || 'CA101'}</td>
-                      <td className="p-3">
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                          อนุมัติแล้ว
-                        </span>
-                      </td>
                     </tr>
                   ))}
                   {youtube2Bookings.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องยูทูป 2</td>
+                      <td colSpan={4} className="p-6 text-center text-slate-400">ไม่มีรายการจองสำหรับห้องยูทูป 2</td>
                     </tr>
                   )}
                 </tbody>
@@ -817,7 +799,7 @@ export function DataSummaryDashboard({
                 </div>
                 <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center text-xs">
                   <span className="text-slate-600 font-medium">ชั่วโมงเปิดใช้งานรวม:</span>
-                  <span className="font-extrabold text-slate-900 font-mono">~{c.hours.toFixed(1)} ชม.</span>
+                  <span className="font-extrabold text-slate-900 font-mono">{formatHoursDisplay(c.hours)} ชม.</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-600 font-medium">ประมาณผู้ใช้งาน:</span>

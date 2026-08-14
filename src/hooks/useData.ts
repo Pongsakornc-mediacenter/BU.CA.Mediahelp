@@ -27,6 +27,55 @@ import {
 import { db, auth, isFirebaseConfigured, googleProvider, handleFirestoreError, OperationType } from '../firebase';
 import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, RoomBooking, BroadcastProgram, Course } from '../types';
 
+export const OVERLAP_ERROR_MESSAGE = "⚠️ ไม่สามารถจอง/ย้ายได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น";
+
+export function parseTimeSlotRange(timeStr: string): { startMin: number; endMin: number } | null {
+  if (!timeStr) return null;
+  const match = timeStr.match(/(\d{1,2})[:.](\d{2})\s*-\s*(\d{1,2})[:.](\d{2})/);
+  if (!match) return null;
+  const startH = parseInt(match[1], 10);
+  const startM = parseInt(match[2], 10);
+  const endH = parseInt(match[3], 10);
+  const endM = parseInt(match[4], 10);
+  
+  const startMin = startH * 60 + startM;
+  const endMin = endH * 60 + endM;
+  
+  if (isNaN(startMin) || isNaN(endMin) || startMin >= endMin) {
+    return null;
+  }
+  return { startMin, endMin };
+}
+
+export function calculateBookingDurationHours(timeSlot: string): number {
+  if (!timeSlot) return 1.0;
+  const range = parseTimeSlotRange(timeSlot);
+  if (range && range.endMin > range.startMin) {
+    const diffMinutes = range.endMin - range.startMin;
+    const hours = diffMinutes / 60;
+    return hours > 0 ? hours : 1.0;
+  }
+  return 1.0;
+}
+
+export function formatHoursDisplay(hours: number): string {
+  if (hours === 0) return "0";
+  return Number.isInteger(hours) ? hours.toString() : hours.toFixed(1);
+}
+
+export function isTimeOverlapping(slotA: string, slotB: string): boolean {
+  const rangeA = parseTimeSlotRange(slotA);
+  const rangeB = parseTimeSlotRange(slotB);
+  
+  if (rangeA && rangeB) {
+    return rangeA.startMin < rangeB.endMin && rangeA.endMin > rangeB.startMin;
+  }
+  
+  const normA = slotA.replace(/\./g, ':').replace(/\s+/g, ' ').trim().toLowerCase();
+  const normB = slotB.replace(/\./g, ':').replace(/\s+/g, ' ').trim().toLowerCase();
+  return normA === normB;
+}
+
 export const DEFAULT_COURSES: Course[] = [
   { id: "course-1", code: "BRS311", name: "การจัดรายการวิทยุกระจายเสียง" },
   { id: "course-2", code: "CA102", name: "เทคโนโลยีสื่อสารมวลชน" },
@@ -1061,8 +1110,69 @@ export function useData() {
   };
 
   // --- Room Booking CRUD Operations ---
+  const checkTimeOverlap = async (
+    roomName: string, 
+    date: string, 
+    timeSlot: string, 
+    excludeBookingId?: string
+  ): Promise<{ hasOverlap: boolean; conflictingBooking?: RoomBooking }> => {
+    const targetRoom = (roomName || '').trim();
+    const targetDate = (date || '').trim();
+    const targetSlot = (timeSlot || '').trim();
+
+    if (!targetRoom || !targetDate || !targetSlot) {
+      return { hasOverlap: false };
+    }
+
+    let candidateBookings: RoomBooking[] = [...bookings];
+
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
+
+    if (shouldUseFirebase && db) {
+      try {
+        const q = query(
+          collection(db, 'bookings'),
+          where('roomName', '==', targetRoom),
+          where('date', '==', targetDate)
+        );
+        const snap = await getDocs(q);
+        const fsBookings: RoomBooking[] = snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as RoomBooking));
+
+        // Combine Firestore results with local state for maximum freshness
+        const map = new Map<string, RoomBooking>();
+        candidateBookings.forEach(b => { if (b.id) map.set(b.id, b); });
+        fsBookings.forEach(b => { if (b.id) map.set(b.id, b); });
+        candidateBookings = Array.from(map.values());
+      } catch (err) {
+        console.warn("Firestore checkTimeOverlap fallback to local state:", err);
+      }
+    }
+
+    for (const b of candidateBookings) {
+      if (excludeBookingId && b.id === excludeBookingId) continue;
+      if (b.status === 'rejected') continue;
+      if ((b.roomName || '').trim() !== targetRoom || (b.date || '').trim() !== targetDate) continue;
+
+      if (isTimeOverlapping(b.timeSlot, targetSlot)) {
+        return { hasOverlap: true, conflictingBooking: b };
+      }
+    }
+
+    return { hasOverlap: false };
+  };
+
   const createBooking = async (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string) => {
     if (!currentUser) return;
+
+    // Strict Overlap Validation Check
+    const overlap = await checkTimeOverlap(roomName, date, timeSlot);
+    if (overlap.hasOverlap) {
+      throw new Error(OVERLAP_ERROR_MESSAGE);
+    }
 
     let subject = "";
     let bookingPurpose = "";
@@ -1139,6 +1249,41 @@ export function useData() {
         setBookings(updated);
       }
     }
+  };
+
+  const updateBooking = async (id: string, updates: Partial<RoomBooking>) => {
+    const existing = bookings.find(b => b.id === id);
+    const targetRoom = updates.roomName || existing?.roomName;
+    const targetDate = updates.date || existing?.date;
+    const targetSlot = updates.timeSlot || existing?.timeSlot;
+
+    if (targetRoom && targetDate && targetSlot) {
+      const overlap = await checkTimeOverlap(targetRoom, targetDate, targetSlot, id);
+      if (overlap.hasOverlap) {
+        throw new Error(OVERLAP_ERROR_MESSAGE);
+      }
+    }
+
+    const payload = {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
+    if (shouldUseFirebase && db) {
+      try {
+        const docRef = doc(db, 'bookings', id);
+        await updateDoc(docRef, payload);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `bookings/${id}`);
+      }
+    }
+    // Always sync local state
+    setBookings(prev => {
+      const updated = prev.map(b => b.id === id ? { ...b, ...payload } : b);
+      saveLocalStorageItem('bu_ca_bookings', updated);
+      return updated;
+    });
   };
 
   const deleteBooking = async (id: string) => {
@@ -1350,7 +1495,9 @@ export function useData() {
     addCourse,
     updateCourse,
     deleteCourse,
+    checkTimeOverlap,
     createBooking,
+    updateBooking,
     updateBookingStatus,
     deleteBooking,
     createProgram,
