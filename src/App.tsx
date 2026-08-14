@@ -1188,9 +1188,9 @@ export default function App() {
                 )}
 
                 {/* 1. TOP SECTION: Header & Atmosphere Image Banner */}
-                <div className="space-y-3">
+                <div className="space-y-4 mb-8 pb-2 relative" style={{ marginBottom: '32px' }}>
                   {/* Centered Dark Header Section with Room selectors */}
-                  <div className="bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-[20px] shadow-2xl text-center space-y-2.5">
+                  <div className="bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-[20px] shadow-2xl text-center space-y-2.5 relative">
                     <div className="text-center space-y-1">
                       <h4 className={`text-base sm:text-lg font-extrabold ${getRoomTheme(activeScheduleRoom).text} tracking-tight font-display flex items-center justify-center gap-1.5`}>
                         📅 ตารางห้องจัดรายการ MEDIA CENTER
@@ -1262,8 +1262,8 @@ export default function App() {
                   </div>
 
                   {/* Top Center Horizontal Atmosphere Banner */}
-                  <div className="w-full max-w-6xl mx-auto">
-                    <div className="w-full h-[570px] sm:h-[590px] md:h-[635px] lg:h-[680px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
+                  <div className="w-full max-w-6xl mx-auto relative">
+                    <div className="w-full h-[520px] sm:h-[560px] md:h-[600px] lg:h-[640px] bg-[#111115] border border-[#2d2d34] rounded-2xl overflow-hidden shadow-2xl relative group">
                       {(() => {
                         const val = roomImages?.[activeScheduleRoom];
                         let images: string[] = [];
@@ -1354,12 +1354,12 @@ export default function App() {
                 </div>
 
                 {/* 2. MAIN CONTENT SECTION: Two-Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start relative mt-6 pt-2" style={{ marginTop: '24px' }}>
                   
                   {/* LEFT COLUMN: Booking Form (lg:col-span-4) */}
-                  <div className="lg:col-span-4 w-full">
+                  <div className="lg:col-span-4 w-full relative">
                     <form onSubmit={handleRoomBookingSubmit} className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 text-slate-800">
-                      <h4 className="font-extrabold text-slate-800 text-[18px] pt-5 pl-0.5 h-[31px] border-b border-slate-100 pb-2.5 flex items-center gap-2" style={{ fontSize: '18px' }}>
+                      <h4 className="font-extrabold text-slate-800 text-[18px] pl-0.5 border-b border-slate-100 pb-3 flex items-center gap-2">
                         <Plus className="w-5 h-5 text-indigo-600" />
                         แบบฟอร์มจองห้องจัดรายการ
                       </h4>
