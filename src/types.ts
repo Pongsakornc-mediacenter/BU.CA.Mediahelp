@@ -94,6 +94,8 @@ export interface RoomBooking {
   updatedAt: string; // ISO String
   subject?: string;
   bookingPurpose?: string;
+  userType?: string;
+  studentNameInput?: string;
 }
 
 export interface Course {

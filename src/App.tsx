@@ -40,10 +40,11 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useData } from './hooks/useData';
+import { useData, getCourseLabel } from './hooks/useData';
 import CameraWorkbench from './components/CameraWorkbench';
 import AdminDashboard from './components/AdminDashboard';
 import { DataSummaryDashboard } from './components/DataSummaryDashboard';
+import { CourseManagementModal } from './components/CourseManagementModal';
 import { HelpCategory } from './types';
 
 const compressImage = (file: File): Promise<string> => {
@@ -151,11 +152,16 @@ export default function App() {
     createProgram,
     updateProgramStatus,
     deleteProgram,
+    courses,
+    addCourse,
+    updateCourse,
+    deleteCourse,
     roomImages,
     updateRoomImages
   } = useData();
 
-  // Room Settings States
+  // Room Settings & Course Management States
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -876,6 +882,27 @@ export default function App() {
                               </div>
                             </button>
 
+                            {/* Settings Option for Admin: Course Management */}
+                            {(currentUser.role === 'admin' || currentUser.role === 'staff' || currentUser.email === 'pongsakorn.c@bu.ac.th') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsProfileDropdownOpen(false);
+                                  setIsCourseModalOpen(true);
+                                }}
+                                id="profile_dropdown_course_management_btn"
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-purple-600 hover:bg-purple-50/80 rounded-xl transition-all text-left cursor-pointer group"
+                              >
+                                <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-100 transition-colors">
+                                  <BookOpen className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="leading-tight">⚙️ จัดการรายวิชา</span>
+                                  <span className="text-[9.5px] font-normal text-slate-400">เพิ่ม แก้ไข ลบรายวิชาในระบบ</span>
+                                </div>
+                              </button>
+                            )}
+
                             {/* Settings Option for Admin */}
                             {currentUser.email === 'pongsakorn.c@bu.ac.th' && (
                               <button
@@ -1000,6 +1027,7 @@ export default function App() {
             onDeleteProgram={deleteProgram}
             onCreateBooking={createBooking}
             roomImages={roomImages}
+            courses={courses}
             activeTabProp={adminTab}
             onTabChangeProp={setAdminTab}
           />
@@ -1329,10 +1357,25 @@ export default function App() {
                           <select
                             value={bookingSubject}
                             onChange={(e) => setBookingSubject(e.target.value)}
-                            className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
+                            className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold cursor-pointer"
                           >
-                            <option value="BRS311">BRS311</option>
-                            <option value="งานอื่นๆ">งานอื่นๆ</option>
+                            {courses.length > 0 ? (
+                              courses.map((c) => {
+                                const lbl = getCourseLabel(c);
+                                return (
+                                  <option key={c.id} value={c.code || lbl}>
+                                    {lbl}
+                                  </option>
+                                );
+                              })
+                            ) : (
+                              <>
+                                <option value="BRS311">BRS311 - การจัดรายการวิทยุกระจายเสียง</option>
+                                <option value="CA102">CA102 - เทคโนโลยีสื่อสารมวลชน</option>
+                                <option value="BC101">BC101 - พื้นฐานการสื่อสาร</option>
+                                <option value="งานอื่นๆ">งานอื่นๆ / คลาสเรียนพิเศษ</option>
+                              </>
+                            )}
                           </select>
                         </div>
                         <div>
@@ -2421,10 +2464,23 @@ export default function App() {
                     className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold cursor-pointer"
                     required
                   >
-                    <option value="BRS311 - การจัดรายการวิทยุกระจายเสียง">BRS311 - การจัดรายการวิทยุกระจายเสียง</option>
-                    <option value="CA102 - เทคโนโลยีสื่อสารมวลชน">CA102 - เทคโนโลยีสื่อสารมวลชน</option>
-                    <option value="BC101 - พื้นฐานการสื่อสาร">BC101 - พื้นฐานการสื่อสาร</option>
-                    <option value="งานอื่นๆ / คลาสเรียนพิเศษ">งานอื่นๆ / คลาสเรียนพิเศษ</option>
+                    {courses.length > 0 ? (
+                      courses.map((c) => {
+                        const lbl = getCourseLabel(c);
+                        return (
+                          <option key={c.id} value={lbl}>
+                            {lbl}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <option value="BRS311 - การจัดรายการวิทยุกระจายเสียง">BRS311 - การจัดรายการวิทยุกระจายเสียง</option>
+                        <option value="CA102 - เทคโนโลยีสื่อสารมวลชน">CA102 - เทคโนโลยีสื่อสารมวลชน</option>
+                        <option value="BC101 - พื้นฐานการสื่อสาร">BC101 - พื้นฐานการสื่อสาร</option>
+                        <option value="งานอื่นๆ / คลาสเรียนพิเศษ">งานอื่นๆ / คลาสเรียนพิเศษ</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -2455,6 +2511,16 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Course Management Modal */}
+      <CourseManagementModal
+        isOpen={isCourseModalOpen}
+        onClose={() => setIsCourseModalOpen(false)}
+        courses={courses}
+        onAddCourse={addCourse}
+        onUpdateCourse={updateCourse}
+        onDeleteCourse={deleteCourse}
+      />
 
     </div>
   );
