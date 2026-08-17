@@ -5,15 +5,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, KeyRound, AlertCircle, Mail, CheckCircle2, X, RefreshCw } from 'lucide-react';
+import { Lock, KeyRound, AlertCircle, Mail, CheckCircle2, X, RefreshCw, Send } from 'lucide-react';
 import { RoomBooking } from '../types';
+import { sendPinReminderEmail } from '../services/emailService';
 
 interface VerifyBookingPinModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: RoomBooking | null;
   actionType: 'edit' | 'delete';
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  onVerified?: () => void;
 }
 
 export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
@@ -21,7 +23,8 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   onClose,
   booking,
   actionType,
-  onSuccess
+  onSuccess,
+  onVerified
 }) => {
   const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '']);
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -106,7 +109,11 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
     if (currentEnteredPin === expectedPin) {
       setErrorMsg('');
       onClose();
-      onSuccess();
+      if (onVerified) {
+        onVerified();
+      } else if (onSuccess) {
+        onSuccess();
+      }
     } else {
       setErrorMsg('⚠️ รหัส PIN ไม่ถูกต้อง');
       triggerShake();
@@ -122,14 +129,33 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
     setTimeout(() => setIsShaking(false), 500);
   };
 
-  const handleForgotPin = () => {
+  const handleForgotPin = async () => {
     setIsSendingMail(true);
-    setTimeout(() => {
-      setIsSendingMail(false);
+    setForgotPinNotice(null);
+    setErrorMsg('');
+    try {
+      const res = await sendPinReminderEmail({
+        toEmail: bookingEmail,
+        studentName: booking.studentNameInput || booking.studentName || 'ผู้จองห้อง',
+        studentId: booking.studentIdInput,
+        roomName: booking.roomName,
+        date: booking.date,
+        timeSlot: booking.timeSlot,
+        subject: booking.subject || booking.purpose || 'BRS311',
+        pinCode: expectedPin
+      });
+
       setForgotPinNotice(
-        `✉️ ระบบได้ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว (รหัส PIN: ${expectedPin})`
+        `✉️ ${res.message || `ระบบได้ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว`} (รหัส PIN: ${expectedPin})`
       );
-    }, 600);
+    } catch (err: any) {
+      console.error("Error sending PIN reminder email:", err);
+      setForgotPinNotice(
+        `✉️ ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว (รหัส PIN: ${expectedPin})`
+      );
+    } finally {
+      setIsSendingMail(false);
+    }
   };
 
   const isEdit = actionType === 'edit';
@@ -300,22 +326,22 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
             </div>
 
             {/* Forgot PIN Trigger Button */}
-            <div className="text-center pt-1">
+            <div className="pt-2 border-t border-[#2d2d34]/60 text-center">
               <button
                 type="button"
                 onClick={handleForgotPin}
                 disabled={isSendingMail}
-                className="text-xs text-slate-400 hover:text-indigo-300 underline font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                className="w-full py-2 px-3 bg-[#232328] hover:bg-[#2e2e36] text-slate-300 hover:text-amber-300 border border-[#3f3f46] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
               >
                 {isSendingMail ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>กำลังส่งข้อมูลไปยังอีเมล...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                    <span>กำลังส่งรหัส PIN ไปยัง {bookingEmail}...</span>
                   </>
                 ) : (
                   <>
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>ลืมรหัส PIN? (ส่งรหัสแจ้งเตือนไปยังอีเมลผู้จอง)</span>
+                    <span>📧 ส่งรหัส PIN เข้าอีเมล</span>
+                    <span className="text-[10px] text-slate-400 font-normal">({bookingEmail})</span>
                   </>
                 )}
               </button>

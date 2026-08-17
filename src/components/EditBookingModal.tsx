@@ -3,18 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Clock, BookOpen, User, Phone, FileText, Check, AlertCircle } from 'lucide-react';
 import { RoomBooking, Course } from '../types';
-import { DEFAULT_COURSES, getCourseLabel } from '../hooks/useData';
+import { DEFAULT_COURSES, getCourseLabel, isTimeOverlapping } from '../hooks/useData';
 
 interface EditBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: RoomBooking | null;
   courses?: Course[];
-  onSave: (id: string, updates: Partial<RoomBooking>) => Promise<void>;
+  bookings?: RoomBooking[];
+  onSave: (id: string, updates: Partial<RoomBooking>) => Promise<{ success: boolean; message?: string } | void>;
   onAfterSaveSuccess?: (newRoom: string, newDate: string) => void;
 }
 
@@ -44,6 +45,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   onClose,
   booking,
   courses = DEFAULT_COURSES,
+  bookings = [],
   onSave,
   onAfterSaveSuccess
 }) => {
@@ -102,7 +104,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         setSelectedCourse("OTHER");
         setCustomSubject(subj);
       } else {
-        setSelectedCourse("BRS311");
+        setSelectedCourse(courses[0]?.code || "BRS311");
         setCustomSubject("");
       }
 
@@ -117,11 +119,32 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     }
   }, [booking, isOpen, courses]);
 
+  const effectiveSlot = isCustomSlot ? customTimeSlot.trim() : timeSlot;
+
+  // Real-time conflict checking
+  const conflictingBooking = useMemo(() => {
+    if (!bookings || !booking || !roomName || !date || !effectiveSlot) return null;
+    return bookings.find(b => {
+      if (b.id === booking.id) return false;
+      if (b.status === 'rejected') return false;
+      if ((b.roomName || '').trim() !== (roomName || '').trim()) return false;
+      if ((b.date || '').trim() !== (date || '').trim()) return false;
+      return isTimeOverlapping(b.timeSlot, effectiveSlot);
+    }) || null;
+  }, [bookings, booking, roomName, date, effectiveSlot]);
+
+  const isSlotConflicted = Boolean(conflictingBooking);
+
   if (!isOpen || !booking) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
+
+    if (isSlotConflicted) {
+      setErrorMessage("⚠️ ไม่สามารถจอง/ย้ายได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น");
+      return;
+    }
 
     if (!date) {
       setErrorMessage("กรุณาเลือกวันที่ต้องการจอง");
@@ -169,15 +192,18 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         updatedAt: new Date().toISOString()
       };
 
-      await onSave(booking.id, updates);
+      const res = await onSave(booking.id, updates);
+      if (res && typeof res === 'object' && 'success' in res && !res.success) {
+        setErrorMessage(res.message || "⚠️ ไม่สามารถจอง/ย้ายได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น");
+        return;
+      }
       
       if (onAfterSaveSuccess) {
         onAfterSaveSuccess(roomName, date);
       }
       onClose();
-    } catch (err: any) {
-      console.error("Error updating booking:", err);
-      const msg = err.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง";
+    } catch {
+      const msg = "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง";
       setErrorMessage(msg);
       alert(msg);
     } finally {
@@ -399,6 +425,23 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               </div>
             </div>
 
+            {/* Conflict Warning Banner */}
+            {isSlotConflicted && (
+              <div className="p-3 bg-red-500/15 border-2 border-red-500 rounded-xl text-red-300 text-xs font-bold flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 leading-snug">
+                  <div className="text-red-300 font-extrabold text-[13px]">
+                    ⚠️ ไม่สามารถจองได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น
+                  </div>
+                  {conflictingBooking && (
+                    <div className="text-[11.5px] text-red-400/90 font-medium">
+                      (ชนกับคิว: {conflictingBooking.subject || conflictingBooking.purpose} • ผู้จอง: {conflictingBooking.studentName || conflictingBooking.studentIdInput || "มีผู้จองแล้ว"})
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-3 pt-3 border-t border-[#3f3f46]">
               <button
@@ -411,8 +454,12 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={saving}
-                className="flex-1 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-extrabold rounded-xl py-2.5 text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                disabled={saving || isSlotConflicted}
+                className={`flex-1 font-extrabold rounded-xl py-2.5 text-xs transition-all shadow-md flex items-center justify-center gap-1.5 ${
+                  isSlotConflicted
+                    ? "bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600 opacity-60 shadow-none pointer-events-none"
+                    : "bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white cursor-pointer disabled:opacity-50"
+                }`}
               >
                 {saving ? (
                   <>

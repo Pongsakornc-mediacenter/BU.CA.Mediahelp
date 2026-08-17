@@ -26,6 +26,7 @@ import {
 } from 'firebase/auth';
 import { db, auth, isFirebaseConfigured, googleProvider, handleFirestoreError, OperationType } from '../firebase';
 import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, RoomBooking, BroadcastProgram, Course } from '../types';
+import { sendBookingEmail, sendPinReminderEmail } from '../services/emailService';
 
 export const OVERLAP_ERROR_MESSAGE = "⚠️ ไม่สามารถจอง/ย้ายได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น";
 
@@ -218,6 +219,24 @@ export const AVAILABLE_CLASSES: ClassSession[] = [
   }
 ];
 
+// Local storage helper functions
+function getLocalStorageItem<T>(key: string, fallback: T): T {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveLocalStorageItem<T>(key: string, data: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error("Local storage sync error", e);
+  }
+}
+
 export function useData() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -226,32 +245,13 @@ export function useData() {
   const [lastNotification, setLastNotification] = useState<string | null>(null);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
   const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>(() => getLocalStorageItem('bu_ca_courses', DEFAULT_COURSES));
   const [roomImages, setRoomImages] = useState<{ [key: string]: string | string[] }>({
     "ห้องจัดรายการ 1": ["https://images.unsplash.com/photo-1590602847861-f357a9332bbc?q=90&w=2560"],
     "ห้องจัดรายการ 2": ["https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=90&w=2560"],
     "ห้องยูทูป 1": ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=90&w=2560"],
     "ห้องยูทูป 2": ["https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=90&w=2560"]
   });
-
-
-  // Load sandbox presets if firebase is active or fallback
-  const getLocalStorageItem = (key: string, fallback: any) => {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : fallback;
-    } catch {
-      return fallback;
-    }
-  };
-
-  const saveLocalStorageItem = (key: string, data: any) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.error("Local storage sync error", e);
-    }
-  };
 
   // Sync Bookings
   useEffect(() => {
@@ -279,7 +279,7 @@ export function useData() {
         } else {
           const loaded: RoomBooking[] = [];
           snapshot.forEach((doc) => {
-            loaded.push({ id: doc.id, ...doc.data() } as RoomBooking);
+            loaded.push({ ...doc.data(), id: doc.id } as RoomBooking);
           });
           loaded.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
           setBookings(loaded);
@@ -441,9 +441,16 @@ export function useData() {
           setCourses(DEFAULT_COURSES);
         } else {
           const list = snapshot.docs.map(d => ({
-            id: d.id,
-            ...d.data()
+            ...d.data(),
+            id: d.id
           })) as Course[];
+          list.sort((a, b) => {
+            const codeA = (a.code || '').trim().toUpperCase();
+            const codeB = (b.code || '').trim().toUpperCase();
+            if (codeA === 'OTHER' || codeA === 'งานอื่นๆ') return 1;
+            if (codeB === 'OTHER' || codeB === 'งานอื่นๆ') return -1;
+            return codeA.localeCompare(codeB, 'th');
+          });
           setCourses(list);
           saveLocalStorageItem('bu_ca_courses', list);
         }
@@ -1124,53 +1131,58 @@ export function useData() {
     timeSlot: string, 
     excludeBookingId?: string
   ): Promise<{ hasOverlap: boolean; conflictingBooking?: RoomBooking }> => {
-    const targetRoom = (roomName || '').trim();
-    const targetDate = (date || '').trim();
-    const targetSlot = (timeSlot || '').trim();
+    try {
+      const targetRoom = (roomName || '').trim();
+      const targetDate = (date || '').trim();
+      const targetSlot = (timeSlot || '').trim();
 
-    if (!targetRoom || !targetDate || !targetSlot) {
+      if (!targetRoom || !targetDate || !targetSlot) {
+        return { hasOverlap: false };
+      }
+
+      let candidateBookings: RoomBooking[] = Array.isArray(bookings) ? [...bookings] : [];
+
+      const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
+      const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
+
+      if (shouldUseFirebase && db) {
+        try {
+          const q = query(
+            collection(db, 'bookings'),
+            where('roomName', '==', targetRoom),
+            where('date', '==', targetDate)
+          );
+          const snap = await getDocs(q);
+          const fsBookings: RoomBooking[] = snap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as RoomBooking));
+
+          // Combine Firestore results with local state for maximum freshness
+          const map = new Map<string, RoomBooking>();
+          candidateBookings.forEach(b => { if (b && b.id) map.set(b.id, b); });
+          fsBookings.forEach(b => { if (b && b.id) map.set(b.id, b); });
+          candidateBookings = Array.from(map.values());
+        } catch (err) {
+          // Silent fallback to local candidate bookings
+        }
+      }
+
+      for (const b of candidateBookings) {
+        if (!b) continue;
+        if (excludeBookingId && b.id === excludeBookingId) continue;
+        if (b.status === 'rejected') continue;
+        if ((b.roomName || '').trim() !== targetRoom || (b.date || '').trim() !== targetDate) continue;
+
+        if (isTimeOverlapping(b.timeSlot || '', targetSlot)) {
+          return { hasOverlap: true, conflictingBooking: b };
+        }
+      }
+
+      return { hasOverlap: false };
+    } catch {
       return { hasOverlap: false };
     }
-
-    let candidateBookings: RoomBooking[] = [...bookings];
-
-    const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
-    const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
-
-    if (shouldUseFirebase && db) {
-      try {
-        const q = query(
-          collection(db, 'bookings'),
-          where('roomName', '==', targetRoom),
-          where('date', '==', targetDate)
-        );
-        const snap = await getDocs(q);
-        const fsBookings: RoomBooking[] = snap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as RoomBooking));
-
-        // Combine Firestore results with local state for maximum freshness
-        const map = new Map<string, RoomBooking>();
-        candidateBookings.forEach(b => { if (b.id) map.set(b.id, b); });
-        fsBookings.forEach(b => { if (b.id) map.set(b.id, b); });
-        candidateBookings = Array.from(map.values());
-      } catch (err) {
-        console.warn("Firestore checkTimeOverlap fallback to local state:", err);
-      }
-    }
-
-    for (const b of candidateBookings) {
-      if (excludeBookingId && b.id === excludeBookingId) continue;
-      if (b.status === 'rejected') continue;
-      if ((b.roomName || '').trim() !== targetRoom || (b.date || '').trim() !== targetDate) continue;
-
-      if (isTimeOverlapping(b.timeSlot, targetSlot)) {
-        return { hasOverlap: true, conflictingBooking: b };
-      }
-    }
-
-    return { hasOverlap: false };
   };
 
   const createBooking = async (
@@ -1183,18 +1195,18 @@ export function useData() {
     studentNameInput?: string,
     emailInput?: string,
     pinCodeInput?: string
-  ) => {
-    if (!currentUser) return;
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!currentUser) return { success: false, message: "กรุณาเข้าสู่ระบบก่อนทำการจอง" };
 
-    // Strict Overlap Validation Check
+    // Strict Overlap Validation Check (Boolean State)
     const overlap = await checkTimeOverlap(roomName, date, timeSlot);
     if (overlap.hasOverlap) {
-      throw new Error(OVERLAP_ERROR_MESSAGE);
+      return { success: false, message: OVERLAP_ERROR_MESSAGE };
     }
 
     let subject = "";
     let bookingPurpose = "";
-    if (purpose.includes("(")) {
+    if (purpose && purpose.includes("(")) {
       const match = purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
       if (match) {
         subject = match[1].trim();
@@ -1203,29 +1215,29 @@ export function useData() {
         subject = purpose;
       }
     } else {
-      subject = purpose;
+      subject = purpose || "";
     }
 
     const finalEmail = (emailInput && emailInput.trim()) || currentUser.email || "";
     const finalPin = (pinCodeInput && pinCodeInput.trim()) || "1234";
 
     const bookingPayload: Omit<RoomBooking, 'id'> = {
-      studentId: currentUser.uid,
-      studentName: studentNameInput && studentNameInput.trim() ? studentNameInput.trim() : currentUser.name,
+      studentId: currentUser.uid || "student",
+      studentName: studentNameInput && studentNameInput.trim() ? studentNameInput.trim() : (currentUser.name || "นักศึกษา"),
       studentEmail: finalEmail,
       email: finalEmail,
       pinCode: finalPin,
-      roomName,
-      date,
-      timeSlot,
-      purpose,
-      studentIdInput,
-      phone,
+      roomName: roomName || "ห้องจัดรายการ 1",
+      date: date || "",
+      timeSlot: timeSlot || "08:30 - 09:30",
+      purpose: purpose || "จัดรายการ",
+      studentIdInput: studentIdInput || "",
+      phone: phone || "",
       status: 'approved',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      subject,
-      bookingPurpose
+      subject: subject || 'BRS311',
+      bookingPurpose: bookingPurpose || "จัดรายการ"
     };
 
     const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
@@ -1237,7 +1249,7 @@ export function useData() {
         handleFirestoreError(error, OperationType.WRITE, 'bookings');
       }
     } else {
-      const current = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+      const current = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS) || [];
       const bookingWithId: RoomBooking = {
         id: 'book_' + Math.floor(Math.random() * 1000000),
         ...bookingPayload
@@ -1246,6 +1258,28 @@ export function useData() {
       saveLocalStorageItem('bu_ca_bookings', updated);
       setBookings(updated);
     }
+
+    // Automatically trigger booking confirmation email safely
+    if (finalEmail) {
+      sendBookingEmail({
+        toEmail: finalEmail,
+        studentName: bookingPayload.studentName,
+        userName: bookingPayload.studentName,
+        name: bookingPayload.studentName,
+        studentId: studentIdInput,
+        roomName,
+        date,
+        timeSlot,
+        subject: subject || 'BRS311',
+        purpose: bookingPurpose || purpose,
+        phone,
+        pinCode: finalPin
+      }).catch(() => {
+        // Safe swallow
+      });
+    }
+
+    return { success: true };
   };
 
   const updateBookingStatus = async (id: string, status: 'approved' | 'rejected') => {
@@ -1274,7 +1308,7 @@ export function useData() {
     }
   };
 
-  const updateBooking = async (id: string, updates: Partial<RoomBooking>) => {
+  const updateBooking = async (id: string, updates: Partial<RoomBooking>): Promise<{ success: boolean; message?: string }> => {
     const existing = bookings.find(b => b.id === id);
     const targetRoom = updates.roomName || existing?.roomName;
     const targetDate = updates.date || existing?.date;
@@ -1283,7 +1317,7 @@ export function useData() {
     if (targetRoom && targetDate && targetSlot) {
       const overlap = await checkTimeOverlap(targetRoom, targetDate, targetSlot, id);
       if (overlap.hasOverlap) {
-        throw new Error(OVERLAP_ERROR_MESSAGE);
+        return { success: false, message: OVERLAP_ERROR_MESSAGE };
       }
     }
 
@@ -1307,6 +1341,8 @@ export function useData() {
       saveLocalStorageItem('bu_ca_bookings', updated);
       return updated;
     });
+
+    return { success: true };
   };
 
   const deleteBooking = async (id: string) => {
@@ -1527,6 +1563,8 @@ export function useData() {
     updateProgramStatus,
     deleteProgram,
     roomImages,
-    updateRoomImages
+    updateRoomImages,
+    sendBookingEmail,
+    sendPinReminderEmail
   };
 }

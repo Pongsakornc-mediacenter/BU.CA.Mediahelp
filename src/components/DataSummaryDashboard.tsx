@@ -210,7 +210,7 @@ export function DataSummaryDashboard({
             onClick={() => setActiveTab('youtube1')}
             className={`flex-1 min-w-[130px] py-2.5 px-3 text-sm sm:text-base font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'youtube1'
-                ? 'bg-rose-600 text-white shadow-md'
+                ? 'bg-[#e33541] text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >

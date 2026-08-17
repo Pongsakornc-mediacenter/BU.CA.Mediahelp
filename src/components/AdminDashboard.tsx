@@ -61,8 +61,17 @@ const getRoomTheme = (room: string) => {
         bg: "bg-[#ef8840]",
         bgLight: "bg-[#ef8840]/10",
         bgHoverLight: "hover:bg-[#ef8840]/20",
-        borderOutline: "border-[#ef8840]/30",
+        borderOutline: "border-[#ef8840]/60",
         borderLight: "border-[#ef8840]/20",
+        cardBg: "bg-gradient-to-br from-[#251307] via-[#1c0f06] to-[#120a04] hover:from-[#2e1809] hover:to-[#221206]",
+        cardBorder: "border-[#ef8840]/60 hover:border-[#ef8840]",
+        cardGlow: "shadow-[0_0_12px_rgba(239,136,64,0.22)] ring-1 ring-orange-500/40",
+        cardBar: "bg-gradient-to-b from-amber-300 via-[#ef8840] to-orange-600",
+        cardSubject: "text-[#ef8840]",
+        cardTitle: "text-amber-100/90",
+        cardDivider: "bg-orange-500/25",
+        cardFooter: "text-amber-300/85",
+        cardBadge: "bg-orange-950/80 border border-orange-500/40 text-orange-200",
       };
     case "ห้องจัดรายการ 2":
       return {
@@ -70,26 +79,53 @@ const getRoomTheme = (room: string) => {
         bg: "bg-[#4a90e2]",
         bgLight: "bg-[#4a90e2]/10",
         bgHoverLight: "hover:bg-[#4a90e2]/20",
-        borderOutline: "border-[#4a90e2]/30",
+        borderOutline: "border-[#4a90e2]/60",
         borderLight: "border-[#4a90e2]/20",
+        cardBg: "bg-gradient-to-br from-[#0a182c] via-[#071223] to-[#050d18] hover:from-[#0f233f] hover:to-[#0b1b30]",
+        cardBorder: "border-[#4a90e2]/60 hover:border-[#4a90e2]",
+        cardGlow: "shadow-[0_0_12px_rgba(74,144,226,0.22)] ring-1 ring-blue-500/40",
+        cardBar: "bg-gradient-to-b from-sky-300 via-[#4a90e2] to-blue-600",
+        cardSubject: "text-[#4a90e2]",
+        cardTitle: "text-sky-100/90",
+        cardDivider: "bg-blue-500/25",
+        cardFooter: "text-sky-300/85",
+        cardBadge: "bg-blue-950/80 border border-blue-500/40 text-blue-200",
       };
     case "ห้องยูทูป 1":
       return {
-        text: "text-rose-500",
-        bg: "bg-rose-600",
-        bgLight: "bg-rose-600/10",
-        bgHoverLight: "hover:bg-rose-600/20",
-        borderOutline: "border-rose-500/30",
-        borderLight: "border-rose-500/20",
+        text: "text-[#e33541]",
+        bg: "bg-[#e33541]",
+        bgLight: "bg-[#e33541]/10",
+        bgHoverLight: "hover:bg-[#e33541]/20",
+        borderOutline: "border-[#e33541]/60",
+        borderLight: "border-[#e33541]/20",
+        cardBg: "bg-gradient-to-br from-[#280c16] via-[#1d0810] to-[#12050a] hover:from-[#330f1c] hover:to-[#240a13]",
+        cardBorder: "border-[#e33541]/60 hover:border-[#e33541]",
+        cardGlow: "shadow-[0_0_12px_rgba(227,53,65,0.22)] ring-1 ring-[#e33541]/40",
+        cardBar: "bg-gradient-to-b from-rose-300 via-[#e33541] to-red-600",
+        cardSubject: "text-[#e33541]",
+        cardTitle: "text-rose-100/90",
+        cardDivider: "bg-[#e33541]/25",
+        cardFooter: "text-rose-300/85",
+        cardBadge: "bg-rose-950/80 border border-[#e33541]/40 text-rose-200",
       };
     case "ห้องยูทูป 2":
       return {
-        text: "text-purple-500",
-        bg: "bg-purple-600",
-        bgLight: "bg-purple-600/10",
-        bgHoverLight: "hover:bg-purple-600/20",
-        borderOutline: "border-purple-500/30",
-        borderLight: "border-purple-500/20",
+        text: "text-[#9810fa]",
+        bg: "bg-[#9810fa]",
+        bgLight: "bg-[#9810fa]/10",
+        bgHoverLight: "hover:bg-[#9810fa]/20",
+        borderOutline: "border-[#9810fa]/60",
+        borderLight: "border-[#9810fa]/20",
+        cardBg: "bg-gradient-to-br from-[#24053d] via-[#170329] to-[#0c0117] hover:from-[#2e074e] hover:to-[#1e0433]",
+        cardBorder: "border-[#9810fa]/60 hover:border-[#9810fa]",
+        cardGlow: "shadow-[0_0_12px_rgba(152,16,250,0.25)] ring-1 ring-[#9810fa]/40",
+        cardBar: "bg-gradient-to-b from-[#d896ff] via-[#9810fa] to-[#6705ab]",
+        cardSubject: "text-[#b85eff]",
+        cardTitle: "text-purple-100/90",
+        cardDivider: "bg-[#9810fa]/25",
+        cardFooter: "text-[#d896ff]/90",
+        cardBadge: "bg-[#24053d]/90 border border-[#9810fa]/40 text-purple-200",
       };
     default:
       return {
@@ -97,8 +133,17 @@ const getRoomTheme = (room: string) => {
         bg: "bg-[#ef8840]",
         bgLight: "bg-[#ef8840]/10",
         bgHoverLight: "hover:bg-[#ef8840]/20",
-        borderOutline: "border-[#ef8840]/30",
+        borderOutline: "border-[#ef8840]/60",
         borderLight: "border-[#ef8840]/20",
+        cardBg: "bg-gradient-to-br from-[#251307] via-[#1c0f06] to-[#120a04] hover:from-[#2e1809] hover:to-[#221206]",
+        cardBorder: "border-[#ef8840]/60 hover:border-[#ef8840]",
+        cardGlow: "shadow-[0_0_12px_rgba(239,136,64,0.22)] ring-1 ring-orange-500/40",
+        cardBar: "bg-gradient-to-b from-amber-300 via-[#ef8840] to-orange-600",
+        cardSubject: "text-[#ef8840]",
+        cardTitle: "text-amber-100/90",
+        cardDivider: "bg-orange-500/25",
+        cardFooter: "text-amber-300/85",
+        cardBadge: "bg-orange-950/80 border border-orange-500/40 text-orange-200",
       };
   }
 };
@@ -112,7 +157,7 @@ interface AdminDashboardProps {
   bookings: RoomBooking[];
   programs: BroadcastProgram[];
   onUpdateBookingStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
-  onUpdateBooking?: (id: string, updates: Partial<RoomBooking>) => Promise<void>;
+  onUpdateBooking?: (id: string, updates: Partial<RoomBooking>) => Promise<{ success: boolean; message?: string } | void>;
   onDeleteBooking: (id: string) => Promise<void>;
   onCreateProgram: (
     programName: string, 
@@ -128,11 +173,11 @@ interface AdminDashboardProps {
   ) => Promise<void>;
   onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
   onDeleteProgram: (id: string) => Promise<void>;
-  onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string, emailInput?: string, pinCodeInput?: string) => Promise<void>;
+  onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string, emailInput?: string, pinCodeInput?: string) => Promise<{ success: boolean; message?: string } | void>;
   roomImages?: { [key: string]: string | string[] };
   courses?: Course[];
-  activeTabProp?: 'student_schedule' | 'summary';
-  onTabChangeProp?: (tab: 'student_schedule' | 'summary') => void;
+  activeTabProp?: 'student_schedule' | 'summary' | 'tickets' | 'bookings';
+  onTabChangeProp?: (tab: 'student_schedule' | 'summary' | 'tickets' | 'bookings') => void;
 }
 
 export default function AdminDashboard({
@@ -158,11 +203,12 @@ export default function AdminDashboard({
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
-  const [activeTabState, setActiveTabState] = useState<'student_schedule' | 'summary'>('student_schedule');
+  const [activeTabState, setActiveTabState] = useState<'student_schedule' | 'summary' | 'tickets' | 'bookings'>('student_schedule');
 
   const activeTab = activeTabProp || activeTabState;
 
-  const handleTabChange = (tab: 'student_schedule' | 'summary') => {
+  const handleTabChange = (tab: 'student_schedule' | 'summary' | 'tickets' | 'bookings') => {
+
     setActiveTabState(tab);
     if (onTabChangeProp) {
       onTabChangeProp(tab);
@@ -209,6 +255,20 @@ export default function AdminDashboard({
       setBookingEmail(currentUserEmail);
     }
   }, [currentUserEmail]);
+
+  // Sync course selection with real-time courses from Firestore / useData
+  useEffect(() => {
+    if (courses && courses.length > 0) {
+      const validCodes = courses.map(c => c.code || getCourseLabel(c));
+      if (!validCodes.includes(bookingSubject) && validCodes[0]) {
+        setBookingSubject(validCodes[0]);
+      }
+      const validTeacherLabels = courses.map(c => getCourseLabel(c));
+      if (!validTeacherLabels.includes(teacherSubject) && validTeacherLabels[0]) {
+        setTeacherSubject(validTeacherLabels[0]);
+      }
+    }
+  }, [courses]);
 
   const myBookings = bookings.filter(b => {
     if (!b) return false;
@@ -1542,7 +1602,7 @@ export default function AdminDashboard({
                 }}
                 className={`flex-1 py-1.5 text-center text-xs sm:text-sm font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1 ${
                   activeScheduleRoom === "ห้องยูทูป 1"
-                    ? "bg-rose-600 text-white shadow-md"
+                    ? "bg-[#e33541] text-white shadow-md"
                     : "hover:bg-white/5 text-slate-400"
                 }`}
               >
@@ -1556,7 +1616,7 @@ export default function AdminDashboard({
                 }}
                 className={`flex-1 py-1.5 text-center text-xs sm:text-sm font-extrabold transition-all rounded-lg cursor-pointer flex items-center justify-center gap-1 ${
                   activeScheduleRoom === "ห้องยูทูป 2"
-                    ? "bg-purple-600 text-white shadow-md"
+                    ? "bg-[#9810fa] text-white shadow-md"
                     : "hover:bg-white/5 text-slate-400"
                 }`}
               >
@@ -1716,24 +1776,34 @@ export default function AdminDashboard({
 
               <div className="space-y-3 pb-1 border-b border-slate-100">
                 <div>
-                  <label className="text-[15px] font-bold text-slate-700 block mb-1">4. รายวิชา</label>
+                  <label className="text-[15px] font-bold text-slate-700 block mb-1">
+                    4. รายวิชา <span className="text-rose-500">*</span>
+                  </label>
                   <select
                     value={bookingSubject}
                     onChange={(e) => setBookingSubject(e.target.value)}
-                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold cursor-pointer"
+                    required
                   >
-                    <option value="BRS311">BRS311</option>
-                    <option value="งานอื่นๆ">งานอื่นๆ</option>
+                    {courses.map((c) => {
+                      const lbl = getCourseLabel(c);
+                      return (
+                        <option key={c.id || c.code} value={c.code || lbl}>
+                          {lbl}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
                   <label className="text-[15px] font-bold text-slate-700 block mb-1">วัตถุประสงค์</label>
                   <textarea
-                    rows={1}
+                    rows={2}
                     value={bookingPurpose}
                     onChange={(e) => setBookingPurpose(e.target.value)}
                     placeholder="จัดรายการรายวิชาเรียน / ฝึกจัดรายการ"
-                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
+                    className="w-full h-[70px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-[15px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-medium resize-none"
+                    style={{ height: '70px' }}
                   />
                 </div>
               </div>
@@ -1985,14 +2055,14 @@ export default function AdminDashboard({
                                       });
                                     }}
                                     style={{ padding: '4px 8px 4px 10px' }}
-                                    className="relative px-2 py-1 pl-2.5 rounded-xl border border-purple-500/60 bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-purple-950/80 hover:from-purple-900/90 hover:to-indigo-900/90 text-center flex flex-col justify-between items-center h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 shadow-lg overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-500/30"
+                                    className="relative px-2 py-1 pl-2.5 rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-[#2a0c44] via-[#1a0833] to-[#2a0c44] hover:from-[#361056] hover:to-[#220a42] text-center flex flex-col justify-between items-center h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 shadow-[0_0_18px_rgba(168,85,247,0.4)] overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-400/60"
                                   >
-                                    {/* Left thick accent gradient line */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl bg-gradient-to-b from-purple-400 via-indigo-400 to-blue-500" />
+                                    {/* Left thick accent neon gradient line */}
+                                    <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl bg-gradient-to-b from-fuchsia-400 via-purple-300 to-indigo-400" />
 
                                     <div className="flex flex-col items-center justify-between h-full w-full min-w-0 px-1 overflow-hidden">
                                       <div 
-                                        className="flex items-center gap-1 font-black !text-[13px] text-purple-200 truncate w-full justify-center leading-[1.2]"
+                                        className="flex items-center gap-1 font-black !text-[13px] text-purple-100 truncate w-full justify-center leading-[1.2]"
                                         style={{ fontSize: '13px', lineHeight: '1.2' }}
                                       >
                                         <span className="text-[13px] shrink-0">🎓</span>
@@ -2005,7 +2075,7 @@ export default function AdminDashboard({
                                         อาจารย์ผู้สอน: {instructorName}
                                       </div>
                                       <div 
-                                        className="inline-flex items-center gap-1 bg-purple-900/70 border border-purple-400/40 text-purple-200 !text-[11px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
+                                        className="inline-flex items-center gap-1 bg-purple-900/90 border border-purple-400/50 text-purple-200 !text-[11px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
                                         style={{ fontSize: '11px' }}
                                       >
                                         <span className="truncate">⏱️ {slotSpanText}</span>
@@ -2070,10 +2140,6 @@ export default function AdminDashboard({
                               }
 
                               const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
-                              const accentColorClass = roomTheme.text;
-                              const barColorClass = roomTheme.bg;
-                              const borderOutlineClass = roomTheme.borderOutline;
-
                               const cardSubject = subjectCode || displaySubject || "BRS 311";
                               const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
                               const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
@@ -2118,28 +2184,28 @@ export default function AdminDashboard({
                                       });
                                     }}
                                     style={{ padding: '4px 8px 4px 10px' }}
-                                    className={`relative px-2 py-1 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 shadow-md overflow-hidden bg-[#1E1E1E] group-hover:bg-[#28282c] group-hover:border-[#ffffff]/50 cursor-pointer ${borderOutlineClass}`}
+                                    className={`relative px-2 py-1 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 overflow-hidden cursor-pointer ${roomTheme.cardBg} ${roomTheme.cardBorder} ${roomTheme.cardGlow} group/card`}
                                   >
-                                    <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl ${barColorClass}`} />
+                                    <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl ${roomTheme.cardBar}`} />
                                     <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
                                       <div 
-                                        className={`font-extrabold !text-[13px] tracking-normal uppercase truncate w-full overflow-hidden text-ellipsis leading-[1.2] ${accentColorClass} group-hover:!text-[#ffffff] transition-colors`}
+                                        className={`font-extrabold !text-[13px] tracking-normal uppercase truncate w-full overflow-hidden text-ellipsis leading-[1.2] ${roomTheme.cardSubject} group-hover/card:!text-white transition-colors`}
                                         style={{ fontSize: '13px', lineHeight: '1.2' }}
                                       >
                                         {subjectCode}
                                       </div>
                                       <div 
-                                        className="font-medium !text-[13px] text-[#d3d3d3] group-hover:!text-[#ffffff] leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors" 
+                                        className={`font-medium !text-[13px] ${roomTheme.cardTitle} group-hover/card:!text-white leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors`} 
                                         style={{ fontSize: '13px', lineHeight: '1.2' }}
                                         title={subjectTitle}
                                       >
                                         {subjectTitle}
                                       </div>
                                     </div>
-                                    <div className="h-[1px] bg-[#aeadad]/20 group-hover:bg-[#ffffff]/40 w-full my-0.5 transition-colors shrink-0" />
+                                    <div className={`h-[1px] ${roomTheme.cardDivider} group-hover/card:bg-white/30 w-full my-0.5 transition-colors shrink-0`} />
                                     <div 
-                                      className="font-semibold !text-[13px] text-[#9CA3AF] group-hover:!text-[#ffffff] truncate w-full overflow-hidden text-ellipsis leading-[1.2] transition-colors"
-                                      style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                      className={`font-semibold !text-[12px] ${roomTheme.cardFooter} group-hover/card:!text-white truncate w-full overflow-hidden text-ellipsis leading-[1.2] transition-colors`}
+                                      style={{ fontSize: '12px', lineHeight: '1.2' }}
                                     >
                                       {footerText}
                                     </div>
@@ -2282,14 +2348,23 @@ export default function AdminDashboard({
 
                     <div className="space-y-3.5">
                       <div>
-                        <label className="text-[11px] font-extrabold text-slate-700 block mb-1">4. รายวิชาเรียน</label>
+                        <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                          4. รายวิชาเรียน <span className="text-rose-500">*</span>
+                        </label>
                         <select
                           value={bookingSubject}
                           onChange={(e) => setBookingSubject(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition-all font-semibold cursor-pointer"
+                          required
                         >
-                          <option value="BRS311">BRS311</option>
-                          <option value="งานอื่นๆ">งานอื่นๆ</option>
+                          {courses.map((c) => {
+                            const lbl = getCourseLabel(c);
+                            return (
+                              <option key={c.id || c.code} value={c.code || lbl}>
+                                {lbl}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <div>
@@ -2547,6 +2622,16 @@ export default function AdminDashboard({
       }}
       booking={targetBookingForPin}
       actionType={pinActionType}
+      onSuccess={() => {
+        setIsVerifyPinModalOpen(false);
+        if (pinActionType === 'edit') {
+          setBookingToEdit(targetBookingForPin);
+          setIsEditModalOpen(true);
+        } else if (pinActionType === 'delete') {
+          setBookingToDelete(targetBookingForPin);
+          setIsDeleteModalOpen(true);
+        }
+      }}
       onVerified={() => {
         setIsVerifyPinModalOpen(false);
         if (pinActionType === 'edit') {
@@ -2568,6 +2653,7 @@ export default function AdminDashboard({
       }}
       booking={bookingToEdit}
       courses={courses}
+      bookings={bookings}
       onSave={async (id, updates) => {
         if (onUpdateBooking) {
           await onUpdateBooking(id, updates);
@@ -2712,23 +2798,14 @@ export default function AdminDashboard({
                   className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3.5 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold cursor-pointer"
                   required
                 >
-                  {courses.length > 0 ? (
-                    courses.map((c) => {
-                      const lbl = getCourseLabel(c);
-                      return (
-                        <option key={c.id} value={lbl}>
-                          {lbl}
-                        </option>
-                      );
-                    })
-                  ) : (
-                    <>
-                      <option value="BRS311 - การจัดรายการวิทยุกระจายเสียง">BRS311 - การจัดรายการวิทยุกระจายเสียง</option>
-                      <option value="CA102 - เทคโนโลยีสื่อสารมวลชน">CA102 - เทคโนโลยีสื่อสารมวลชน</option>
-                      <option value="BC101 - พื้นฐานการสื่อสาร">BC101 - พื้นฐานการสื่อสาร</option>
-                      <option value="งานอื่นๆ / คลาสเรียนพิเศษ">งานอื่นๆ / คลาสเรียนพิเศษ</option>
-                    </>
-                  )}
+                  {courses.map((c) => {
+                    const lbl = getCourseLabel(c);
+                    return (
+                      <option key={c.id || c.code} value={lbl}>
+                        {lbl}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

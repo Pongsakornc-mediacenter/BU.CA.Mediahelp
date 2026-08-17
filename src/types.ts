@@ -9,10 +9,11 @@ export interface ChatMessage {
   id: string;
   senderId: string;
   senderName: string;
-  senderRole: 'student' | 'admin';
+  senderRole: 'student' | 'admin' | 'staff';
   text: string;
   createdAt: string;
 }
+
 
 export interface Ticket {
   id: string;
@@ -63,9 +64,10 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
-  role: 'student' | 'admin';
+  role: 'student' | 'admin' | 'staff';
   joinedAt: string;
 }
+
 
 export interface CameraPreset {
   name: string;
