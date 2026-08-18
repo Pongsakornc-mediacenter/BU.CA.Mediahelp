@@ -113,77 +113,11 @@ export const AVAILABLE_TIMESLOTS = [
   "16:00 - 17:00"
 ];
 
-// Default bookings for starting/demo purposes
-export const DEFAULT_BOOKINGS: RoomBooking[] = [
-  {
-    id: "book-1",
-    studentId: "somchai_bumail_net",
-    studentName: "สมชาย บุญช่วย (นักศึกษาจำลอง)",
-    studentEmail: "somchai@bumail.net",
-    email: "somchai@bumail.net",
-    pinCode: "1234",
-    roomName: "ห้องจัดรายการ 1",
-    date: "2026-06-12",
-    timeSlot: "08:30 - 10:30",
-    purpose: "CA101 ฝึกจัดรายการสดยามเช้า",
-    studentIdInput: "1660123456",
-    phone: "081-234-5678",
-    status: "approved",
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
-  },
-  {
-    id: "book-2",
-    studentId: "wilai_bumail_net",
-    studentName: "วิไลลักษณ์ เนตรตา (นักศึกษาจำลอง)",
-    studentEmail: "wilai.n@bumail.net",
-    email: "wilai.n@bumail.net",
-    pinCode: "1234",
-    roomName: "ห้องจัดรายการ 2",
-    date: "2026-06-13",
-    timeSlot: "13:00 - 15:00",
-    purpose: "CA102 อัดประเด็นบันทึกหัวข้อวิทยาศาสตร์เสียง",
-    studentIdInput: "1661234567",
-    phone: "089-876-5432",
-    status: "pending",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+// Default bookings for starting/demo purposes (Empty - no mock data)
+export const DEFAULT_BOOKINGS: RoomBooking[] = [];
 
-// Default broadcast programs for starting/demo purposes
-export const DEFAULT_PROGRAMS: BroadcastProgram[] = [
-  {
-    id: "prog-1",
-    studentId: "somchai_bumail_net",
-    studentName: "สมชาย บุญช่วย",
-    studentEmail: "somchai@bumail.net",
-    programName: "BU CA Morning Wave 📻",
-    hosts: "ดีเจสมชาย & เพื่อนๆ คณะนิเทศศาสตร์",
-    category: "radio",
-    roomName: "Studio D: ห้องจัดรายการวิทยุเเละดีเจ (FM Broadcast Radio Booth)",
-    date: "2026-06-12",
-    timeSlot: "ช่วงเช้า (09:00 - 12:00 น.)",
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "prog-2",
-    studentId: "wilai_bumail_net",
-    studentName: "วิไลลักษณ์ เนตรตา",
-    studentEmail: "wilai.n@bumail.net",
-    programName: "Creative Talk Podcast 🎙️",
-    hosts: "วิไลลักษณ์ & ดีเจอติกันต์",
-    category: "podcast",
-    roomName: "Studio B: ห้องบันทึกรายการพอดแคสต์ (Podcast Creative Room)",
-    date: "2026-06-12",
-    timeSlot: "ช่วงบ่าย (13:00 - 16:00 น.)",
-    status: "upcoming",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+// Default broadcast programs for starting/demo purposes (Empty - no mock data)
+export const DEFAULT_PROGRAMS: BroadcastProgram[] = [];
 
 // Supported Class Sessions with strict passcode verification (Time-based/Passcode validation)
 export const AVAILABLE_CLASSES: ClassSession[] = [
@@ -292,7 +226,7 @@ export function useData() {
           setBookings(DEFAULT_BOOKINGS);
         }
       });
-      return unsubscribe;
+      return () => unsubscribe();
     } else {
       const local = getLocalStorageItem('bu_ca_bookings', null);
       if (!local) {
@@ -374,7 +308,7 @@ export function useData() {
       }, (error) => {
         console.error("Room images sync error:", error);
       });
-      return unsubscribe;
+      return () => unsubscribe();
     } else {
       const local = getLocalStorageItem('bu_ca_room_images', null);
       if (local) {
@@ -518,7 +452,7 @@ export function useData() {
           setPrograms(DEFAULT_PROGRAMS);
         }
       });
-      return unsubscribe;
+      return () => unsubscribe();
     } else {
       const local = getLocalStorageItem('bu_ca_programs', null);
       if (!local) {
@@ -667,41 +601,52 @@ export function useData() {
         unsubscribeAttendance();
       };
     } else {
-      // Local Sandbox Live Monitoring Mock Setup
+      // Local Sandbox Live Monitoring Mock Setup (Safe compare & non-mutating update)
       const interval = setInterval(() => {
         const localTickets = getLocalStorageItem('bu_ca_tickets', []);
         const filteredTickets = currentUser.role === 'admin' 
           ? localTickets 
           : localTickets.filter((t: Ticket) => t.studentId === currentUser.uid);
         
-        // Check for state updates for sound alerts
-        if (currentUser.role === 'student' && tickets.length > 0) {
-          filteredTickets.forEach((freshTicket: Ticket) => {
-            const oldMatch = tickets.find(t => t.id === freshTicket.id);
-            if (oldMatch && oldMatch.status !== 'answered' && freshTicket.status === 'answered') {
-              setLastNotification(`💡 อาจารย์ตอบกลับเรื่อง "${freshTicket.title}": "${freshTicket.replyText}"`);
-            }
-          });
-        }
-        
-        setTickets(filteredTickets);
+        setTickets(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(filteredTickets)) {
+            return filteredTickets;
+          }
+          return prev;
+        });
 
         const localAttendance = getLocalStorageItem('bu_ca_attendance', []);
         const filteredAttendance = currentUser.role === 'admin'
           ? localAttendance
           : localAttendance.filter((a: AttendanceRecord) => a.studentId === currentUser.uid);
-        setAttendance(filteredAttendance);
+        
+        setAttendance(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(filteredAttendance)) {
+            return filteredAttendance;
+          }
+          return prev;
+        });
 
         const localBookings = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
-        setBookings(localBookings);
+        setBookings(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(localBookings)) {
+            return localBookings;
+          }
+          return prev;
+        });
 
         const localPrograms = getLocalStorageItem('bu_ca_programs', DEFAULT_PROGRAMS);
-        setPrograms(localPrograms);
-      }, 800);
+        setPrograms(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(localPrograms)) {
+            return localPrograms;
+          }
+          return prev;
+        });
+      }, 1500);
 
       return () => clearInterval(interval);
     }
-  }, [currentUser, tickets.length]);
+  }, [currentUser]);
 
   // Auth Handlers (Google / Sandbox selector)
   const loginWithGoogle = async (domainRestriction = true) => {
@@ -1046,82 +991,12 @@ export function useData() {
     document.body.removeChild(link);
   };
 
-  // Seeding test values for demo
+  // Clear demo data
   const seedDemoData = () => {
-    const defaultTickets: Ticket[] = [
-      {
-        id: "t_demo_1",
-        studentId: "somchai_bumail_net",
-        studentName: "สมชาย บุญช่วย (นักศึกษา)",
-        studentEmail: "somchai@bumail.net",
-        category: "camera",
-        title: "เบลอหลังไม่ออก ถ่ายหน้าคนแล้วเบลอข้างหลังยังนูนอยู่มาก",
-        description: "พยายามเปิดค่า f/1.4 แล้วแต่พื้นหลังยังไม่ค่อยเบลอละลายเลยครับ ผมต้องยืนห่างจากตัวแบบเท่าไร และใช้ช่วงเลนส์ยาวเท่าไรดีครับ ถ่ายด้วยกล้อง Sony A7IV เลนส์ 50mm ครับ",
-        status: "pending",
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        updatedAt: new Date(Date.now() - 3600000 * 2).toISOString()
-      },
-      {
-        id: "t_demo_2",
-        studentId: "wilai_bumail_net",
-        studentName: "วิไลลักษณ์ เนตรตา (นักศึกษา)",
-        studentEmail: "wilai.n@bumail.net",
-        category: "microphone",
-        title: "ไมค์ตัวส่ง Wireless Go II ดังซ่า เสียงไม่มีสัญญาณเข้าช่องซ้าย",
-        description: "หนูเสียบสาย TRS เข้าช่องกล้อง DSLR Canon 80D แล้ว มีเสียงฟูซ่าตลอด และตัวส่งสัญญาณติดเป็นระดับเต็มสเกลเหมือนกระแทกเสียง แต่ไม่มีเสียงพูดจากไมค์เข้าตัวกล้องเลยค่ะ ต้องเซ็ตตั้งค่าตรงไหนคะ",
-        status: "answered",
-        createdAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-        updatedAt: new Date(Date.now() - 3600000 * 18).toISOString(),
-        replyText: "กรณีสาย TRS ซ่าและสัญญาณพีคเต็ม ให้เข้าไปเช็กที่เมนูเสียงของกล้อง Canon เปลี่ยน Recording Level จาก Auto เป็น Manual แล้วดึงเกณฑ์กล้องต่ำสุด (ประมาณ 10-15%) แล้วปรับแต่งเกนที่ Wireless Go เป็น 0dB หรือ -12dB ครับ",
-        repliedBy: "อาจารย์พงศกร CO-CA",
-        repliedAt: new Date(Date.now() - 3600000 * 18).toISOString()
-      }
-    ];
-
-    const defaultAttendance: AttendanceRecord[] = [
-      {
-        id: "att_dem_1",
-        studentId: "somchai_bumail_net",
-        studentName: "สมชาย บุญช่วย",
-        studentEmail: "somchai@bumail.net",
-        classId: "ca101",
-        className: "CA101: การตั้งค่ากล้องพื้นฐานและการจัดเฟรม (Basic Camera Setup)",
-        checkedInAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-        status: "on_time",
-        points: 10,
-        deviceMeta: "📱 Smartphone"
-      },
-      {
-        id: "att_dem_2",
-        studentId: "wilai_bumail_net",
-        studentName: "วิไลลักษณ์ เนตรตา",
-        studentEmail: "wilai.n@bumail.net",
-        classId: "ca101",
-        className: "CA101: การตั้งค่ากล้องพื้นฐานและการจัดเฟรม (Basic Camera Setup)",
-        checkedInAt: new Date(Date.now() - 3600000 * 23.8).toISOString(),
-        status: "on_time",
-        points: 10,
-        deviceMeta: "📱 Smartphone"
-      },
-      {
-        id: "att_dem_3",
-        studentId: "anupong_bumail_net",
-        studentName: "อนุพงศ์ มีแสง",
-        studentEmail: "anupong.m@bumail.net",
-        classId: "ca101",
-        className: "CA101: การตั้งค่ากล้องพื้นฐานและการจัดเฟรม (Basic Camera Setup)",
-        checkedInAt: new Date(Date.now() - 3600000 * 23.5).toISOString(),
-        status: "late",
-        points: 7,
-        deviceMeta: "💻 Desktop"
-      }
-    ];
-
-    saveLocalStorageItem('bu_ca_tickets', defaultTickets);
-    saveLocalStorageItem('bu_ca_attendance', defaultAttendance);
-    setTickets(defaultTickets);
-    setAttendance(defaultAttendance);
-    alert("ระบบจำลองได้จำลองข้อมูลตั๋วสถิติและคะแนนเข้าเรียนระดับเบื้องต้นเรียบร้อย!");
+    saveLocalStorageItem('bu_ca_tickets', []);
+    saveLocalStorageItem('bu_ca_attendance', []);
+    setTickets([]);
+    setAttendance([]);
   };
 
   // --- Room Booking CRUD Operations ---
@@ -1266,13 +1141,17 @@ export function useData() {
         studentName: bookingPayload.studentName,
         userName: bookingPayload.studentName,
         name: bookingPayload.studentName,
-        studentId: studentIdInput,
-        roomName,
-        date,
-        timeSlot,
+        studentId: studentIdInput || "-",
+        roomName: roomName || "ห้องจัดรายการ 1",
+        date: date || new Date().toISOString().split('T')[0],
+        bookingDate: date || new Date().toISOString().split('T')[0],
+        timeSlot: timeSlot || "08:30 - 09:30",
+        course_name: subject || 'BRS311',
+        courseName: subject || 'BRS311',
         subject: subject || 'BRS311',
-        purpose: bookingPurpose || purpose,
-        phone,
+        purpose: bookingPurpose || (purpose && !purpose.includes("(") ? purpose : "จัดรายการ"),
+        bookingPurpose: bookingPurpose || (purpose && !purpose.includes("(") ? purpose : "จัดรายการ"),
+        phone: phone || "-",
         pinCode: finalPin
       }).catch(() => {
         // Safe swallow

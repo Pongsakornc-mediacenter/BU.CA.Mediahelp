@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   BarChart3,
   Calendar,
@@ -18,7 +18,6 @@ import {
   CheckCircle,
   ListFilter
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { RoomBooking, Ticket, AttendanceRecord } from '../types';
 import { calculateBookingDurationHours, formatHoursDisplay } from '../hooks/useData';
 
@@ -45,7 +44,7 @@ export function DataSummaryDashboard({
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedRoom, setSelectedRoom] = useState<string>('all');
 
-  // Filtered Bookings logic
+  // Filtered Bookings logic with useMemo
   const filteredBookings = useMemo(() => {
     return bookings.filter(b => {
       if (!b) return false;
@@ -67,31 +66,26 @@ export function DataSummaryDashboard({
     });
   }, [bookings, selectedRoom, selectedSubject]);
 
-  // Statistics calculation
-  const totalBookings = filteredBookings.length;
-  const approvedBookings = filteredBookings.filter(b => b.status === 'approved' || !b.status);
-  const pendingBookings = filteredBookings.filter(b => b.status === 'pending');
-  
-  const room1Bookings = filteredBookings.filter(b => b.roomName === 'ห้องจัดรายการ 1' || (!b.roomName && !b.roomName));
-  const room2Bookings = filteredBookings.filter(b => b.roomName === 'ห้องจัดรายการ 2');
-  const youtube1Bookings = filteredBookings.filter(b => b.roomName === 'ห้องยูทูป 1');
-  const youtube2Bookings = filteredBookings.filter(b => b.roomName === 'ห้องยูทูป 2');
+  // Statistics calculation with useMemo to completely prevent re-renders & layout shifts
+  const stats = useMemo(() => {
+    const totalBookings = filteredBookings.length;
+    const room1List = filteredBookings.filter(b => b.roomName === 'ห้องจัดรายการ 1' || (!b.roomName && !b.roomName));
+    const room2List = filteredBookings.filter(b => b.roomName === 'ห้องจัดรายการ 2');
+    const youtube1List = filteredBookings.filter(b => b.roomName === 'ห้องยูทูป 1');
+    const youtube2List = filteredBookings.filter(b => b.roomName === 'ห้องยูทูป 2');
 
-  // Helper to calculate total hours from a booking array
-  const calculateTotalHours = (bookingList: RoomBooking[]) => {
-    return bookingList.reduce((sum, b) => sum + calculateBookingDurationHours(b.timeSlot), 0);
-  };
+    const calcHours = (list: RoomBooking[]) => {
+      return list.reduce((sum, b) => sum + calculateBookingDurationHours(b.timeSlot), 0);
+    };
 
-  const totalHours = calculateTotalHours(filteredBookings);
-  const room1Hours = calculateTotalHours(room1Bookings);
-  const room2Hours = calculateTotalHours(room2Bookings);
-  const youtube1Hours = calculateTotalHours(youtube1Bookings);
-  const youtube2Hours = calculateTotalHours(youtube2Bookings);
+    const totalHours = calcHours(filteredBookings);
+    const room1Hours = calcHours(room1List);
+    const room2Hours = calcHours(room2List);
+    const youtube1Hours = calcHours(youtube1List);
+    const youtube2Hours = calcHours(youtube2List);
 
-  // Course distribution
-  const courseStats = useMemo(() => {
+    // Course distribution
     const map: Record<string, { count: number; hours: number; students: Set<string> }> = {};
-    
     filteredBookings.forEach(b => {
       const subj = (b.subject || 'วิชาทั่วไป').trim();
       if (!map[subj]) {
@@ -104,25 +98,44 @@ export function DataSummaryDashboard({
       }
     });
 
-    return Object.entries(map).map(([subject, stat]) => ({
+    const courseList = Object.entries(map).map(([subject, stat]) => ({
       subject,
       count: stat.count,
       hours: stat.hours,
       studentsCount: stat.students.size || Math.max(1, Math.floor(stat.count * 1.2))
     })).sort((a, b) => b.count - a.count);
+
+    return {
+      totalBookings,
+      room1Bookings: room1List,
+      room2Bookings: room2List,
+      youtube1Bookings: youtube1List,
+      youtube2Bookings: youtube2List,
+      totalHours,
+      room1Hours,
+      room2Hours,
+      youtube1Hours,
+      youtube2Hours,
+      courseStats: courseList
+    };
   }, [filteredBookings]);
 
-  // Helpdesk Stats
-  const totalTickets = tickets.length;
-  const solvedTickets = tickets.filter(t => t.status === 'answered' || t.status === 'closed').length;
-  const pendingTickets = tickets.filter(t => t.status === 'pending' || t.status === 'inprogress').length;
-  const ratedTickets = tickets.filter(t => t.rating && t.rating > 0);
-  const averageRating = ratedTickets.length > 0 
-    ? (ratedTickets.reduce((acc, t) => acc + (t.rating || 0), 0) / ratedTickets.length).toFixed(1) 
-    : '4.9';
+  const {
+    totalBookings,
+    room1Bookings,
+    room2Bookings,
+    youtube1Bookings,
+    youtube2Bookings,
+    totalHours,
+    room1Hours,
+    room2Hours,
+    youtube1Hours,
+    youtube2Hours,
+    courseStats
+  } = stats;
 
   return (
-    <div className="space-y-6 animate-fade-in" id="data_summary_dashboard_page">
+    <div className="space-y-6 min-h-[650px] w-full" id="data_summary_dashboard_page">
       
       {/* 1. TOP HEADER BANNER (Dark Theme matching Schedule View) */}
       <div className="bg-[#111115] border border-[#2d2d34] p-5 sm:p-6 rounded-[24px] shadow-2xl text-white space-y-5">

@@ -7,37 +7,28 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Camera, 
-  HelpCircle, 
   BookOpen, 
   Sparkles, 
   LogOut, 
-  Send, 
   Layers, 
   Sliders, 
   CheckCircle, 
   Clock, 
-  Star, 
-  MessageSquare, 
-  BellRing, 
   AlertCircle,
-  FileImage,
-  QrCode,
-  ShieldAlert,
+  BellRing,
   GraduationCap,
-  RefreshCw,
-  Mic,
-  Lightbulb,
-  PenTool,
-  Plus,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Trash2,
-  User,
-  ChevronDown,
-  FileSpreadsheet,
-  BarChart3,
-  X
+  QrCode, 
+  RefreshCw, 
+  Plus, 
+  Settings, 
+  ChevronLeft, 
+  ChevronRight, 
+  Trash2, 
+  User, 
+  ChevronDown, 
+  FileSpreadsheet, 
+  BarChart3, 
+  X 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData, getCourseLabel, isTimeOverlapping } from './hooks/useData';
@@ -48,7 +39,7 @@ import { CourseManagementModal } from './components/CourseManagementModal';
 import { EditBookingModal } from './components/EditBookingModal';
 import { DeleteBookingConfirmModal } from './components/DeleteBookingConfirmModal';
 import { VerifyBookingPinModal } from './components/VerifyBookingPinModal';
-import { HelpCategory, RoomBooking } from './types';
+import { RoomBooking, HelpCategory } from './types';
 
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -182,7 +173,6 @@ export default function App() {
     lastNotification,
     setLastNotification,
     loginWithGoogle,
-    loginAsMockUser,
     logout,
     createSupportTicket,
     submitTicketReply,
@@ -190,17 +180,11 @@ export default function App() {
     sendTicketMessage,
     checkInToClass,
     downloadAttendanceReportCSV,
-    seedDemoData,
-    isFirebaseConfigured,
     bookings,
-    programs,
     createBooking,
     updateBooking,
     updateBookingStatus,
     deleteBooking,
-    createProgram,
-    updateProgramStatus,
-    deleteProgram,
     courses,
     addCourse,
     updateCourse,
@@ -212,7 +196,6 @@ export default function App() {
   // Room Settings & Course Management States
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [tempRoom1Images, setTempRoom1Images] = useState<string[]>(["", "", "", "", ""]);
   const [tempRoom2Images, setTempRoom2Images] = useState<string[]>(["", "", "", "", ""]);
@@ -224,7 +207,7 @@ export default function App() {
 
   // Sync temp images when loaded
   React.useEffect(() => {
-    if (roomImages) {
+    if (roomImages && !isRoomSettingsOpen) {
       const getArray = (val: any, defaultUrl: string) => {
         let arr: string[] = [];
         if (Array.isArray(val)) {
@@ -248,14 +231,14 @@ export default function App() {
       setTempYoutube1Images(getArray(roomImages["ห้องยูทูป 1"], "https://images.unsplash.com/photo-1616469829941-c7200edec809?q=85&w=1920"));
       setTempYoutube2Images(getArray(roomImages["ห้องยูทูป 2"], "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=85&w=1920"));
     }
-  }, [roomImages]);
+  }, [roomImages, isRoomSettingsOpen]);
 
   // Sync bookingStudentName with currentUser
   React.useEffect(() => {
-    if (currentUser) {
-      setBookingStudentName(currentUser.name || "");
+    if (currentUser?.name) {
+      setBookingStudentName(prev => prev || currentUser.name || "");
     }
-  }, [currentUser]);
+  }, [currentUser?.name]);
 
   const handleSettingsFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -312,7 +295,13 @@ export default function App() {
   
   // Student Booking states
   const [bookingRoom, setBookingRoom] = useState("ห้องจัดรายการ 1");
-  const [bookingDate, setBookingDate] = useState("");
+  const [bookingDate, setBookingDate] = useState<string>(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
   const [bookingSlot, setBookingSlot] = useState("08:30 - 09:30");
   const [bookingSubject, setBookingSubject] = useState("BRS311");
   const [bookingPurpose, setBookingPurpose] = useState("");
@@ -322,45 +311,83 @@ export default function App() {
   const [bookingEmail, setBookingEmail] = useState("");
   const [bookingPinCode, setBookingPinCode] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [myBookingFilter, setMyBookingFilter] = useState("");
 
-  // Real-time conflict checking for left-side booking form
+  // Auto Close 2.5 seconds timer
+  React.useEffect(() => {
+    if (showSuccessModal) {
+      const timer = setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessModal]);
+
+  // Robust Date & Room comparison helpers
+  const isSameDate = (dateA?: string, dateB?: string) => {
+    if (!dateA || !dateB) return false;
+    const cleanA = dateA.trim();
+    const cleanB = dateB.trim();
+    if (cleanA === cleanB) return true;
+    const partsA = cleanA.split('-');
+    const partsB = cleanB.split('-');
+    if (partsA.length === 3 && partsB.length === 3) {
+      const yA = parseInt(partsA[0], 10);
+      const mA = parseInt(partsA[1], 10);
+      const dA = parseInt(partsA[2], 10);
+      const yB = parseInt(partsB[0], 10);
+      const mB = parseInt(partsB[1], 10);
+      const dB = parseInt(partsB[2], 10);
+      return yA === yB && mA === mB && dA === dB;
+    }
+    return false;
+  };
+
+  const isSameRoom = (roomA?: string, roomB?: string) => {
+    if (!roomA || !roomB) return false;
+    return roomA.replace(/\s+/g, ' ').trim().toLowerCase() === roomB.replace(/\s+/g, ' ').trim().toLowerCase();
+  };
+
+  // Real-time conflict checking for left-side / student booking form
   const conflictingBooking = React.useMemo(() => {
     if (!bookingRoom || !bookingDate || !bookingSlot) return null;
     return bookings.find(b => {
       if (b.status === 'rejected') return false;
-      if ((b.roomName || '').trim() !== (bookingRoom || '').trim()) return false;
-      if ((b.date || '').trim() !== (bookingDate || '').trim()) return false;
+      if (!isSameRoom(b.roomName, bookingRoom)) return false;
+      if (!isSameDate(b.date, bookingDate)) return false;
       return isTimeOverlapping(b.timeSlot, bookingSlot);
     }) || null;
   }, [bookings, bookingRoom, bookingDate, bookingSlot]);
 
   const isConflict = Boolean(conflictingBooking);
-  const isSlotTaken = isConflict;
-  const isBookingSlotConflicted = isConflict;
 
-  // Sync default user email/name when currentUser loads
+  // Sync default user email when currentUser loads
   React.useEffect(() => {
-    if (currentUser?.email && !bookingEmail) {
-      setBookingEmail(currentUser.email);
+    if (currentUser?.email) {
+      setBookingEmail(prev => prev || currentUser.email || "");
     }
-    if (currentUser?.name && !bookingStudentName) {
-      setBookingStudentName(currentUser.name);
-    }
-  }, [currentUser]);
+  }, [currentUser?.email]);
 
   // Sync course selection with real-time courses from Firestore / useData
   React.useEffect(() => {
     if (courses && courses.length > 0) {
       const validCodes = courses.map(c => c.code || getCourseLabel(c));
-      if (!validCodes.includes(bookingSubject) && validCodes[0]) {
-        setBookingSubject(validCodes[0]);
-      }
+      setBookingSubject(prev => {
+        if (!prev || !validCodes.includes(prev)) {
+          return validCodes[0] || "BRS311";
+        }
+        return prev;
+      });
+
       const validTeacherLabels = courses.map(c => getCourseLabel(c));
-      if (!validTeacherLabels.includes(teacherSubject) && validTeacherLabels[0]) {
-        setTeacherSubject(validTeacherLabels[0]);
-      }
+      setTeacherSubject(prev => {
+        if (!prev || !validTeacherLabels.includes(prev)) {
+          return validTeacherLabels[0] || "BRS311 - การจัดรายการวิทยุกระจายเสียง";
+        }
+        return prev;
+      });
     }
   }, [courses]);
 
@@ -438,6 +465,19 @@ export default function App() {
   const [teacherPinCode, setTeacherPinCode] = useState<string>("1234");
   const [submittingTeacherBooking, setSubmittingTeacherBooking] = useState<boolean>(false);
 
+  // Real-time conflict checking for teacher booking modal
+  const teacherConflictingBooking = React.useMemo(() => {
+    if (!teacherRoom || !teacherDate || !teacherTimeSlot) return null;
+    return bookings.find(b => {
+      if (b.status === 'rejected') return false;
+      if (!isSameRoom(b.roomName, teacherRoom)) return false;
+      if (!isSameDate(b.date, teacherDate)) return false;
+      return isTimeOverlapping(b.timeSlot, teacherTimeSlot);
+    }) || null;
+  }, [bookings, teacherRoom, teacherDate, teacherTimeSlot]);
+
+  const isTeacherConflict = Boolean(teacherConflictingBooking);
+
   React.useEffect(() => {
     if (currentUser?.email && !teacherEmail) {
       setTeacherEmail(currentUser.email);
@@ -446,6 +486,13 @@ export default function App() {
 
   const handleTeacherBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isTeacherConflict) {
+      return;
+    }
+    if (!teacherDate) {
+      alert("กรุณาเลือกวันที่ต้องการจอง");
+      return;
+    }
     if (!teacherSubject.trim()) {
       alert("กรุณาระบุรหัสวิชา / กลุ่มเรียน (Section)");
       return;
@@ -461,7 +508,7 @@ export default function App() {
     setSubmittingTeacherBooking(true);
     try {
       const instructorName = teacherName.trim() || currentUser?.name || "อาจารย์ผู้สอน";
-      await createBooking(
+      const res = await createBooking(
         teacherRoom,
         teacherDate,
         teacherTimeSlot,
@@ -473,12 +520,17 @@ export default function App() {
         finalPin
       );
 
+      if (res && !res.success) {
+        alert(res.message || "⚠️ ไม่สามารถจองได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว");
+        return;
+      }
+
       setIsTeacherModalOpen(false);
       setActiveScheduleRoom(teacherRoom);
       setScheduleBaseDate(teacherDate);
       setTeacherSubject("BRS311 - การจัดรายการวิทยุกระจายเสียง");
       setTeacherPinCode("1234");
-      alert("🎓 บันทึกการจองห้องสำหรับอาจารย์สอนเรียบร้อยแล้ว! ข้อมูลปูเต็มช่วงเวลาในตารางทันที");
+      setShowSuccessModal(true);
     } catch (err) {
       console.error("Teacher booking error:", err);
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
@@ -796,14 +848,18 @@ export default function App() {
       }
 
       setIsBookingModalOpen(false);
+      const studentNameText = bookingStudentName.trim() || currentUser?.name || "";
       setBookingSubject("BRS311");
       setBookingPurpose("");
       setBookingStudentName(currentUser?.name || "");
       setBookingStudentId("");
       setBookingPhone("");
       setBookingPinCode("");
-      setBookingSuccessMsg(`🎉 ยืนยันการจองสำเร็จ! ส่งข้อมูลการจองและรหัส PIN (4 หลัก) ไปยังอีเมล ${finalEmail} เรียบร้อยแล้ว`);
-      setTimeout(() => setBookingSuccessMsg(""), 7000);
+      
+      const successMessage = `🎉 ยืนยันการจองสำเร็จ! ระบบส่งข้อมูลยืนยันการจองห้อง ${bookingRoom} (${bookingDate} เวลา ${bookingSlot}) และรหัส PIN (${finalPin}) ไปยังอีเมล ${finalEmail} เรียบร้อยแล้ว`;
+      setBookingSuccessMsg(successMessage);
+      setShowSuccessModal(true);
+      setTimeout(() => setBookingSuccessMsg(""), 9000);
     } catch {
       // Safe fallback
     }
@@ -1159,16 +1215,12 @@ export default function App() {
             tickets={tickets}
             attendance={attendance}
             bookings={bookings}
-            programs={programs}
             onSubmitReply={submitTicketReply}
             onDownloadReport={downloadAttendanceReportCSV}
             currentUserEmail={currentUser.email}
             onUpdateBookingStatus={updateBookingStatus}
             onUpdateBooking={updateBooking}
             onDeleteBooking={deleteBooking}
-            onCreateProgram={createProgram}
-            onUpdateProgramStatus={updateProgramStatus}
-            onDeleteProgram={deleteProgram}
             onCreateBooking={createBooking}
             roomImages={roomImages}
             courses={courses}
@@ -2234,7 +2286,7 @@ export default function App() {
                   </div>
 
                   {/* Conflict Alert Banner in modal */}
-                  {isBookingSlotConflicted && (
+                  {isConflict && (
                     <div className="p-3 bg-red-50 border-2 border-red-500 rounded-xl text-red-700 text-xs font-bold flex items-start gap-2 shadow-sm animate-in fade-in duration-200">
                       <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                       <div className="space-y-0.5 leading-snug">
@@ -2261,9 +2313,9 @@ export default function App() {
                     </button>
                     <button
                       type="submit"
-                      disabled={isBookingSlotConflicted}
+                      disabled={isConflict}
                       className={`flex-1 font-extrabold rounded-xl py-3 text-xs transition-colors shadow-md flex items-center justify-center gap-1.5 ${
-                        isBookingSlotConflicted
+                        isConflict
                           ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none border border-slate-300 pointer-events-none select-none opacity-80"
                           : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-indigo-600/15 cursor-pointer"
                       }`}
@@ -2912,11 +2964,33 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Conflict Warning Banner for Teacher Booking */}
+                {isTeacherConflict && (
+                  <div className="p-3.5 bg-red-500/15 border-2 border-red-500 rounded-xl text-red-300 text-xs font-bold flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5 leading-snug">
+                      <div className="text-red-300 font-extrabold text-[13px]">
+                        ⚠️ ไม่สามารถจองได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น
+                      </div>
+                      {teacherConflictingBooking && (
+                        <div className="text-[11.5px] text-red-400/90 font-medium">
+                          (ชนกับคิว: {teacherConflictingBooking.subject || teacherConflictingBooking.purpose} • ผู้จอง: {teacherConflictingBooking.studentName || teacherConflictingBooking.studentIdInput || "มีผู้จองแล้ว"} • เวลา: {teacherConflictingBooking.timeSlot})
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={submittingTeacherBooking}
-                  className="w-full h-11 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black rounded-xl text-sm transition-all shadow-lg shadow-purple-600/25 cursor-pointer mt-2 flex items-center justify-center gap-2 disabled:opacity-50"
+                  disabled={submittingTeacherBooking || isTeacherConflict}
+                  style={isTeacherConflict ? { cursor: 'not-allowed', opacity: 0.5 } : undefined}
+                  className={`w-full h-11 text-white font-black rounded-xl text-sm transition-all mt-2 flex items-center justify-center gap-2 ${
+                    isTeacherConflict
+                      ? "bg-slate-700 text-slate-400 cursor-not-allowed shadow-none border border-slate-600 opacity-50 select-none pointer-events-none"
+                      : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-600/25 cursor-pointer active:scale-95"
+                  }`}
                 >
                   {submittingTeacherBooking ? "กำลังบันทึกข้อมูล..." : "⚡ บันทึกการจองปูเต็มตาราง"}
                 </button>
@@ -2935,6 +3009,93 @@ export default function App() {
         onUpdateCourse={updateCourse}
         onDeleteCourse={deleteCourse}
       />
+
+      {/* Success Animation Pop-up Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div 
+            id="success-booking-modal-overlay"
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 pointer-events-auto"
+            onClick={() => setShowSuccessModal(false)}
+          >
+            <motion.div
+              id="success-booking-modal-card"
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1, 
+                y: 0,
+                transition: { 
+                  type: "spring", 
+                  stiffness: 350, 
+                  damping: 22 
+                } 
+              }}
+              exit={{ 
+                opacity: 0, 
+                scale: 0.85, 
+                y: -15, 
+                transition: { duration: 0.3, ease: "easeInOut" } 
+              }}
+              className="relative w-full max-w-sm bg-gradient-to-b from-[#18181b]/95 via-[#111113]/95 to-[#09090b]/98 border border-emerald-500/40 rounded-3xl p-7 text-center shadow-[0_0_50px_rgba(16,185,129,0.3)] ring-1 ring-emerald-400/20 backdrop-blur-xl overflow-hidden cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Neon Glow Accents */}
+              <div className="absolute -top-16 -left-16 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Animated Checkmark Circle */}
+              <div className="relative mx-auto mb-4 flex items-center justify-center">
+                {/* Pulsing ring */}
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: [1, 1.25, 1], opacity: [0.3, 0.7, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500/30 to-cyan-400/30 blur-sm"
+                />
+
+                {/* Main Icon Container with Bounce */}
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ 
+                    scale: [0, 1.2, 0.95, 1], 
+                    rotate: 0,
+                    transition: { delay: 0.1, duration: 0.55, ease: "easeOut" } 
+                  }}
+                  className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.5)] border border-emerald-300/40 text-slate-950"
+                >
+                  <CheckCircle className="w-9 h-9 text-slate-950 stroke-[2.5]" />
+                </motion.div>
+              </div>
+
+              {/* Text Information */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+                className="space-y-1.5"
+              >
+                <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 tracking-tight">
+                  🎉 บันทึกการจองสำเร็จ!
+                </h3>
+                <p className="text-xs text-slate-300 font-medium leading-relaxed max-w-[270px] mx-auto">
+                  ระบบได้ทำการบันทึกข้อมูลและส่งอีเมลยืนยันเรียบร้อยแล้ว
+                </p>
+              </motion.div>
+
+              {/* Progress bar indicating 2.5s auto fade-out */}
+              <div className="mt-5 w-full bg-slate-800/60 h-1 rounded-full overflow-hidden border border-white/5">
+                <motion.div
+                  initial={{ width: "100%" }}
+                  animate={{ width: "0%" }}
+                  transition={{ duration: 2.5, ease: "linear" }}
+                  className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

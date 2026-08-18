@@ -4,8 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Sliders, HelpCircle, Eye, RefreshCw, Layers, ShieldCheck, Sun } from 'lucide-react';
-import { CameraPreset } from '../types';
+import { Sliders, HelpCircle, Eye, Layers, ShieldCheck, Sun } from 'lucide-react';
 import { cameraPresets } from '../data/presets';
 
 export default function CameraWorkbench() {

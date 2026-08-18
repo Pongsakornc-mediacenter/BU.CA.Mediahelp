@@ -13,9 +13,14 @@ export interface BookingEmailDetails {
   studentId?: string;
   roomName: string;
   date: string;
+  bookingDate?: string;
   timeSlot: string;
-  subject: string;
+  subject?: string;
+  courseName?: string;
+  course_name?: string;
+  course?: string;
   purpose?: string;
+  bookingPurpose?: string;
   phone?: string;
   pinCode: string;
 }
@@ -93,26 +98,34 @@ export async function sendBookingEmail(
     const { serviceId, templateId, publicKey } = getEmailConfig();
 
     const userDisplayName = details.userName || details.name || details.studentName || 'ผู้ใช้บริการ';
+    const bookingDateValue = details.date || details.bookingDate || (details as any).booking_date || new Date().toISOString().split('T')[0];
+    const courseNameValue = details.courseName || details.course || details.subject || 'BRS311';
+    const purposeValue = details.purpose || details.bookingPurpose || '-';
 
     const templateParams = {
-      to_email: details.toEmail,
+      // 1. Exact required parameters
       email: details.toEmail,
-      recipient_email: details.toEmail,
       name: userDisplayName,
       user_name: userDisplayName,
-      userName: userDisplayName,
+      room_name: details.roomName || '-',
+      booking_date: bookingDateValue,
+      time_slot: details.timeSlot || '-',
+      course_name: courseNameValue,
+      purpose: purposeValue,
+      student_id: details.studentId || '-',
+      phone: details.phone || '-',
+      pin_code: details.pinCode || '1234',
+
+      // 2. Compatible aliases to guarantee 100% template compatibility
+      date: bookingDateValue,
+      course: courseNameValue,
+      subject: courseNameValue,
+      to_email: details.toEmail,
+      recipient_email: details.toEmail,
       to_name: userDisplayName,
       student_name: userDisplayName,
       studentName: userDisplayName,
-      student_id: details.studentId || '-',
-      room_name: details.roomName || '-',
-      booking_date: details.date || '-',
-      time_slot: details.timeSlot || '-',
-      subject: details.subject || 'BRS311',
-      course_name: details.subject || 'BRS311',
-      purpose: details.purpose || '-',
-      phone: details.phone || '-',
-      pin_code: details.pinCode || '1234',
+      userName: userDisplayName,
       pin: details.pinCode || '1234',
       current_year: new Date().getFullYear().toString()
     };

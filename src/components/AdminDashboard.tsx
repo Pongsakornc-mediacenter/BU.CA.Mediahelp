@@ -22,7 +22,7 @@ import {
   Users, 
   Layers, 
   MessageSquareOff,
-  ClipboardList, 
+  ClipboardList,
   FileSpreadsheet, 
   Camera, 
   Mic, 
@@ -31,7 +31,6 @@ import {
   HelpCircle,
   Clock, 
   CheckCircle, 
-  XCircle, 
   AlertCircle,
   Send,
   User,
@@ -46,8 +45,8 @@ import {
   ChevronRight,
   X
 } from 'lucide-react';
-import { Ticket, AttendanceRecord, HelpCategory, ClassSession, RoomBooking, BroadcastProgram, Course } from '../types';
-import { AVAILABLE_CLASSES, AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCourseLabel } from '../hooks/useData';
+import { Ticket, AttendanceRecord, HelpCategory, RoomBooking, BroadcastProgram, Course } from '../types';
+import { AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCourseLabel } from '../hooks/useData';
 import { DataSummaryDashboard } from './DataSummaryDashboard';
 import { EditBookingModal } from './EditBookingModal';
 import { DeleteBookingConfirmModal } from './DeleteBookingConfirmModal';
@@ -155,11 +154,11 @@ interface AdminDashboardProps {
   onDownloadReport: () => void;
   currentUserEmail: string;
   bookings: RoomBooking[];
-  programs: BroadcastProgram[];
-  onUpdateBookingStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
+  programs?: BroadcastProgram[];
+  onUpdateBookingStatus?: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   onUpdateBooking?: (id: string, updates: Partial<RoomBooking>) => Promise<{ success: boolean; message?: string } | void>;
   onDeleteBooking: (id: string) => Promise<void>;
-  onCreateProgram: (
+  onCreateProgram?: (
     programName: string, 
     hosts: string, 
     category: 'radio' | 'tv' | 'podcast' | 'other', 
@@ -171,8 +170,8 @@ interface AdminDashboardProps {
     studentIdInput?: string,
     phone?: string
   ) => Promise<void>;
-  onUpdateProgramStatus: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
-  onDeleteProgram: (id: string) => Promise<void>;
+  onUpdateProgramStatus?: (id: string, status: 'upcoming' | 'active' | 'completed') => Promise<void>;
+  onDeleteProgram?: (id: string) => Promise<void>;
   onCreateBooking?: (roomName: string, date: string, timeSlot: string, purpose: string, studentIdInput?: string, phone?: string, studentNameInput?: string, emailInput?: string, pinCodeInput?: string) => Promise<{ success: boolean; message?: string } | void>;
   roomImages?: { [key: string]: string | string[] };
   courses?: Course[];
@@ -251,8 +250,8 @@ export default function AdminDashboard({
   const [myBookingFilter, setMyBookingFilter] = useState("");
 
   useEffect(() => {
-    if (currentUserEmail && !bookingEmail) {
-      setBookingEmail(currentUserEmail);
+    if (currentUserEmail) {
+      setBookingEmail(prev => prev || currentUserEmail);
     }
   }, [currentUserEmail]);
 
@@ -260,13 +259,20 @@ export default function AdminDashboard({
   useEffect(() => {
     if (courses && courses.length > 0) {
       const validCodes = courses.map(c => c.code || getCourseLabel(c));
-      if (!validCodes.includes(bookingSubject) && validCodes[0]) {
-        setBookingSubject(validCodes[0]);
-      }
+      setBookingSubject(prev => {
+        if (!prev || !validCodes.includes(prev)) {
+          return validCodes[0] || "BRS311";
+        }
+        return prev;
+      });
+
       const validTeacherLabels = courses.map(c => getCourseLabel(c));
-      if (!validTeacherLabels.includes(teacherSubject) && validTeacherLabels[0]) {
-        setTeacherSubject(validTeacherLabels[0]);
-      }
+      setTeacherSubject(prev => {
+        if (!prev || !validTeacherLabels.includes(prev)) {
+          return validTeacherLabels[0] || "BRS311 - การจัดรายการวิทยุกระจายเสียง";
+        }
+        return prev;
+      });
     }
   }, [courses]);
 
