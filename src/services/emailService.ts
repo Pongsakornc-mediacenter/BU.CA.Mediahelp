@@ -98,28 +98,39 @@ export async function sendBookingEmail(
     const { serviceId, templateId, publicKey } = getEmailConfig();
 
     const userDisplayName = details.userName || details.name || details.studentName || 'ผู้ใช้บริการ';
-    const bookingDateValue = details.date || details.bookingDate || (details as any).booking_date || new Date().toISOString().split('T')[0];
+    
+    // 1. ดึงวันที่เดิมมาแปลงเป็น วัน/เดือน/ปี (DD/MM/YYYY)
+    const rawDate = details.date || details.bookingDate || (details as any).booking_date || new Date().toISOString().split('T')[0];
+    let formattedDate = rawDate;
+    if (typeof rawDate === 'string' && rawDate.includes('-')) {
+      const [year, month, day] = rawDate.trim().split('-');
+      if (year && month && day) {
+        formattedDate = `${day}/${month}/${year}`; // ผลลัพธ์: เช่น "19/08/2026"
+      }
+    }
+
     const courseNameValue = details.courseName || details.course || details.subject || 'BRS311';
     const purposeValue = details.purpose || details.bookingPurpose || '-';
 
+    // 2. นำ formattedDate ไปใส่ใน templateParams
     const templateParams = {
-      // 1. Exact required parameters
+      // Exact required parameters
       email: details.toEmail,
       name: userDisplayName,
       user_name: userDisplayName,
       room_name: details.roomName || '-',
-      booking_date: bookingDateValue,
+      date: formattedDate, // <--- ใช้วันที่ที่สลับเป็น DD/MM/YYYY เรียบร้อยแล้ว
+      booking_date: formattedDate,
       time_slot: details.timeSlot || '-',
+      subject: courseNameValue,
       course_name: courseNameValue,
       purpose: purposeValue,
       student_id: details.studentId || '-',
       phone: details.phone || '-',
       pin_code: details.pinCode || '1234',
 
-      // 2. Compatible aliases to guarantee 100% template compatibility
-      date: bookingDateValue,
+      // Compatible aliases to guarantee 100% template compatibility
       course: courseNameValue,
-      subject: courseNameValue,
       to_email: details.toEmail,
       recipient_email: details.toEmail,
       to_name: userDisplayName,
@@ -188,6 +199,16 @@ export async function sendPinReminderEmail(
 
     const userDisplayName = details.userName || details.name || details.studentName || 'ผู้ใช้บริการ';
 
+    // แปลงวันที่เป็น DD/MM/YYYY
+    const rawDate = details.date || (details as any).bookingDate || new Date().toISOString().split('T')[0];
+    let formattedDate = rawDate;
+    if (typeof rawDate === 'string' && rawDate.includes('-')) {
+      const [year, month, day] = rawDate.trim().split('-');
+      if (year && month && day) {
+        formattedDate = `${day}/${month}/${year}`;
+      }
+    }
+
     const templateParams = {
       to_email: details.toEmail,
       email: details.toEmail,
@@ -200,7 +221,8 @@ export async function sendPinReminderEmail(
       studentName: userDisplayName,
       student_id: details.studentId || '-',
       room_name: details.roomName || '-',
-      booking_date: details.date || '-',
+      date: formattedDate,
+      booking_date: formattedDate,
       time_slot: details.timeSlot || '-',
       subject: details.subject || 'BRS311',
       pin_code: details.pinCode || '1234',
