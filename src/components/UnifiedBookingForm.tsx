@@ -350,7 +350,11 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   }, [room]);
 
   return (
-    <div id="unified-booking-form-container" className="w-full max-w-[624px] mx-auto bg-[#111115] border border-[#2d2d34] rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4 text-white relative">
+    <div 
+      id="unified-booking-form-container" 
+      className="w-full max-w-[624px] mx-auto bg-[#111115] border border-[#2d2d34] rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4 text-white relative overflow-y-auto"
+      style={{ height: '880px' }}
+    >
       
       {/* 1. Header & Tab Switcher */}
       <div className="space-y-3">
@@ -460,8 +464,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               required
               value={date}
               onChange={(e) => handleDateSelect(e.target.value)}
-              className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold"
-              style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+              className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold"
+              style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
             />
           </div>
 
@@ -482,8 +486,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 }
                 setFormError("");
               }}
-              className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
-              style={{ color: timeSlot ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
+              className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
+              style={{ height: '40px', color: timeSlot ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
             >
               <option value="" style={{ color: '#9ca3af', backgroundColor: '#1a1d24' }} className="text-slate-400">
                 -- กรุณาเลือกช่วงเวลา --
@@ -527,8 +531,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               setSubject(e.target.value);
               setFormError("");
             }}
-            className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
-            style={{ color: subject ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
+            className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
+            style={{ height: '40px', color: subject ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
           >
             <option value="" style={{ color: '#9ca3af', backgroundColor: '#1a1d24' }} className="text-slate-400">
               -- กรุณาเลือกรายวิชา --
@@ -550,8 +554,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               value={customSubject}
               onChange={(e) => setCustomSubject(e.target.value)}
               placeholder=""
-              className="w-full h-9 mt-1.5 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500"
-              style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+              className="w-full h-10 mt-1.5 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500"
+              style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
             />
           )}
         </div>
@@ -572,8 +576,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder=""
-                  className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                  style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
 
@@ -589,8 +593,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   placeholder=""
-                  className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                  style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
             </div>
@@ -608,8 +612,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder=""
-                  className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                  style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
 
@@ -625,8 +629,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={pinCode}
                   onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
                   placeholder=""
-                  className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-mono tracking-widest text-center"
-                  style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-mono tracking-widest text-center"
+                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
             </div>
@@ -643,8 +647,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder=""
-                className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
               />
             </div>
 
@@ -655,12 +659,12 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 วัตถุประสงค์การใช้งาน
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 placeholder=""
-                className="w-full bg-[#1a1d24] border border-[#2d2d34] rounded-xl p-2.5 text-[15px] min-h-[66px] text-white focus:outline-none focus:border-orange-500 font-medium resize-none"
-                style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                className="w-full bg-[#1a1d24] border border-[#2d2d34] rounded-xl p-2.5 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium resize-none"
+                style={{ height: '90px', color: '#ffffff', backgroundColor: '#1a1d24' }}
               />
             </div>
           </>
@@ -682,8 +686,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={teacherName}
                   onChange={(e) => setTeacherName(e.target.value)}
                   placeholder=""
-                  className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-blue-500 font-medium"
-                  style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-blue-500 font-medium"
+                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
 
@@ -698,8 +702,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={teacherEmail}
                   onChange={(e) => setTeacherEmail(e.target.value)}
                   placeholder=""
-                  className="w-full h-9 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-blue-500 font-medium"
-                  style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-blue-500 font-medium"
+                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
             </div>
@@ -711,12 +715,12 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 หมายเหตุคลาสเรียน / วัตถุประสงค์
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 value={teacherNote}
                 onChange={(e) => setTeacherNote(e.target.value)}
                 placeholder=""
-                className="w-full bg-[#1a1d24] border border-[#2d2d34] rounded-xl p-2.5 text-[15px] min-h-[66px] text-white focus:outline-none focus:border-blue-500 font-medium resize-none"
-                style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
+                className="w-full bg-[#1a1d24] border border-[#2d2d34] rounded-xl p-2.5 text-[15px] text-white focus:outline-none focus:border-blue-500 font-medium resize-none"
+                style={{ height: '90px', color: '#ffffff', backgroundColor: '#1a1d24' }}
               />
             </div>
           </>
@@ -755,7 +759,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           type="submit"
           disabled={isConflict || isSubmitting}
           id="submit-unified-booking-btn"
-          className={`w-full py-3 rounded-xl font-extrabold text-[16px] transition-all flex items-center justify-center gap-2 ${
+          style={{ height: '50px' }}
+          className={`w-full h-[50px] py-3 rounded-xl font-extrabold text-[16px] transition-all flex items-center justify-center gap-2 ${
             isConflict
               ? "bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed shadow-none opacity-60 select-none"
               : mode === 'teacher'

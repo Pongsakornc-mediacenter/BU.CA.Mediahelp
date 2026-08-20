@@ -40,6 +40,7 @@ import { EditBookingModal } from './components/EditBookingModal';
 import { DeleteBookingConfirmModal } from './components/DeleteBookingConfirmModal';
 import { VerifyBookingPinModal } from './components/VerifyBookingPinModal';
 import { UnifiedBookingForm } from './components/UnifiedBookingForm';
+import { BookingDetailModal } from './components/BookingDetailModal';
 import { RoomBooking, HelpCategory } from './types';
 
 const compressImage = (file: File): Promise<string> => {
@@ -1267,7 +1268,10 @@ export default function App() {
                   </div>
 
                   {/* RIGHT COLUMN: Weekly Schedule Calendar Grid (lg:col-span-8) */}
-                  <div className="lg:col-span-8 bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-2xl shadow-2xl space-y-3">
+                  <div 
+                    className="lg:col-span-8 bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-2xl shadow-2xl space-y-3 overflow-y-auto"
+                    style={{ height: '880px' }}
+                  >
                     {/* Navigation controls for weeks */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                       <div className="flex items-center gap-2">
@@ -1358,12 +1362,12 @@ export default function App() {
                             ];
 
                             return (
-                              <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[94px]">
+                              <tr key={dayInfo.dayName} className="border-b border-[#2d2d34] bg-[#16161a] hover:bg-[#1b1b21] transition-colors h-[116px]">
                                 {/* Day Name and Date */}
-                                <td className="py-1 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[94px] max-h-[94px] w-[12%] align-middle box-border">
-                                  <div className="flex flex-col justify-center items-center h-full w-full overflow-hidden">
-                                    <div className={`text-[16px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
-                                    <div className="text-[16px] text-slate-400 font-semibold mt-0.5 truncate w-full">{dayInfo.displayDate}</div>
+                                <td className="py-1 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[116px] max-h-[116px] w-[12%] align-middle box-border">
+                                  <div className="flex flex-col justify-center items-center h-full w-full overflow-hidden gap-1">
+                                    <div className={`text-[17px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
+                                    <div className="text-[14px] text-slate-300 font-semibold truncate w-full">{dayInfo.displayDate}</div>
                                   </div>
                                 </td>
 
@@ -1415,7 +1419,7 @@ export default function App() {
                                           <td
                                             key={`${slot}_span_${i}`}
                                             colSpan={spanCount}
-                                            className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[94px] max-h-[94px] box-border"
+                                            className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[116px] max-h-[116px] box-border"
                                           >
                                             <div
                                               onClick={(e) => {
@@ -1432,19 +1436,19 @@ export default function App() {
                                                   booking: b
                                                 });
                                               }}
-                                              style={{ padding: '4px 8px 4px 10px' }}
-                                              className="relative px-2 py-1 pl-2.5 rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-[#2a0c44] via-[#1a0833] to-[#2a0c44] hover:from-[#361056] hover:to-[#220a42] text-center flex flex-col justify-between items-center h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 shadow-[0_0_18px_rgba(168,85,247,0.4)] overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-400/60"
+                                              style={{ padding: '6px 10px 6px 12px' }}
+                                              className="relative px-2.5 py-1.5 pl-3 rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-[#2a0c44] via-[#1a0833] to-[#2a0c44] hover:from-[#361056] hover:to-[#220a42] text-center flex flex-col justify-between items-center h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 shadow-[0_0_18px_rgba(168,85,247,0.4)] overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-400/60"
                                             >
                                               {/* Left thick accent neon gradient line */}
                                               <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl bg-gradient-to-b from-fuchsia-400 via-purple-300 to-indigo-400" />
 
-                                              <div className="flex flex-col items-center justify-between h-full w-full min-w-0 px-1 overflow-hidden">
+                                              <div className="flex flex-col items-center justify-between h-full w-full min-w-0 px-1 overflow-hidden py-0.5">
                                                 <div 
-                                                  className="flex items-center gap-1 font-black !text-[13px] text-purple-100 truncate w-full justify-center leading-[1.2]"
-                                                  style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                                  className="flex items-center gap-1 font-black !text-[14px] text-purple-100 truncate w-full justify-center leading-[1.2]"
+                                                  style={{ fontSize: '14px', lineHeight: '1.2' }}
                                                 >
-                                                  <span className="text-[13px] shrink-0">🎓</span>
-                                                  <span className="truncate !text-[13px]" style={{ fontSize: '13px' }}>{displaySubject}</span>
+                                                  <span className="text-[14px] shrink-0">🎓</span>
+                                                  <span className="truncate !text-[14px]" style={{ fontSize: '14px' }}>{displaySubject}</span>
                                                 </div>
                                                 <div 
                                                   className="font-bold !text-[13px] text-[#ef8840] truncate w-full leading-[1.2]"
@@ -1453,8 +1457,8 @@ export default function App() {
                                                   อาจารย์ผู้สอน: {instructorName}
                                                 </div>
                                                 <div 
-                                                  className="inline-flex items-center gap-1 bg-purple-900/90 border border-purple-400/50 text-purple-200 !text-[11px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
-                                                  style={{ fontSize: '11px' }}
+                                                  className="inline-flex items-center gap-1 bg-purple-900/90 border border-purple-400/50 text-purple-200 !text-[12px] font-extrabold px-2 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
+                                                  style={{ fontSize: '12px' }}
                                                 >
                                                   <span className="truncate">⏱️ {slotSpanText}</span>
                                                 </div>
@@ -1532,7 +1536,7 @@ export default function App() {
                                         renderedCells.push(
                                           <td 
                                             key={slot} 
-                                            className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[94px] max-h-[94px] w-[11%] box-border"
+                                            className="p-1 border-r border-[#2d2d34] text-left align-top bg-[#16161a] transition-all relative group h-[116px] max-h-[116px] w-[11%] box-border"
                                           >
                                             <div 
                                               onClick={(e) => {
@@ -1549,8 +1553,8 @@ export default function App() {
                                                   booking: b
                                                 });
                                               }}
-                                              style={{ padding: '4px 8px 4px 10px' }}
-                                              className={`relative px-2 py-1 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 overflow-hidden cursor-pointer ${roomTheme.cardBg} ${roomTheme.cardBorder} ${roomTheme.cardGlow} group/card`}
+                                              style={{ padding: '6px 8px 6px 10px' }}
+                                              className={`relative px-2 py-1.5 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 overflow-hidden cursor-pointer ${roomTheme.cardBg} ${roomTheme.cardBorder} ${roomTheme.cardGlow} group/card`}
                                             >
                                               <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl ${roomTheme.cardBar}`} />
                                               <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
@@ -1598,15 +1602,15 @@ export default function App() {
                                       renderedCells.push(
                                         <td 
                                           key={slot} 
-                                          className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[94px] max-h-[94px] w-[11%] box-border"
+                                          className="p-1 border-r border-[#2d2d34] group bg-[#16161a] transition-all duration-300 text-center h-[116px] max-h-[116px] w-[11%] box-border"
                                         >
-                                          <div className="p-1 rounded-lg border border-dashed border-[#2d2d34] bg-[#0e0e11]/20 text-center flex items-center justify-center h-[84px] min-h-[84px] max-h-[84px] w-full transition-all duration-300 group-hover:border-slate-500/30 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden">
-                                            <div className="relative flex items-center justify-center select-none w-full gap-1 overflow-hidden truncate">
-                                              <span className="text-xs opacity-30 group-hover:scale-110 transition-transform duration-300 shrink-0">🗓️</span>
-                                              <span className="text-[10px] text-slate-500 font-bold tracking-wide group-hover:text-slate-400 transition-colors truncate">
-                                                ว่าง
-                                              </span>
+                                          <div className="p-1 rounded-xl border border-dashed border-[#2d2d34] bg-[#0e0e11]/30 text-center flex flex-col items-center justify-center h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 group-hover:border-slate-500/40 group-hover:bg-[#1c1c24] shadow-sm overflow-hidden gap-1.5">
+                                            <div className="w-6 h-6 rounded-full bg-slate-800/60 flex items-center justify-center text-xs opacity-60 group-hover:scale-110 group-hover:bg-slate-700/80 transition-all duration-300">
+                                              🗓️
                                             </div>
+                                            <span className="text-[12px] text-slate-400 font-bold tracking-wider group-hover:text-slate-300 transition-colors">
+                                              ว่าง
+                                            </span>
                                           </div>
                                         </td>
                                       );
