@@ -1467,41 +1467,29 @@ export default function App() {
                                       } else {
                                         // STANDARD SINGLE-SLOT STUDENT BOOKING
                                         const roomTheme = getRoomTheme(activeScheduleRoom);
-                                        let displaySubject = b.subject || "";
-                                        let displayPurpose = b.bookingPurpose || "";
-                                        if (!displaySubject && b.purpose) {
-                                          if (b.purpose.includes("(")) {
-                                            const match = b.purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                                            if (match) {
-                                              displaySubject = match[1].trim();
-                                              displayPurpose = match[2].trim();
-                                            } else {
-                                              displaySubject = b.purpose;
-                                            }
-                                          } else {
-                                            displaySubject = b.purpose;
-                                          }
+                                        let fullSubjectText = b.subject || "";
+                                        let displayPurpose = b.bookingPurpose || b.purpose || "";
+                                        if (!fullSubjectText && b.purpose) {
+                                          fullSubjectText = b.purpose;
+                                        }
+                                        if (!fullSubjectText) {
+                                          fullSubjectText = "BRS 311";
                                         }
 
-                                        let subjectCode = "BRS311";
+                                        let subjectCode = "";
                                         let subjectTitle = "";
-                                        if (displaySubject) {
-                                          const codeMatch = displaySubject.match(/^([A-Za-z]{2,4}\d{3,4})[\s:-]*(.*)$/);
-                                          if (codeMatch) {
-                                            subjectCode = codeMatch[1].toUpperCase();
-                                            subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
-                                          } else {
-                                            if (displaySubject.length <= 8) {
-                                              subjectCode = displaySubject;
-                                              subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
-                                            } else {
-                                              subjectCode = "WORK";
-                                              subjectTitle = displaySubject;
-                                            }
-                                          }
+                                        const codeMatch = fullSubjectText.match(/^([A-Za-z]{2,4}\s*\d{3,4})[\s:-]*(.*)$/);
+                                        if (codeMatch) {
+                                          subjectCode = codeMatch[1].toUpperCase();
+                                          subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
                                         } else {
-                                          subjectCode = "BRS311";
-                                          subjectTitle = displayPurpose || "ฝึกจัดรายการ";
+                                          if (fullSubjectText.length <= 10) {
+                                            subjectCode = fullSubjectText;
+                                            subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
+                                          } else {
+                                            subjectCode = "";
+                                            subjectTitle = fullSubjectText;
+                                          }
                                         }
 
                                         const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
@@ -1518,7 +1506,7 @@ export default function App() {
                                         }
 
                                         const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
-                                        const cardSubject = subjectCode || displaySubject || "BRS 311";
+                                        const cardSubject = subjectCode ? (subjectTitle ? `${subjectCode}: ${subjectTitle}` : subjectCode) : subjectTitle;
                                         const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
                                         const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
 
@@ -1566,19 +1554,31 @@ export default function App() {
                                             >
                                               <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl ${roomTheme.cardBar}`} />
                                               <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
-                                                <div 
-                                                  className={`font-extrabold !text-[13px] tracking-normal uppercase truncate w-full overflow-hidden text-ellipsis leading-[1.2] ${roomTheme.cardSubject} group-hover/card:!text-white transition-colors`}
-                                                  style={{ fontSize: '13px', lineHeight: '1.2' }}
-                                                >
-                                                  {subjectCode}
-                                                </div>
-                                                <div 
-                                                  className={`font-medium !text-[13px] ${roomTheme.cardTitle} group-hover/card:!text-white leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors`} 
-                                                  style={{ fontSize: '13px', lineHeight: '1.2' }}
-                                                  title={subjectTitle}
-                                                >
-                                                  {subjectTitle}
-                                                </div>
+                                                {subjectCode ? (
+                                                  <>
+                                                    <div 
+                                                      className={`font-extrabold !text-[13px] tracking-normal uppercase truncate w-full overflow-hidden text-ellipsis leading-[1.2] ${roomTheme.cardSubject} group-hover/card:!text-white transition-colors`}
+                                                      style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                                    >
+                                                      {subjectCode}
+                                                    </div>
+                                                    <div 
+                                                      className={`font-medium !text-[13px] ${roomTheme.cardTitle} group-hover/card:!text-white leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors`} 
+                                                      style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                                      title={subjectTitle}
+                                                    >
+                                                      {subjectTitle}
+                                                    </div>
+                                                  </>
+                                                ) : (
+                                                  <div 
+                                                    className={`font-bold !text-[13px] ${roomTheme.cardTitle} group-hover/card:!text-white leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors`} 
+                                                    style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                                    title={subjectTitle}
+                                                  >
+                                                    {subjectTitle}
+                                                  </div>
+                                                )}
                                               </div>
                                               <div className={`h-[1px] ${roomTheme.cardDivider} group-hover/card:bg-white/30 w-full my-0.5 transition-colors shrink-0`} />
                                               <div 
