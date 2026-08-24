@@ -19,10 +19,15 @@ export interface BookingEmailDetails {
   courseName?: string;
   course_name?: string;
   course?: string;
+  bookingTitle?: string;
+  title?: string;
+  booking_title?: string;
   purpose?: string;
   bookingPurpose?: string;
   phone?: string;
   pinCode: string;
+  userType?: 'teacher' | 'student' | string;
+  isTeacher?: boolean;
 }
 
 export interface PinReminderDetails {
@@ -35,7 +40,12 @@ export interface PinReminderDetails {
   date: string;
   timeSlot: string;
   subject?: string;
+  bookingTitle?: string;
+  title?: string;
+  booking_title?: string;
   pinCode: string;
+  userType?: 'teacher' | 'student' | string;
+  isTeacher?: boolean;
 }
 
 export interface EmailJSConfig {
@@ -97,7 +107,19 @@ export async function sendBookingEmail(
 
     const { serviceId, templateId, publicKey } = getEmailConfig();
 
-    const userDisplayName = details.userName || details.name || details.studentName || 'ผู้ใช้บริการ';
+    const isTeacher =
+      details.userType === 'teacher' ||
+      details.isTeacher === true ||
+      details.studentId === 'TEACHER' ||
+      details.studentId === 'อาจารย์ประจำวิชา' ||
+      (details.purpose && details.purpose.includes('สำหรับการเรียนการสอน')) ||
+      (details.subject && details.subject.includes('สำหรับการเรียนการสอน')) ||
+      details.studentName === 'อาจารย์ผู้สอน';
+
+    let userDisplayName = details.userName || details.name || details.studentName || (isTeacher ? 'อาจารย์ผู้สอน' : 'ผู้ใช้บริการ');
+    if (isTeacher && (!userDisplayName || userDisplayName === 'ผู้ใช้บริการ' || userDisplayName === '-')) {
+      userDisplayName = 'อาจารย์ผู้สอน';
+    }
     
     // 1. ดึงวันที่เดิมมาแปลงเป็น วัน/เดือน/ปี (DD/MM/YYYY)
     const rawDate = details.date || details.bookingDate || (details as any).booking_date || new Date().toISOString().split('T')[0];
@@ -109,27 +131,91 @@ export async function sendBookingEmail(
       }
     }
 
-    const courseNameValue = details.courseName || details.course || details.subject || 'BRS311';
-    const purposeValue = details.purpose || details.bookingPurpose || '-';
+    let courseNameValue = details.courseName || details.course || details.subject || 'BRS311';
+    courseNameValue = courseNameValue.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').trim();
 
-    // 2. นำ formattedDate ไปใส่ใน templateParams
+    // 2. ดึงชื่อรายการ (booking_title)
+    let bookingTitleValue = details.bookingTitle || details.title || details.booking_title || '';
+    if (!bookingTitleValue && details.purpose) {
+      const headerMatch = details.purpose.match(/หัวข้อ:\s*([^|)]+)/i);
+      if (headerMatch) {
+        bookingTitleValue = headerMatch[1].trim();
+      } else {
+        const parenMatch = details.purpose.match(/\((.*?)\)/);
+        if (parenMatch) {
+          const cleanInside = parenMatch[1].replace(/วัตถุประสงค์:\s*[^|)]+/i, '').replace(/\|/g, '').trim();
+          if (cleanInside && !cleanInside.includes('สำหรับการเรียนการสอน')) {
+            bookingTitleValue = cleanInside;
+          }
+        }
+      }
+    }
+
+    if (isTeacher) {
+      if (!bookingTitleValue || bookingTitleValue === 'จัดรายการ') {
+        bookingTitleValue = 'สำหรับการเรียนการสอน';
+      }
+    } else {
+      if (!bookingTitleValue) {
+        bookingTitleValue = 'จัดรายการ';
+      }
+    }
+
+    // 3. ดึงวัตถุประสงค์ (purpose)
+    let purposeValue = details.bookingPurpose || details.purpose || '';
+    if (purposeValue) {
+      const purposeFieldMatch = purposeValue.match(/วัตถุประสงค์:\s*([^|)]+)/i);
+      if (purposeFieldMatch) {
+        purposeValue = purposeFieldMatch[1].trim();
+      } else {
+        purposeValue = purposeValue
+          .replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '')
+          .replace(/หัวข้อ:\s*[^|)]+/gi, '')
+          .replace(/\|/g, '')
+          .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+          .replace(/^\((.*)\)$/, '$1')
+          .trim();
+      }
+    }
+
+    if (isTeacher) {
+      if (!purposeValue || purposeValue === '-' || purposeValue === 'จัดรายการ') {
+        purposeValue = 'สำหรับการเรียนการสอน';
+      }
+    } else {
+      if (!purposeValue || purposeValue === '-') {
+        purposeValue = 'ฝึกปฏิบัติการจัดรายการ';
+      }
+    }
+
+    let studentIdValue = details.studentId || (isTeacher ? 'อาจารย์ประจำวิชา' : '-');
+    if (isTeacher && (!studentIdValue || studentIdValue === 'TEACHER' || studentIdValue === '-')) {
+      studentIdValue = 'อาจารย์ประจำวิชา';
+    }
+
+    // 4. นำค่าทั้งหมดใส่ใน templateParams
     const templateParams = {
-      // Exact required parameters
+      // Required parameters matching user specifications
+      room_name: details.roomName || '-',
+      date: formattedDate, // วันที่ DD/MM/YYYY
+      time_slot: details.timeSlot || '-',
+      subject: courseNameValue,
+      booking_title: bookingTitleValue, // ชื่อรายการ (เพิ่มใหม่)
+      purpose: purposeValue, // วัตถุประสงค์
+      student_id: studentIdValue, // รหัสนักศึกษา/อาจารย์
+      phone: details.phone || '-', // เบอร์โทร
+      pin_code: details.pinCode || '1234', // รหัส PIN
+
+      // Extended & compatible aliases for EmailJS templates
       email: details.toEmail,
       name: userDisplayName,
       user_name: userDisplayName,
-      room_name: details.roomName || '-',
-      date: formattedDate, // <--- ใช้วันที่ที่สลับเป็น DD/MM/YYYY เรียบร้อยแล้ว
       booking_date: formattedDate,
-      time_slot: details.timeSlot || '-',
-      subject: courseNameValue,
       course_name: courseNameValue,
-      purpose: purposeValue,
-      student_id: details.studentId || '-',
-      phone: details.phone || '-',
-      pin_code: details.pinCode || '1234',
-
-      // Compatible aliases to guarantee 100% template compatibility
+      bookingTitle: bookingTitleValue,
+      title: bookingTitleValue,
+      program_title: bookingTitleValue,
+      program_name: bookingTitleValue,
       course: courseNameValue,
       to_email: details.toEmail,
       recipient_email: details.toEmail,
@@ -197,7 +283,18 @@ export async function sendPinReminderEmail(
     const { serviceId, templateId, pinTemplateId, publicKey } = getEmailConfig();
     const effectiveTemplateId = pinTemplateId || templateId;
 
-    const userDisplayName = details.userName || details.name || details.studentName || 'ผู้ใช้บริการ';
+    const isTeacher =
+      details.userType === 'teacher' ||
+      details.isTeacher === true ||
+      details.studentId === 'TEACHER' ||
+      details.studentId === 'อาจารย์ประจำวิชา' ||
+      (details.subject && details.subject.includes('สำหรับการเรียนการสอน')) ||
+      details.studentName === 'อาจารย์ผู้สอน';
+
+    let userDisplayName = details.userName || details.name || details.studentName || (isTeacher ? 'อาจารย์ผู้สอน' : 'ผู้ใช้บริการ');
+    if (isTeacher && (!userDisplayName || userDisplayName === 'ผู้ใช้บริการ' || userDisplayName === '-')) {
+      userDisplayName = 'อาจารย์ผู้สอน';
+    }
 
     // แปลงวันที่เป็น DD/MM/YYYY
     const rawDate = details.date || (details as any).bookingDate || new Date().toISOString().split('T')[0];
@@ -209,7 +306,30 @@ export async function sendPinReminderEmail(
       }
     }
 
+    let bookingTitleValue = details.bookingTitle || details.title || details.booking_title || '';
+    if (isTeacher) {
+      if (!bookingTitleValue || bookingTitleValue === 'จัดรายการ') {
+        bookingTitleValue = 'สำหรับการเรียนการสอน';
+      }
+    } else if (!bookingTitleValue) {
+      bookingTitleValue = 'จัดรายการ';
+    }
+
+    let studentIdValue = details.studentId || (isTeacher ? 'อาจารย์ประจำวิชา' : '-');
+    if (isTeacher && (!studentIdValue || studentIdValue === 'TEACHER' || studentIdValue === '-')) {
+      studentIdValue = 'อาจารย์ประจำวิชา';
+    }
+
     const templateParams = {
+      room_name: details.roomName || '-',
+      date: formattedDate,
+      time_slot: details.timeSlot || '-',
+      subject: (details.subject || 'BRS311').replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').trim(),
+      booking_title: bookingTitleValue,
+      student_id: studentIdValue,
+      pin_code: details.pinCode || '1234',
+
+      // Compatibility fields
       to_email: details.toEmail,
       email: details.toEmail,
       recipient_email: details.toEmail,
@@ -219,13 +339,9 @@ export async function sendPinReminderEmail(
       to_name: userDisplayName,
       student_name: userDisplayName,
       studentName: userDisplayName,
-      student_id: details.studentId || '-',
-      room_name: details.roomName || '-',
-      date: formattedDate,
       booking_date: formattedDate,
-      time_slot: details.timeSlot || '-',
-      subject: details.subject || 'BRS311',
-      pin_code: details.pinCode || '1234',
+      bookingTitle: bookingTitleValue,
+      title: bookingTitleValue,
       pin: details.pinCode || '1234',
       current_year: new Date().getFullYear().toString()
     };

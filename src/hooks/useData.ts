@@ -64,6 +64,24 @@ export function formatHoursDisplay(hours: number): string {
   return Number.isInteger(hours) ? hours.toString() : hours.toFixed(1);
 }
 
+export function formatTimestampDisplay(isoStr?: string): string {
+  if (!isoStr) return "-";
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const day = pad(d.getDate());
+    const month = pad(d.getMonth() + 1);
+    const year = d.getFullYear();
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    const seconds = pad(d.getSeconds());
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds} น.`;
+  } catch {
+    return isoStr;
+  }
+}
+
 export function isTimeOverlapping(slotA: string, slotB: string): boolean {
   const rangeA = parseTimeSlotRange(slotA);
   const rangeB = parseTimeSlotRange(slotB);
@@ -1079,13 +1097,25 @@ export function useData() {
       return { success: false, message: OVERLAP_ERROR_MESSAGE };
     }
 
+    const nowIso = new Date().toISOString();
+    const isTeacher = studentIdInput === 'TEACHER' || (purpose && purpose.includes('สำหรับการเรียนการสอนอาจารย์'));
+
     let subject = "";
-    let bookingPurpose = "";
+    let extractedBookingTitle = "";
+    let extractedBookingPurpose = "";
+
     if (purpose && purpose.includes("(")) {
-      const match = purpose.match(/^(.*?)\s*\((.*?)\)\s*$/);
+      const match = purpose.match(/^(.*?)\s*\((.*?)\)/);
       if (match) {
         subject = match[1].trim();
-        bookingPurpose = match[2].trim();
+        const inside = match[2].trim();
+        const headerMatch = purpose.match(/หัวข้อ:\s*([^|)]+)/i);
+        const purposeMatch = purpose.match(/วัตถุประสงค์:\s*([^|)]+)/i);
+        if (headerMatch) extractedBookingTitle = headerMatch[1].trim();
+        if (purposeMatch) extractedBookingPurpose = purposeMatch[1].trim();
+        if (!extractedBookingPurpose && !headerMatch) {
+          extractedBookingPurpose = inside.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').trim();
+        }
       } else {
         subject = purpose;
       }
@@ -1093,26 +1123,37 @@ export function useData() {
       subject = purpose || "";
     }
 
+    if (isTeacher) {
+      if (!extractedBookingTitle) extractedBookingTitle = "สำหรับการเรียนการสอน";
+      if (!extractedBookingPurpose) extractedBookingPurpose = "สำหรับการเรียนการสอน";
+    }
+
+    const finalBookingTitle = extractedBookingTitle || (isTeacher ? "สำหรับการเรียนการสอน" : "จัดรายการ");
+    const finalBookingPurpose = extractedBookingPurpose || (isTeacher ? "สำหรับการเรียนการสอน" : "ฝึกปฏิบัติการจัดรายการ");
+
     const finalEmail = (emailInput && emailInput.trim()) || currentUser.email || "";
     const finalPin = (pinCodeInput && pinCodeInput.trim()) || "1234";
 
     const bookingPayload: Omit<RoomBooking, 'id'> = {
       studentId: currentUser.uid || "student",
-      studentName: studentNameInput && studentNameInput.trim() ? studentNameInput.trim() : (currentUser.name || "นักศึกษา"),
+      studentName: studentNameInput && studentNameInput.trim() ? studentNameInput.trim() : (isTeacher ? "อาจารย์ผู้สอน" : (currentUser.name || "นักศึกษา")),
       studentEmail: finalEmail,
       email: finalEmail,
       pinCode: finalPin,
       roomName: roomName || "ห้องจัดรายการ 1",
       date: date || "",
       timeSlot: timeSlot || "08:30 - 09:30",
-      purpose: purpose || "จัดรายการ",
-      studentIdInput: studentIdInput || "",
+      purpose: purpose || (isTeacher ? "สำหรับการเรียนการสอน" : "จัดรายการ"),
+      bookingTitle: finalBookingTitle,
+      studentIdInput: studentIdInput || (isTeacher ? "TEACHER" : ""),
       phone: phone || "",
       status: 'approved',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: nowIso,
+      submittedAt: nowIso,
+      updatedAt: nowIso,
       subject: subject || 'BRS311',
-      bookingPurpose: bookingPurpose || "จัดรายการ"
+      bookingPurpose: finalBookingPurpose,
+      userType: isTeacher ? 'teacher' : 'student'
     };
 
     const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
@@ -1141,7 +1182,7 @@ export function useData() {
         studentName: bookingPayload.studentName,
         userName: bookingPayload.studentName,
         name: bookingPayload.studentName,
-        studentId: studentIdInput || "-",
+        studentId: studentIdInput || (isTeacher ? "อาจารย์ประจำวิชา" : "-"),
         roomName: roomName || "ห้องจัดรายการ 1",
         date: date || new Date().toISOString().split('T')[0],
         bookingDate: date || new Date().toISOString().split('T')[0],
@@ -1149,10 +1190,15 @@ export function useData() {
         course_name: subject || 'BRS311',
         courseName: subject || 'BRS311',
         subject: subject || 'BRS311',
-        purpose: bookingPurpose || (purpose && !purpose.includes("(") ? purpose : "จัดรายการ"),
-        bookingPurpose: bookingPurpose || (purpose && !purpose.includes("(") ? purpose : "จัดรายการ"),
+        bookingTitle: finalBookingTitle,
+        title: finalBookingTitle,
+        booking_title: finalBookingTitle,
+        purpose: finalBookingPurpose,
+        bookingPurpose: finalBookingPurpose,
         phone: phone || "-",
-        pinCode: finalPin
+        pinCode: finalPin,
+        userType: isTeacher ? 'teacher' : 'student',
+        isTeacher
       }).catch(() => {
         // Safe swallow
       });

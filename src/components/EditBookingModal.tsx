@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Calendar, Clock, BookOpen, User, Phone, FileText, Check, AlertCircle } from 'lucide-react';
+import { X, Calendar, Clock, BookOpen, User, Phone, FileText, Check, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { RoomBooking, Course } from '../types';
 import { DEFAULT_COURSES, getCourseLabel, isTimeOverlapping } from '../hooks/useData';
 
@@ -26,7 +26,7 @@ const AVAILABLE_ROOMS = [
   "ห้องยูทูป 2"
 ];
 
-const STANDARD_TIMESLOTS = [
+const HOURLY_TIMESLOTS = [
   { label: "08:30 - 09:30", value: "08:30 - 09:30" },
   { label: "09:30 - 10:30", value: "09:30 - 10:30" },
   { label: "10:30 - 11:30", value: "10:30 - 11:30" },
@@ -34,10 +34,25 @@ const STANDARD_TIMESLOTS = [
   { label: "13:00 - 14:00", value: "13:00 - 14:00" },
   { label: "14:00 - 15:00", value: "14:00 - 15:00" },
   { label: "15:00 - 16:00", value: "15:00 - 16:00" },
-  { label: "16:00 - 17:00", value: "16:00 - 17:00" },
+  { label: "16:00 - 17:00", value: "16:00 - 17:00" }
+];
+
+const BLOCK_TEACHER_TIMESLOTS = [
   { label: "08:30 - 12:30 (คาบเช้า)", value: "08:30 - 12:30" },
   { label: "13:00 - 17:00 (คาบบ่าย)", value: "13:00 - 17:00" },
   { label: "08:30 - 17:00 (เหมาทั้งวัน)", value: "08:30 - 17:00" }
+];
+
+const STANDARD_TIMESLOTS = [
+  ...HOURLY_TIMESLOTS,
+  ...BLOCK_TEACHER_TIMESLOTS
+];
+
+const STANDARD_PURPOSES = [
+  "จัดรายการส่งในรายวิชา",
+  "ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว",
+  "งานกิจกรรมคณะ / มหาวิทยาลัย",
+  "สำหรับการเรียนการสอน"
 ];
 
 export const EditBookingModal: React.FC<EditBookingModalProps> = ({
@@ -56,10 +71,42 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   const [isCustomSlot, setIsCustomSlot] = useState<boolean>(false);
   const [selectedCourse, setSelectedCourse] = useState<string>("BRS311");
   const [customSubject, setCustomSubject] = useState<string>("");
+  const [bookingTitle, setBookingTitle] = useState<string>("");
   const [studentName, setStudentName] = useState<string>("");
   const [studentIdInput, setStudentIdInput] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
-  const [purpose, setPurpose] = useState<string>("");
+  const [showPhone, setShowPhone] = useState<boolean>(false);
+  const [purposeDropdown, setPurposeDropdown] = useState<string>("จัดรายการส่งในรายวิชา");
+
+  // Determine if booking is teacher or student
+  const isTeacher = useMemo(() => {
+    if (!booking) return false;
+    const uType = (booking.userType || (booking as any).role || '').toLowerCase();
+    return (
+      uType === 'teacher' ||
+      booking.studentId === 'TEACHER' ||
+      booking.studentIdInput === 'TEACHER' ||
+      booking.studentIdInput === 'อาจารย์ประจำวิชา' ||
+      (booking.purpose && booking.purpose.includes('สำหรับการเรียนการสอนอาจารย์')) ||
+      (booking.purpose && booking.purpose.includes('สำหรับการเรียนการสอน')) ||
+      booking.studentName === 'อาจารย์ผู้สอน'
+    );
+  }, [booking]);
+
+  // Format masked phone number (064-***-****)
+  const maskPhoneNumber = (phoneStr: string) => {
+    if (!phoneStr || phoneStr === "-" || phoneStr === "ไม่ระบุ") return phoneStr;
+    const clean = phoneStr.trim();
+    const digits = clean.replace(/\D/g, '');
+    if (digits.length >= 3) {
+      return `${digits.slice(0, 3)}-***-****`;
+    }
+    if (clean.length > 0) {
+      return `${clean.slice(0, Math.min(3, clean.length))}-***-****`;
+    }
+    return '064-***-****';
+  };
+
   const [saving, setSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
@@ -68,20 +115,46 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     if (booking && isOpen) {
       setRoomName(booking.roomName || "ห้องจัดรายการ 1");
       setDate(booking.date || "");
+      setShowPhone(false);
       
+      const checkTeacher =
+        (booking.userType || (booking as any).role || '').toLowerCase() === 'teacher' ||
+        booking.studentId === 'TEACHER' ||
+        booking.studentIdInput === 'TEACHER' ||
+        booking.studentIdInput === 'อาจารย์ประจำวิชา' ||
+        (booking.purpose && booking.purpose.includes('สำหรับการเรียนการสอนอาจารย์')) ||
+        (booking.purpose && booking.purpose.includes('สำหรับการเรียนการสอน')) ||
+        booking.studentName === 'อาจารย์ผู้สอน';
+
       const normalizedSlot = (booking.timeSlot || "").replace(/\./g, ':').trim();
       const matchedSlot = STANDARD_TIMESLOTS.find(s => s.value === normalizedSlot || s.label.includes(normalizedSlot));
       
       if (matchedSlot) {
-        setTimeSlot(matchedSlot.value);
+        if (!checkTeacher && BLOCK_TEACHER_TIMESLOTS.some(b => b.value === matchedSlot.value)) {
+          // If a student had a block timeslot somehow, default to first hourly slot
+          setTimeSlot(HOURLY_TIMESLOTS[0].value);
+        } else {
+          setTimeSlot(matchedSlot.value);
+        }
         setIsCustomSlot(false);
         setCustomTimeSlot("");
       } else if (booking.timeSlot) {
-        setTimeSlot(booking.timeSlot);
-        setIsCustomSlot(true);
-        setCustomTimeSlot(booking.timeSlot);
+        if (checkTeacher) {
+          setTimeSlot(booking.timeSlot);
+          setIsCustomSlot(true);
+          setCustomTimeSlot(booking.timeSlot);
+        } else {
+          const hourlyMatch = HOURLY_TIMESLOTS.find(s => s.value === normalizedSlot || s.label.includes(normalizedSlot));
+          if (hourlyMatch) {
+            setTimeSlot(hourlyMatch.value);
+          } else {
+            setTimeSlot(HOURLY_TIMESLOTS[0].value);
+          }
+          setIsCustomSlot(false);
+          setCustomTimeSlot("");
+        }
       } else {
-        setTimeSlot("08:30 - 09:30");
+        setTimeSlot(HOURLY_TIMESLOTS[0].value);
         setIsCustomSlot(false);
       }
 
@@ -95,6 +168,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           subj = booking.purpose;
         }
       }
+      subj = subj.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').trim();
 
       const foundCourse = courses.find(c => c.code === subj || subj.startsWith(c.code));
       if (foundCourse) {
@@ -108,13 +182,65 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         setCustomSubject("");
       }
 
+      // Booking Title (ชื่อรายการ) extraction
+      let title = booking.bookingTitle ? booking.bookingTitle.trim() : '';
+      if (!title && booking.purpose) {
+        const headerMatch = booking.purpose.match(/หัวข้อ:\s*([^|)]+)/i);
+        if (headerMatch) {
+          title = headerMatch[1].trim();
+        } else {
+          const parenMatch = booking.purpose.match(/\((.*?)\)/);
+          if (parenMatch) {
+            const cleanInside = parenMatch[1].replace(/วัตถุประสงค์:\s*[^|)]+/i, '').replace(/\|/g, '').trim();
+            if (cleanInside && !cleanInside.includes('สำหรับการเรียนการสอน')) {
+              title = cleanInside;
+            }
+          }
+        }
+      }
+
+      if (checkTeacher) {
+        if (!title || title === 'จัดรายการ') {
+          title = 'สำหรับการเรียนการสอน';
+        }
+      }
+      setBookingTitle(title);
+
       setStudentName(booking.studentNameInput || booking.studentName || "");
       setStudentIdInput(booking.studentIdInput || booking.studentId || "");
       setPhone(booking.phone || "");
       
-      let cleanPurp = booking.bookingPurpose || booking.purpose || "";
-      cleanPurp = cleanPurp.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/, '').trim();
-      setPurpose(cleanPurp);
+      // Purpose extraction & dropdown mapping
+      let cleanPurp = booking.bookingPurpose || "";
+      if (!cleanPurp && booking.purpose) {
+        const purposeFieldMatch = booking.purpose.match(/วัตถุประสงค์:\s*([^|)]+)/i);
+        if (purposeFieldMatch) {
+          cleanPurp = purposeFieldMatch[1].trim();
+        } else {
+          cleanPurp = booking.purpose
+            .replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '')
+            .replace(/หัวข้อ:\s*[^|)]+/gi, '')
+            .replace(/\|/g, '')
+            .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+            .replace(/^\((.*)\)$/, '$1')
+            .trim();
+        }
+      }
+
+      if (checkTeacher && (!cleanPurp || cleanPurp === 'จัดรายการ')) {
+        cleanPurp = 'สำหรับการเรียนการสอน';
+      }
+
+      if (cleanPurp && STANDARD_PURPOSES.includes(cleanPurp)) {
+        setPurposeDropdown(cleanPurp);
+      } else if (checkTeacher) {
+        setPurposeDropdown("สำหรับการเรียนการสอน");
+      } else if (cleanPurp) {
+        setPurposeDropdown(cleanPurp);
+      } else {
+        setPurposeDropdown("จัดรายการส่งในรายวิชา");
+      }
+
       setErrorMessage("");
     }
   }, [booking, isOpen, courses]);
@@ -169,13 +295,27 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
     setSaving(true);
     try {
-      const isTeacher = booking.userType === "TEACHER" || (booking.purpose && booking.purpose.includes("สำหรับการเรียนการสอนอาจารย์"));
-      
-      let compositePurpose = purpose.trim() || "จัดรายการ";
+      const finalBookingTitle = isTeacher
+        ? (bookingTitle.trim() || "สำหรับการเรียนการสอน")
+        : (bookingTitle.trim() || "จัดรายการ");
+
+      const finalPurpose = purposeDropdown.trim() || (isTeacher ? "สำหรับการเรียนการสอน" : "จัดรายการส่งในรายวิชา");
+
+      let compositePurpose = "";
       if (isTeacher) {
-        compositePurpose = `${finalSubject} (${compositePurpose}) (สำหรับการเรียนการสอนอาจารย์)`;
+        compositePurpose = `${finalSubject} (${finalBookingTitle}) (สำหรับการเรียนการสอนอาจารย์)`;
       } else {
-        compositePurpose = `${finalSubject} (${compositePurpose})`;
+        const parts: string[] = [];
+        if (finalBookingTitle && finalBookingTitle !== "จัดรายการ") {
+          parts.push(`หัวข้อ: ${finalBookingTitle}`);
+        }
+        if (finalPurpose) {
+          parts.push(`วัตถุประสงค์: ${finalPurpose}`);
+        }
+        if (parts.length === 0) {
+          parts.push("จัดรายการ");
+        }
+        compositePurpose = `${finalSubject} (${parts.join(" | ")})`;
       }
 
       const updates: Partial<RoomBooking> = {
@@ -183,11 +323,12 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         date,
         timeSlot: finalSlot,
         subject: finalSubject,
-        bookingPurpose: purpose.trim() || "จัดรายการ",
+        bookingTitle: finalBookingTitle,
+        bookingPurpose: finalPurpose,
         purpose: compositePurpose,
         studentName: studentName.trim() || booking.studentName,
         studentNameInput: studentName.trim(),
-        studentIdInput: studentIdInput.trim(),
+        studentIdInput: studentIdInput.trim() || (isTeacher ? "TEACHER" : ""),
         phone: phone.trim(),
         updatedAt: new Date().toISOString()
       };
@@ -222,20 +363,26 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative w-full max-w-lg bg-[#18181a] border border-[#3f3f46] rounded-2xl p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.95)] cursor-default my-auto text-white"
+          className="relative w-full max-w-2xl sm:max-w-3xl bg-[#18181a] border border-[#3f3f46] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.95)] cursor-default my-auto text-white"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-[#3f3f46]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center text-lg">
+          <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-[#3f3f46]">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center text-xl shadow-sm">
                 ✏️
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-black text-slate-100 font-display">
+                <h3 
+                  className="text-lg sm:text-xl font-black text-slate-100 font-display tracking-tight"
+                  style={{ color: '#ffffff' }}
+                >
                   แก้ไข / ย้ายวันเวลาการจอง
                 </h3>
-                <p className="text-[11px] text-slate-400">
+                <p 
+                  className="text-xs sm:text-sm text-slate-400 mt-0.5"
+                  style={{ fontSize: '15px' }}
+                >
                   อัปเดตข้อมูลและย้ายช่องเวลาบนตารางทันที
                 </p>
               </div>
@@ -243,31 +390,34 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             <button 
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
               title="ปิด"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
 
           {errorMessage && (
-            <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="mt-4 p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-sm flex items-center gap-2.5">
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
-            {/* 1. ห้องจัดรายการ */}
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4 sm:space-y-4.5">
+            {/* 1. เลือกห้องจัดรายการ */}
             <div>
-              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
+              <label 
+                className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                style={{ fontSize: '16px', color: '#b8b3b3' }}
+              >
                 <span>🎙️</span> 1. เลือกห้องจัดรายการ
               </label>
               <select
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
-                className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold transition-colors"
               >
                 {AVAILABLE_ROOMS.map(r => (
                   <option key={r} value={r}>{r}</option>
@@ -276,23 +426,29 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             </div>
 
             {/* 2. วันที่ต้องการจอง (Date) & 3. ช่วงเวลา (Timeslot) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                  <Calendar className="w-3.5 h-3.5 text-orange-400" /> 2. วันที่ต้องการจอง
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <Calendar className="w-4 h-4 text-orange-400" /> 2. วันที่ต้องการจอง
                 </label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-orange-400" /> 3. ช่วงเวลา
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <Clock className="w-4 h-4 text-orange-400" /> 3. ช่วงเวลา
                 </label>
                 <select
                   value={isCustomSlot ? "CUSTOM" : timeSlot}
@@ -304,27 +460,37 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                       setTimeSlot(e.target.value);
                     }
                   }}
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold transition-colors cursor-pointer"
                 >
-                  <optgroup label="ช่วงเวลารายชั่วโมง (1 ชั่วโมง)">
-                    {STANDARD_TIMESLOTS.slice(0, 8).map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="ช่วงเวลาแบบบล็อก / อาจารย์">
-                    {STANDARD_TIMESLOTS.slice(8).map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </optgroup>
-                  <option value="CUSTOM">กำหนดเวลาเอง...</option>
+                  {isTeacher ? (
+                    <>
+                      <optgroup label="ช่วงเวลารายชั่วโมง (1 ชั่วโมง)">
+                        {HOURLY_TIMESLOTS.map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="ช่วงเวลาแบบบล็อก / อาจารย์">
+                        {BLOCK_TEACHER_TIMESLOTS.map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </optgroup>
+                      <option value="CUSTOM">กำหนดเวลาเอง...</option>
+                    </>
+                  ) : (
+                    <optgroup label="ช่วงเวลารายชั่วโมง (1 ชั่วโมง)">
+                      {HOURLY_TIMESLOTS.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
             </div>
 
-            {/* Custom Timeslot input if selected */}
-            {isCustomSlot && (
+            {/* Custom Timeslot input if selected (Only for teacher) */}
+            {isTeacher && isCustomSlot && (
               <div>
-                <label className="text-xs font-semibold text-orange-300 block mb-1">
+                <label className="text-sm font-semibold text-orange-300 block mb-1.5">
                   ระบุช่วงเวลาเอง (เช่น 09:00 - 11:00)
                 </label>
                 <input
@@ -332,7 +498,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   value={customTimeSlot}
                   onChange={(e) => setCustomTimeSlot(e.target.value)}
                   placeholder="เช่น 10:00 - 12:00"
-                  className="w-full h-10 bg-[#27272a] border border-orange-500/50 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                  className="w-full h-12 bg-[#27272a] border border-orange-500/50 rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold"
                   required
                 />
               </div>
@@ -340,13 +506,16 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
 
             {/* 4. รายวิชา (Course/Subject) */}
             <div>
-              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                <BookOpen className="w-3.5 h-3.5 text-orange-400" /> 4. รายวิชา
+              <label 
+                className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                style={{ fontSize: '16px', color: '#b8b3b3' }}
+              >
+                <BookOpen className="w-4 h-4 text-orange-400" /> 4. รายวิชา
               </label>
               <select
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
-                className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold transition-colors"
               >
                 {courses.map(c => (
                   <option key={c.id || c.code} value={c.code}>
@@ -361,80 +530,141 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   value={customSubject}
                   onChange={(e) => setCustomSubject(e.target.value)}
                   placeholder="ระบุชื่อวิชาหรือหัวข้อ..."
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold mt-1.5"
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold mt-2"
                   required
                 />
               )}
             </div>
 
-            {/* 5. ข้อมูลผู้จอง (ชื่อ & รหัส & เบอร์โทร) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 5. ชื่อรายการ (Booking Title) - แสดงเฉพาะนักศึกษา ซ่อนกรณีอาจารย์ */}
+            {!isTeacher && (
               <div>
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                  <User className="w-3.5 h-3.5 text-orange-400" /> ชื่อ-นามสกุล ผู้จอง
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <FileText className="w-4 h-4 text-orange-400" /> ชื่อรายการ
+                </label>
+                <input
+                  type="text"
+                  value={bookingTitle}
+                  onChange={(e) => setBookingTitle(e.target.value)}
+                  placeholder="ระบุชื่อรายการ (เช่น ช้างจำหนีข้าทำไม, ซ้อมจัดรายการกลุ่ม 1)"
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold placeholder:text-gray-500"
+                />
+              </div>
+            )}
+
+            {/* 6. ข้อมูลผู้จอง (ชื่อ & รหัส) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <User className="w-4 h-4 text-orange-400" /> {isTeacher ? "ชื่ออาจารย์ผู้สอน" : "ชื่อ-นามสกุล ผู้จอง"}
                 </label>
                 <input
                   type="text"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="เช่น สมชาย ใจดี"
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                  placeholder={isTeacher ? "เช่น อาจารย์ผู้สอน" : "เช่น สมชาย ใจดี"}
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                  รหัสนักศึกษา / รหัสอาจารย์
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <span className="text-orange-400 font-mono text-sm">#</span> {isTeacher ? "รหัสอาจารย์" : "รหัสนักศึกษา / รหัสอาจารย์"}
                 </label>
                 <input
                   type="text"
                   value={studentIdInput}
                   onChange={(e) => setStudentIdInput(e.target.value)}
-                  placeholder="รหัสนักศึกษา 10 หลัก"
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
+                  placeholder={isTeacher ? "รหัสอาจารย์ / อาจารย์ประจำวิชา" : "รหัสนักศึกษา 10 หลัก"}
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold"
                 />
               </div>
             </div>
 
-            {/* เบอร์โทรศัพท์ & วัตถุประสงค์ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 7. เบอร์โทรศัพท์ & วัตถุประสงค์การใช้งาน (Dropdown) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                  <Phone className="w-3.5 h-3.5 text-orange-400" /> เบอร์โทรศัพท์ติดต่อ
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <Phone className="w-4 h-4 text-orange-400" /> เบอร์โทรศัพท์ติดต่อ
                 </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="08XXXXXXXX"
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={showPhone ? phone : (phone ? maskPhoneNumber(phone) : "")}
+                    onChange={(e) => {
+                      if (!showPhone) {
+                        setShowPhone(true);
+                      }
+                      setPhone(e.target.value);
+                    }}
+                    onFocus={() => {
+                      if (!showPhone && phone) {
+                        setShowPhone(true);
+                      }
+                    }}
+                    placeholder="08XXXXXXXX"
+                    className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl pl-4 pr-12 text-base text-white focus:outline-none focus:border-orange-500 font-semibold tracking-wide font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPhone(!showPhone)}
+                    className="absolute right-2 p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    title={showPhone ? "ซ่อนเบอร์โทรศัพท์" : "แสดงเบอร์โทรศัพท์"}
+                  >
+                    {showPhone ? (
+                      <EyeOff className="w-5 h-5 text-orange-400" />
+                    ) : (
+                      <Eye className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 mb-1">
-                  <FileText className="w-3.5 h-3.5 text-orange-400" /> วัตถุประสงค์การใช้งาน
+                <label 
+                  className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-1.5"
+                  style={{ fontSize: '16px', color: '#b8b3b3' }}
+                >
+                  <FileText className="w-4 h-4 text-orange-400" /> วัตถุประสงค์การใช้งาน
                 </label>
-                <input
-                  type="text"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="เช่น ฝึกจัดรายการสด, อัดพอดแคสต์"
-                  className="w-full h-10 bg-[#27272a] border border-[#3f3f46] rounded-xl px-3 text-sm text-white focus:outline-none focus:border-orange-500 font-semibold"
-                />
+                <select
+                  value={purposeDropdown}
+                  onChange={(e) => setPurposeDropdown(e.target.value)}
+                  className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold transition-colors cursor-pointer"
+                >
+                  <option value="จัดรายการส่งในรายวิชา">จัดรายการส่งในรายวิชา</option>
+                  <option value="ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว">ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว</option>
+                  <option value="งานกิจกรรมคณะ / มหาวิทยาลัย">งานกิจกรรมคณะ / มหาวิทยาลัย</option>
+                  <option value="สำหรับการเรียนการสอน">สำหรับการเรียนการสอน</option>
+                  {purposeDropdown && !STANDARD_PURPOSES.includes(purposeDropdown) && (
+                    <option value={purposeDropdown}>{purposeDropdown}</option>
+                  )}
+                </select>
               </div>
             </div>
 
             {/* Conflict Warning Banner */}
             {isSlotConflicted && (
-              <div className="p-3 bg-red-500/15 border-2 border-red-500 rounded-xl text-red-300 text-xs font-bold flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <div className="space-y-0.5 leading-snug">
-                  <div className="text-red-300 font-extrabold text-[13px]">
+              <div className="p-3.5 bg-red-500/15 border-2 border-red-500 rounded-xl text-red-300 text-sm font-bold flex items-start gap-3 shadow-sm animate-in fade-in duration-200">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div className="space-y-1 leading-snug">
+                  <div className="text-red-300 font-extrabold text-sm sm:text-base">
                     ⚠️ ไม่สามารถจองได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น
                   </div>
                   {conflictingBooking && (
-                    <div className="text-[11.5px] text-red-400/90 font-medium">
+                    <div className="text-xs sm:text-sm text-red-400/90 font-medium">
                       (ชนกับคิว: {conflictingBooking.subject || conflictingBooking.purpose} • ผู้จอง: {conflictingBooking.studentName || conflictingBooking.studentIdInput || "มีผู้จองแล้ว"})
                     </div>
                   )}
@@ -443,23 +673,25 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-3 border-t border-[#3f3f46]">
+            <div className="flex gap-4 pt-4 sm:pt-5 border-t border-[#3f3f46]">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={saving}
-                className="flex-1 bg-[#27272a] hover:bg-[#323238] text-slate-300 font-bold rounded-xl py-2.5 text-xs transition-colors cursor-pointer"
+                className="flex-1 bg-[#27272a] hover:bg-[#323238] font-bold rounded-xl py-3.5 text-base transition-colors cursor-pointer text-center"
+                style={{ color: '#b8b3b3', fontSize: '16px' }}
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={saving || isSlotConflicted}
-                className={`flex-1 font-extrabold rounded-xl py-2.5 text-xs transition-all shadow-md flex items-center justify-center gap-1.5 ${
+                className={`flex-1 font-extrabold rounded-xl py-3.5 text-base transition-all shadow-md flex items-center justify-center gap-2 ${
                   isSlotConflicted
                     ? "bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600 opacity-60 shadow-none pointer-events-none"
                     : "bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white cursor-pointer disabled:opacity-50"
                 }`}
+                style={{ fontSize: '16px' }}
               >
                 {saving ? (
                   <>
@@ -468,7 +700,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Check className="w-4 h-4" />
+                    <Check className="w-5 h-5" />
                     <span>บันทึกการแก้ไข / ย้ายเวลา</span>
                   </>
                 )}
@@ -480,3 +712,4 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
     </AnimatePresence>
   );
 };
+

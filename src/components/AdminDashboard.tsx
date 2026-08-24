@@ -23,6 +23,7 @@ import {
   Layers, 
   MessageSquareOff,
   ClipboardList,
+  Calendar,
   FileSpreadsheet, 
   Camera, 
   Mic, 
@@ -52,6 +53,8 @@ import { EditBookingModal } from './EditBookingModal';
 import { DeleteBookingConfirmModal } from './DeleteBookingConfirmModal';
 import { VerifyBookingPinModal } from './VerifyBookingPinModal';
 import { UnifiedBookingForm } from './UnifiedBookingForm';
+import { BookingDetailModal } from './BookingDetailModal';
+import { SuccessNotificationModal, SuccessModalType } from './SuccessNotificationModal';
 
 const getRoomTheme = (room: string) => {
   switch (room) {
@@ -146,6 +149,128 @@ const getRoomTheme = (room: string) => {
         cardBadge: "bg-orange-950/80 border border-orange-500/40 text-orange-200",
       };
   }
+};
+
+const formatDateDisplay = (dateStr?: string) => {
+  if (!dateStr) return '-';
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD -> DD-MM-YYYY
+        const [year, month, day] = parts;
+        return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
+      }
+      const [p1, p2, year] = parts;
+      return `${p1.padStart(2, '0')}-${p2.padStart(2, '0')}-${year}`;
+    }
+  }
+  return dateStr;
+};
+
+const formatTimestampDisplay = (ts?: string) => {
+  if (!ts) return '-';
+  try {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${day}-${month}-${year} ${hours}:${mins} น.`;
+  } catch {
+    return ts;
+  }
+};
+
+const getBookingRowData = (b: RoomBooking) => {
+  const isTeacher =
+    b.userType === 'teacher' ||
+    b.studentId === 'TEACHER' ||
+    b.studentIdInput === 'TEACHER' ||
+    (b.purpose && b.purpose.includes('สำหรับการเรียนการสอนอาจารย์')) ||
+    b.studentName === 'อาจารย์ผู้สอน' ||
+    b.studentIdInput === 'อาจารย์ประจำวิชา';
+
+  // 1. Booker Name
+  let bookerName = b.studentName || b.studentNameInput || (isTeacher ? 'อาจารย์ผู้สอน' : '-');
+  if (isTeacher && (!bookerName || bookerName === '-')) {
+    bookerName = 'อาจารย์ผู้สอน';
+  }
+
+  // 2. Student / Teacher ID
+  let idDisplay = b.studentIdInput || b.studentId || (isTeacher ? 'อาจารย์ประจำวิชา' : '-');
+  if (isTeacher && (!idDisplay || idDisplay === '-')) {
+    idDisplay = 'อาจารย์ประจำวิชา';
+  }
+
+  // 3. Subject / Course
+  let subjectDisplay = b.subject || 'BRS311';
+  subjectDisplay = subjectDisplay.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').trim();
+
+  // 4. Booking Title (ชื่อรายการ)
+  let titleDisplay = b.bookingTitle ? b.bookingTitle.trim() : '';
+  if (!titleDisplay && b.purpose) {
+    const headerMatch = b.purpose.match(/หัวข้อ:\s*([^|)]+)/i);
+    if (headerMatch) {
+      titleDisplay = headerMatch[1].trim();
+    } else {
+      const parenMatch = b.purpose.match(/\((.*?)\)/);
+      if (parenMatch) {
+        const cleanInside = parenMatch[1].replace(/วัตถุประสงค์:\s*[^|)]+/i, '').replace(/\|/g, '').trim();
+        if (cleanInside) {
+          titleDisplay = cleanInside;
+        }
+      }
+    }
+  }
+
+  if (isTeacher) {
+    if (!titleDisplay || titleDisplay === 'จัดรายการ') {
+      titleDisplay = 'สำหรับการเรียนการสอน';
+    }
+  } else {
+    if (!titleDisplay) {
+      titleDisplay = 'จัดรายการ';
+    }
+  }
+
+  // 5. Purpose (วัตถุประสงค์)
+  let purposeDisplay = b.bookingPurpose ? b.bookingPurpose.trim() : '';
+  if (!purposeDisplay && b.purpose) {
+    const purposeFieldMatch = b.purpose.match(/วัตถุประสงค์:\s*([^|)]+)/i);
+    if (purposeFieldMatch) {
+      purposeDisplay = purposeFieldMatch[1].trim();
+    } else {
+      purposeDisplay = b.purpose
+        .replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '')
+        .replace(/หัวข้อ:\s*[^|)]+/gi, '')
+        .replace(/\|/g, '')
+        .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+        .replace(/^\((.*)\)$/, '$1')
+        .trim();
+    }
+  }
+
+  if (isTeacher) {
+    if (!purposeDisplay) {
+      purposeDisplay = 'สำหรับการเรียนการสอน';
+    }
+  } else {
+    if (!purposeDisplay) {
+      purposeDisplay = 'ฝึกปฏิบัติการจัดรายการ';
+    }
+  }
+
+  return {
+    isTeacher,
+    bookerName,
+    idDisplay,
+    subjectDisplay,
+    titleDisplay,
+    purposeDisplay
+  };
 };
 
 interface AdminDashboardProps {
@@ -247,6 +372,13 @@ export default function AdminDashboard({
   const [bookingEmail, setBookingEmail] = useState("");
   const [bookingPinCode, setBookingPinCode] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
+  const [successModalConfig, setSuccessModalConfig] = useState<{
+    isOpen: boolean;
+    type: SuccessModalType;
+  }>({
+    isOpen: false,
+    type: 'booking'
+  });
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [myBookingFilter, setMyBookingFilter] = useState("");
 
@@ -524,6 +656,7 @@ export default function AdminDashboard({
         setBookingStudentId("");
         setBookingPhone("");
         setBookingPinCode("");
+        setSuccessModalConfig({ isOpen: true, type: 'booking' });
         setBookingSuccessMsg("🎉 ยืนยันการจองห้องจัดรายการเสร็จสิ้นเรียบร้อยแล้วค่ะ! ข้อมูลแสดงในตารางจัดรายการเรียบร้อยแล้ว");
         setTimeout(() => setBookingSuccessMsg(""), 6000);
       } else {
@@ -759,6 +892,7 @@ export default function AdminDashboard({
           bookings={bookings}
           tickets={tickets}
           attendance={attendance}
+          courses={courses}
           onDownloadReport={onDownloadReport}
           onBack={() => handleTabChange('student_schedule')}
         />
@@ -1229,48 +1363,74 @@ export default function AdminDashboard({
                 <p className="font-bold text-slate-700">ไม่มีสถิติคำขอจองห้องในขณะนี้</p>
               </div>
             ) : (
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left border-collapse min-w-[1020px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-550 font-bold bg-slate-50/50">
-                    <th className="py-3 px-4 font-display w-[30%]">ผู้ขอจอง / นักศึกษา</th>
-                    <th className="py-3 px-4 font-display w-[16%]">ห้อง</th>
-                    <th className="py-3 px-4 font-display w-[18%]">ช่วงเวลา</th>
-                    <th className="py-3 px-4 font-display w-[36%]">รายวิชา / วัตถุประสงค์</th>
+                  <tr className="border-b border-slate-200/80 text-slate-600 font-bold bg-slate-50/80">
+                    <th className="py-3 px-3 font-display w-[13%] min-w-[140px]" style={{ fontSize: '15px' }}>ชื่อผู้จอง</th>
+                    <th className="py-3 px-3 font-display w-[12%] min-w-[120px]" style={{ fontSize: '15px' }}>รหัสนักศึกษา / รหัสอาจารย์</th>
+                    <th className="py-3 px-3 font-display w-[22%] min-w-[220px]" style={{ fontSize: '15px' }}>รายวิชา</th>
+                    <th className="py-3 px-3 font-display w-[13%] min-w-[125px]" style={{ fontSize: '15px' }}>ชื่อรายการ</th>
+                    <th className="py-3 px-3 font-display w-[18%] min-w-[160px]" style={{ fontSize: '15px' }}>วัตถุประสงค์</th>
+                    <th className="py-3 px-3 font-display w-[12%] min-w-[130px]" style={{ fontSize: '15px' }}>วันที่และเวลา</th>
+                    <th className="py-3 px-3 font-display w-[10%] min-w-[110px]" style={{ fontSize: '15px' }}>เวลาทำรายการล่าสุด</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-100 text-sm">
                   {bookings.map((booking) => {
+                    const info = getBookingRowData(booking);
+                    const theme = getRoomTheme(booking.roomName);
                     return (
-                      <tr key={booking.id} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800 text-sm">{booking.studentName}</div>
-                          <div className="text-xs text-slate-500 font-mono mt-0.5">{booking.studentEmail}</div>
-                          {(booking.studentIdInput || booking.phone) && (
-                            <div className="text-xs text-indigo-600 font-bold mt-1 font-mono">
-                              {booking.studentIdInput ? `ID: ${booking.studentIdInput}` : ''} 
-                              {booking.studentIdInput && booking.phone ? ' • ' : ''} 
-                              {booking.phone ? `โทร: ${booking.phone}` : ''}
+                      <tr key={booking.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-3">
+                          <div className="font-bold text-slate-800 text-sm whitespace-normal break-words leading-snug" title={info.bookerName}>
+                            {info.bookerName}
+                          </div>
+                          {booking.studentEmail && (
+                            <div className="text-[13px] text-slate-400 font-mono mt-0.5 whitespace-normal break-all leading-tight" title={booking.studentEmail}>
+                              {booking.studentEmail}
+                            </div>
+                          )}
+                          {booking.phone && (
+                            <div className="text-[12px] text-indigo-600 font-semibold mt-0.5 font-mono">
+                              📞 {booking.phone}
                             </div>
                           )}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <span className="bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs">
-                            {booking.roomName}
+                        <td className="py-3 px-3 font-mono text-slate-600">
+                          <span className={info.isTeacher ? "bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded text-sm inline-block" : "text-sm"}>
+                            {info.idDisplay}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-800 text-xs">{booking.timeSlot}</div>
-                          <div className="text-xs text-slate-500 font-mono mt-0.5">📅 {booking.date}</div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-indigo-700 text-xs">
-                            {booking.subject || 'BRS311'}
+                        <td className="py-3 px-3 font-bold text-indigo-600">
+                          <div className="text-sm font-semibold whitespace-normal break-words leading-snug" title={info.subjectDisplay}>
+                            {info.subjectDisplay}
                           </div>
-                          {booking.purpose && (
-                            <div className="text-xs text-slate-600 mt-1 font-medium leading-relaxed">
-                              {booking.purpose}
-                            </div>
-                          )}
+                        </td>
+                        <td className="py-3 px-3 font-bold text-slate-800">
+                          <div className="text-sm font-bold text-slate-800 whitespace-normal break-words leading-snug" title={info.titleDisplay}>
+                            {info.titleDisplay}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 font-medium">
+                          <div className="text-sm font-medium text-slate-600 whitespace-normal break-words leading-snug" title={info.purposeDisplay}>
+                            {info.purposeDisplay}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${theme.bgLight} ${theme.text} border ${theme.borderLight}`}>
+                              {booking.roomName}
+                            </span>
+                          </div>
+                          <div className="font-mono text-slate-800 font-semibold whitespace-nowrap text-sm">
+                            {formatDateDisplay(booking.date)}
+                          </div>
+                          <div className="text-[13px] text-slate-500 font-mono mt-0.5">
+                            {booking.timeSlot}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-slate-500 font-medium text-sm whitespace-nowrap">
+                          {formatTimestampDisplay(booking.updatedAt || booking.submittedAt || booking.createdAt)}
                         </td>
                       </tr>
                     );
@@ -1721,10 +1881,11 @@ export default function AdminDashboard({
           </div>
         </div>
 
+        {/* 2. MAIN CONTENT SECTION: Two-Column Layout (30% Form / 70% Table Ratio) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start relative mt-6 pt-2" style={{ marginTop: '24px' }}>
           
-          {/* LEFT COLUMN: Unified Booking Form (lg:col-span-4) */}
-          <div className="lg:col-span-4 w-full relative">
+          {/* LEFT COLUMN: Unified Booking Form (lg:col-span-3 - Reduced Width ~20-25%) */}
+          <div className="lg:col-span-3 w-full relative">
             <UnifiedBookingForm
               courses={courses}
               bookings={bookings}
@@ -1738,6 +1899,7 @@ export default function AdminDashboard({
                 setScheduleBaseDate(newDate);
               }}
               onBookingSuccess={() => {
+                setSuccessModalConfig({ isOpen: true, type: 'booking' });
                 setBookingSuccessMsg("🎉 บันทึกการจองสำเร็จและส่งอีเมลยืนยันเรียบร้อยแล้ว!");
                 setTimeout(() => setBookingSuccessMsg(null), 4000);
               }}
@@ -1759,9 +1921,9 @@ export default function AdminDashboard({
             />
           </div>
 
-          {/* RIGHT COLUMN: Table representation (lg:col-span-8) */}
+          {/* RIGHT COLUMN: Table representation (lg:col-span-9 - Expanded Width +20-25%) */}
           <div 
-            className="lg:col-span-8 bg-[#111115] border border-[#2d2d34] p-3 rounded-[16px] shadow-2xl space-y-3 overflow-y-auto"
+            className="lg:col-span-9 bg-[#111115] border border-[#2d2d34] p-3 rounded-[16px] shadow-2xl space-y-3 overflow-y-auto"
             style={{ height: '880px' }}
           >
             {/* Navigation controls for weeks */}
@@ -1859,7 +2021,7 @@ export default function AdminDashboard({
                         <td className="py-1 px-1 border-r border-[#2d2d34] font-bold bg-[#111113] text-slate-100 h-[116px] max-h-[116px] w-[12%] align-middle box-border">
                           <div className="flex flex-col justify-center items-center h-full w-full overflow-hidden gap-1">
                             <div className={`text-[17px] uppercase font-extrabold truncate w-full ${getRoomTheme(activeScheduleRoom).text}`}>{dayInfo.dayName}</div>
-                            <div className="text-[14px] text-slate-300 font-semibold truncate w-full">{dayInfo.displayDate}</div>
+                            <div className="text-[14px] text-[#ffffff] font-semibold truncate w-full">{dayInfo.displayDate}</div>
                           </div>
                         </td>
 
@@ -1887,14 +2049,29 @@ export default function AdminDashboard({
                               break;
                             }
 
-                            const isTeacherBooking = b.userType === "TEACHER" || (b.purpose && b.purpose.includes("สำหรับการเรียนการสอนอาจารย์"));
+                            const isTeacherBooking = b.userType === "TEACHER" || 
+                              (b.purpose && b.purpose.includes("สำหรับการเรียนการสอนอาจารย์")) ||
+                              (b.studentId === "อาจารย์ผู้สอน") ||
+                              (b.studentName && b.studentName.includes("อาจารย์"));
 
                             if (isTeacherBooking || spanCount > 1) {
                               // MERGED CELL (Teacher / Multi-slot booking)
                               let displaySubject = b.subject || b.purpose || "วิชาสำหรับการเรียนการสอน";
-                              displaySubject = displaySubject.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/, '').trim();
+                              displaySubject = displaySubject
+                                .replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '')
+                                .replace(/สำหรับการเรียนการสอนอาจารย์/g, '')
+                                .trim();
+                              if (!displaySubject) displaySubject = "วิชาสำหรับการเรียนการสอน";
 
-                              const instructorName = b.studentName || b.studentIdInput || "อาจารย์ผู้สอน";
+                              const rawInstructorName = b.studentName || b.studentIdInput || "อาจารย์ผู้สอน";
+                              let cleanTeacherName = rawInstructorName
+                                .replace(/^อาจารย์ผู้สอน[:\s]*/, '')
+                                .replace(/^อาจารย์[:\s]*/, '')
+                                .trim();
+                              if (!cleanTeacherName) {
+                                cleanTeacherName = "อาจารย์ผู้สอน";
+                              }
+
                               let slotSpanText = b.timeSlot || `${slots[i].split('-')[0].trim()} - ${slots[i + spanCount - 1].split('-')[1].trim()}`;
                               if (slotSpanText.includes("08:30 - 17:00") || slotSpanText.includes("8.30 - 17.00") || slotSpanText.includes("09:00 - 16:00") || slotSpanText.includes("9.00 - 16.00")) {
                                 slotSpanText = "08:30 - 17:00 (เหมาทั้งวัน)";
@@ -1910,51 +2087,137 @@ export default function AdminDashboard({
                                 <td
                                   key={`${slot}_span_${i}`}
                                   colSpan={spanCount}
-                                  className="p-1 border-r border-[#2d2d34] text-center align-middle bg-[#16161a] transition-all relative group h-[116px] max-h-[116px] box-border"
+                                  className="p-1 border-r border-[#2d2d34] text-left align-middle bg-[#16161a] transition-all relative group h-[116px] max-h-[116px] box-border"
                                 >
-                                  <div
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedScheduleBookingModal({
-                                        room: activeScheduleRoom,
-                                        subject: displaySubject,
-                                        slot: slotSpanText,
-                                        studentId: "อาจารย์ผู้สอน",
-                                        studentName: instructorName,
-                                        phone: b.phone && b.phone !== "-" ? b.phone : "อาจารย์ผู้สอน",
-                                        purpose: purposeText || "สำหรับการเรียนการสอนอาจารย์",
-                                        roomThemeText: "text-purple-400",
-                                        booking: b
-                                      });
-                                    }}
-                                    style={{ padding: '6px 10px 6px 12px' }}
-                                    className="relative px-2.5 py-1.5 pl-3 rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-[#2a0c44] via-[#1a0833] to-[#2a0c44] hover:from-[#361056] hover:to-[#220a42] text-center flex flex-col justify-between items-center h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 shadow-[0_0_18px_rgba(168,85,247,0.4)] overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-400/60"
-                                  >
-                                    {/* Left thick accent neon gradient line */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl bg-gradient-to-b from-fuchsia-400 via-purple-300 to-indigo-400" />
+                                  {isTeacherBooking ? (
+                                    /* TEACHER LUXURY GOLD & WHITE CARD */
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedScheduleBookingModal({
+                                          room: activeScheduleRoom,
+                                          subject: displaySubject,
+                                          slot: slotSpanText,
+                                          studentId: "อาจารย์ผู้สอน",
+                                          studentName: cleanTeacherName,
+                                          phone: b.phone && b.phone !== "-" ? b.phone : "อาจารย์ผู้สอน",
+                                          purpose: purposeText || "สำหรับการเรียนการสอนอาจารย์",
+                                          roomThemeText: "text-[#c59324]",
+                                          booking: b
+                                        });
+                                      }}
+                                      style={{ backgroundColor: '#ffffff' }}
+                                      className="teacher-schedule-card relative rounded-2xl border-[3.5px] border-[#d8a735] p-2 sm:px-2.5 sm:py-2 text-left flex flex-col justify-between h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(216,167,53,0.35)] overflow-hidden cursor-pointer group/teachercard"
+                                    >
+                                      {/* Top-Right Badge: 'อาจารย์' */}
+                                      <div className="teacher-gold-badge absolute top-0 right-0 px-2.5 py-0.5 rounded-bl-xl shadow-sm flex items-center gap-1 z-10">
+                                        <User className="w-3 h-3 stroke-[2.5]" />
+                                        <span className="text-[11px] font-extrabold tracking-wide leading-none">อาจารย์</span>
+                                      </div>
 
-                                    <div className="flex flex-col items-center justify-between h-full w-full min-w-0 px-1 overflow-hidden py-0.5">
-                                      <div 
-                                        className="flex items-center gap-1 font-black !text-[14px] text-purple-100 truncate w-full justify-center leading-[1.2]"
-                                        style={{ fontSize: '14px', lineHeight: '1.2' }}
-                                      >
-                                        <span className="text-[14px] shrink-0">🎓</span>
-                                        <span className="truncate !text-[14px]" style={{ fontSize: '14px' }}>{displaySubject}</span>
-                                      </div>
-                                      <div 
-                                        className="font-bold !text-[13px] text-[#ef8840] truncate w-full leading-[1.2]"
-                                        style={{ fontSize: '13px', lineHeight: '1.2' }}
-                                      >
-                                        อาจารย์ผู้สอน: {instructorName}
-                                      </div>
-                                      <div 
-                                        className="inline-flex items-center gap-1 bg-purple-900/90 border border-purple-400/50 text-purple-200 !text-[12px] font-extrabold px-2 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
-                                        style={{ fontSize: '12px' }}
-                                      >
-                                        <span className="truncate">⏱️ {slotSpanText}</span>
+                                      {/* 3 Content Rows with gold dividers */}
+                                      <div className="flex flex-col justify-between h-full w-full min-w-0">
+                                        {/* Row 1: Calendar Icon + Subject */}
+                                        <div className="flex items-center gap-2 min-w-0 pr-16" style={{ marginLeft: '0px' }}>
+                                          <Calendar className="teacher-gold-icon w-3.5 h-3.5 shrink-0 stroke-[2.2]" style={{ marginTop: '1px', marginLeft: '0px' }} />
+                                          <span 
+                                            className="teacher-gold-value font-black truncate leading-tight tracking-tight" 
+                                            title={displaySubject}
+                                            style={{ 
+                                              fontSize: '15px', 
+                                              height: '18.25px', 
+                                              width: '200px', 
+                                              paddingTop: '0px', 
+                                              paddingBottom: '0px', 
+                                              paddingLeft: '0px', 
+                                              marginLeft: '8px', 
+                                              marginTop: '4px' 
+                                            }}
+                                          >
+                                            {displaySubject}
+                                          </span>
+                                        </div>
+
+                                        {/* Row 2: User Icon + 'ชื่อ' + Teacher Name */}
+                                        <div className="teacher-gold-divider flex items-center gap-2 min-w-0 pt-1">
+                                          <User className="teacher-gold-icon w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
+                                          <span 
+                                            className="teacher-gold-label font-bold shrink-0"
+                                            style={{ fontSize: '15px', marginTop: '2px', marginLeft: '0px' }}
+                                          >
+                                            ชื่อ
+                                          </span>
+                                          <span 
+                                            className="teacher-gold-value font-extrabold truncate leading-tight" 
+                                            title={cleanTeacherName}
+                                            style={{ fontSize: '15px', marginTop: '3px', marginLeft: '0px' }}
+                                          >
+                                            {cleanTeacherName}
+                                          </span>
+                                        </div>
+
+                                        {/* Row 3: Clock Icon + 'เวลา' + Time Slot */}
+                                        <div className="teacher-gold-divider flex items-center gap-2 min-w-0 pt-1">
+                                          <Clock className="teacher-gold-icon w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
+                                          <span 
+                                            className="teacher-gold-label font-bold shrink-0"
+                                            style={{ fontSize: '15px' }}
+                                          >
+                                            เวลา
+                                          </span>
+                                          <span 
+                                            className="teacher-gold-value font-extrabold truncate font-mono leading-tight"
+                                            style={{ fontSize: '15px', marginTop: '2px' }}
+                                          >
+                                            {slotSpanText}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
+                                  ) : (
+                                    /* MULTI-SLOT STUDENT MERGED CARD */
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedScheduleBookingModal({
+                                          room: activeScheduleRoom,
+                                          subject: displaySubject,
+                                          slot: slotSpanText,
+                                          studentId: b.studentIdInput || b.studentId || "นักศึกษา",
+                                          studentName: rawInstructorName,
+                                          phone: b.phone && b.phone !== "-" ? b.phone : "-",
+                                          purpose: purposeText || "จองใช้งานต่อเนื่อง",
+                                          roomThemeText: "text-purple-400",
+                                          booking: b
+                                        });
+                                      }}
+                                      style={{ padding: '6px 10px 6px 12px' }}
+                                      className="relative px-2.5 py-1.5 pl-3 rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-[#2a0c44] via-[#1a0833] to-[#2a0c44] hover:from-[#361056] hover:to-[#220a42] text-center flex flex-col justify-between items-center h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 shadow-[0_0_18px_rgba(168,85,247,0.4)] overflow-hidden cursor-pointer group-hover:border-purple-300 ring-1 ring-purple-400/60"
+                                    >
+                                      <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl bg-gradient-to-b from-fuchsia-400 via-purple-300 to-indigo-400" />
+                                      <div className="flex flex-col items-center justify-between h-full w-full min-w-0 px-1 overflow-hidden py-0.5">
+                                        <div 
+                                          className="flex items-center gap-1 font-black !text-[14px] text-purple-100 truncate w-full justify-center leading-[1.2]"
+                                          style={{ fontSize: '14px', lineHeight: '1.2' }}
+                                        >
+                                          <span className="text-[14px] shrink-0">🎓</span>
+                                          <span className="truncate !text-[14px]" style={{ fontSize: '14px' }}>{displaySubject}</span>
+                                        </div>
+                                        <div 
+                                          className="font-bold !text-[13px] text-[#ef8840] truncate w-full leading-[1.2]"
+                                          style={{ fontSize: '13px', lineHeight: '1.2' }}
+                                        >
+                                          ผู้จอง: {rawInstructorName}
+                                        </div>
+                                        <div 
+                                          className="inline-flex items-center gap-1 bg-purple-900/90 border border-purple-400/50 text-purple-200 !text-[12px] font-extrabold px-2 py-0.5 rounded-full shadow-sm leading-tight max-w-[95%] truncate"
+                                          style={{ fontSize: '12px' }}
+                                        >
+                                          <span className="truncate">⏱️ {slotSpanText}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </td>
                               );
 
@@ -1962,67 +2225,48 @@ export default function AdminDashboard({
                             } else {
                               // STANDARD SINGLE-SLOT STUDENT BOOKING
                               const roomTheme = getRoomTheme(activeScheduleRoom);
-                              let fullSubjectText = b.subject || "";
-                              let displayPurpose = b.bookingPurpose || b.purpose || "";
-                              if (!fullSubjectText && b.purpose) {
-                                fullSubjectText = b.purpose;
-                              }
-                              if (!fullSubjectText) {
-                                fullSubjectText = "BRS 311";
-                              }
-
-                              let subjectCode = "";
-                              let subjectTitle = "";
-                              const codeMatch = fullSubjectText.match(/^([A-Za-z]{2,4}\s*\d{3,4})[\s:-]*(.*)$/);
+                              // Extract exact 4-line fields for student booking card
+                              let displayCourseCode = "BRS 122";
+                              const fullSubjectRaw = b.subject || b.purpose || "";
+                              const codeMatch = fullSubjectRaw.match(/([A-Za-z]{2,4}\s*\d{3,4})/i);
                               if (codeMatch) {
-                                subjectCode = codeMatch[1].toUpperCase();
-                                subjectTitle = codeMatch[2].trim() || displayPurpose || "ฝึกจัดรายการ";
-                              } else {
-                                if (fullSubjectText.length <= 10) {
-                                  subjectCode = fullSubjectText;
-                                  subjectTitle = displayPurpose || "กิจกรรมพิเศษ";
+                                displayCourseCode = codeMatch[1].toUpperCase();
+                              } else if (b.subject && b.subject.trim().length <= 10) {
+                                displayCourseCode = b.subject.trim().toUpperCase();
+                              }
+
+                              let displayProgramTitle = "";
+                              if (b.bookingTitle && b.bookingTitle.trim()) {
+                                displayProgramTitle = b.bookingTitle.trim();
+                              } else if (b.purpose) {
+                                const headerMatch = b.purpose.match(/หัวข้อ:\s*([^|)]+)/i);
+                                if (headerMatch) {
+                                  displayProgramTitle = headerMatch[1].trim();
                                 } else {
-                                  subjectCode = "";
-                                  subjectTitle = fullSubjectText;
+                                  const parenMatch = b.purpose.match(/\((.*?)\)/);
+                                  if (parenMatch) {
+                                    const cleanInside = parenMatch[1].replace(/วัตถุประสงค์:\s*[^|)]+/i, '').replace(/\|/g, '').trim();
+                                    if (cleanInside) {
+                                      displayProgramTitle = cleanInside;
+                                    }
+                                  }
+                                }
+                              }
+                              if (!displayProgramTitle) {
+                                const stripped = (b.purpose || "").replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
+                                if (stripped && !stripped.startsWith("(") && stripped !== displayCourseCode) {
+                                  displayProgramTitle = stripped;
+                                } else if (b.bookingPurpose && b.bookingPurpose.trim()) {
+                                  displayProgramTitle = b.bookingPurpose.trim();
+                                } else {
+                                  displayProgramTitle = "จัดรายการ";
                                 }
                               }
 
-                              const namePart = b.studentName ? b.studentName.split(/\s+/)[0] : "ไม่ระบุ";
-                              let phoneMasked = "";
-                              if (b.phone) {
-                                const cleanPhone = b.phone.trim();
-                                if (cleanPhone.length >= 8) {
-                                  phoneMasked = cleanPhone.slice(0, cleanPhone.length - 4) + "xxxx";
-                                } else {
-                                  phoneMasked = cleanPhone;
-                                }
-                              } else {
-                                phoneMasked = b.studentIdInput ? (b.studentIdInput.length > 4 ? b.studentIdInput.slice(0, 4) + "xxxx" : b.studentIdInput) : "";
-                              }
-
-                              const footerText = phoneMasked ? `${namePart} (${phoneMasked})` : namePart;
-                              const cardSubject = subjectCode ? (subjectTitle ? `${subjectCode}: ${subjectTitle}` : subjectCode) : subjectTitle;
+                              const displayStudentFullName = (b.studentNameInput || b.studentName || "นักศึกษา").trim();
                               const cleanSlot = slot ? slot.replace(/\s*-\s*/g, '-') : '';
+                              const displayTimeText = (cleanSlot || slot || "").replace(/:/g, '.').replace(/\s*-\s*/, ' – ');
                               const studentIdStr = b.studentIdInput || b.studentId || b.studentName || '-';
-
-                              let rawPurpose = b.bookingPurpose || displayPurpose || "";
-                              if (!rawPurpose && b.purpose) {
-                                const parenMatch = b.purpose.match(/\((.*?)\)/);
-                                if (parenMatch) {
-                                  rawPurpose = parenMatch[1].trim();
-                                } else {
-                                  rawPurpose = b.purpose.replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '').trim();
-                                }
-                              }
-                              if (!rawPurpose) {
-                                rawPurpose = subjectTitle || "จัดรายการ";
-                              }
-                              let cleanPurpose = rawPurpose
-                                .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
-                                .replace(/^\((.*)\)$/, '$1')
-                                .trim();
-
-                              const purposeText = cleanPurpose || rawPurpose || "จัดรายการ";
 
                               renderedCells.push(
                                 <td 
@@ -2034,53 +2278,54 @@ export default function AdminDashboard({
                                       e.stopPropagation();
                                       setSelectedScheduleBookingModal({
                                         room: activeScheduleRoom,
-                                        subject: cardSubject,
+                                        subject: `${displayCourseCode}: ${displayProgramTitle}`,
                                         slot: cleanSlot,
                                         studentId: studentIdStr,
-                                        studentName: b.studentNameInput || b.studentName,
+                                        studentName: displayStudentFullName,
                                         phone: b.phone || '-',
-                                        purpose: purposeText,
+                                        purpose: displayProgramTitle,
                                         roomThemeText: roomTheme.text,
                                         booking: b
                                       });
                                     }}
-                                    style={{ padding: '6px 8px 6px 10px' }}
-                                    className={`relative px-2 py-1.5 pl-2.5 rounded-xl border border-solid text-left flex flex-col justify-between h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-300 overflow-hidden cursor-pointer ${roomTheme.cardBg} ${roomTheme.cardBorder} ${roomTheme.cardGlow} group/card`}
+                                    className={`relative p-2 pl-3 rounded-2xl border-[1.5px] ${roomTheme.cardBorder} ${roomTheme.cardBg} ${roomTheme.cardGlow} text-left flex flex-col justify-between h-[106px] min-h-[106px] max-h-[106px] w-full transition-all duration-200 overflow-hidden cursor-pointer group/card`}
                                   >
-                                    <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl ${roomTheme.cardBar}`} />
-                                    <div className="flex flex-col gap-0.5 w-full min-w-0 overflow-hidden">
-                                      {subjectCode ? (
-                                        <>
-                                          <div 
-                                            className={`font-extrabold !text-[13px] tracking-normal uppercase truncate w-full overflow-hidden text-ellipsis leading-[1.2] ${roomTheme.cardSubject} group-hover/card:!text-white transition-colors`}
-                                            style={{ fontSize: '13px', lineHeight: '1.2' }}
-                                          >
-                                            {subjectCode}
-                                          </div>
-                                          <div 
-                                            className={`font-medium !text-[13px] ${roomTheme.cardTitle} group-hover/card:!text-white leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors`} 
-                                            style={{ fontSize: '13px', lineHeight: '1.2' }}
-                                            title={subjectTitle}
-                                          >
-                                            {subjectTitle}
-                                          </div>
-                                        </>
-                                      ) : (
-                                        <div 
-                                          className={`font-bold !text-[13px] ${roomTheme.cardTitle} group-hover/card:!text-white leading-[1.2] truncate w-full overflow-hidden text-ellipsis transition-colors`} 
-                                          style={{ fontSize: '13px', lineHeight: '1.2' }}
-                                          title={subjectTitle}
-                                        >
-                                          {subjectTitle}
-                                        </div>
-                                      )}
+                                    {/* Dynamic Theme Left Accent Bar - Flush to left edge with rounded-l-2xl */}
+                                    <div className={`absolute left-0 top-0 bottom-0 w-[4.5px] rounded-l-2xl ${roomTheme.cardBar}`} />
+
+                                    {/* Top Section: Line 1 (Course Code) & Line 2 (Booking Title) */}
+                                    <div className="flex flex-col min-w-0 overflow-hidden">
+                                      {/* Line 1: Course Code only (Room Theme Color) */}
+                                      <div className={`font-black text-[15px] sm:text-[16px] ${roomTheme.cardSubject} tracking-tight uppercase leading-tight truncate`}>
+                                        {displayCourseCode}
+                                      </div>
+                                      {/* Line 2: Booking Title / Program Name (Solid Bright White) */}
+                                      <div 
+                                        className="font-bold text-[12.5px] sm:text-[13px] text-[#ffffff] leading-tight truncate mt-0.5" 
+                                        style={{ color: '#ffffff' }}
+                                        title={displayProgramTitle}
+                                      >
+                                        {displayProgramTitle}
+                                      </div>
                                     </div>
-                                    <div className={`h-[1px] ${roomTheme.cardDivider} group-hover/card:bg-white/30 w-full my-0.5 transition-colors shrink-0`} />
-                                    <div 
-                                      className={`font-semibold !text-[12px] ${roomTheme.cardFooter} group-hover/card:!text-white truncate w-full overflow-hidden text-ellipsis leading-[1.2] transition-colors`}
-                                      style={{ fontSize: '12px', lineHeight: '1.2' }}
-                                    >
-                                      {footerText}
+
+                                    {/* Dynamic Room Theme Divider */}
+                                    <div className={`h-[1px] ${roomTheme.cardDivider} w-full my-0.5 shrink-0`} />
+
+                                    {/* Bottom Section: Line 3 (Full Name) & Line 4 (Time Slot) */}
+                                    <div className="flex flex-col min-w-0 overflow-hidden">
+                                      {/* Line 3: Student Full Name (Solid Bright White) */}
+                                      <div 
+                                        className="font-bold text-[12px] sm:text-[12.5px] text-[#ffffff] leading-tight truncate" 
+                                        style={{ color: '#ffffff' }}
+                                        title={displayStudentFullName}
+                                      >
+                                        {displayStudentFullName}
+                                      </div>
+                                      {/* Line 4: Booking Time Slot (Room Theme Color) */}
+                                      <div className={`font-bold text-[11.5px] sm:text-[12px] ${roomTheme.cardSubject} font-mono tracking-tight leading-tight mt-0.5`}>
+                                        {displayTimeText}
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
@@ -2370,107 +2615,24 @@ export default function AdminDashboard({
     )}
 
     {/* Modal Dialog for Schedule Booking Details */}
-    {selectedScheduleBookingModal && createPortal(
-      <div 
-        onClick={() => setSelectedScheduleBookingModal(null)}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
-      >
-        <div 
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-[360px] sm:max-w-[400px] cursor-default bg-[#18181a] border border-[#3f3f46] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] p-5 text-left flex flex-col animate-in zoom-in-95 duration-200"
-          style={{ color: '#E5E7EB' }}
-        >
-          {/* Header: Room Name & Close Button */}
-          <div className="flex items-center justify-between gap-2">
-            <div className={`font-black text-[22px] leading-tight tracking-wide ${selectedScheduleBookingModal.roomThemeText}`}>
-              {selectedScheduleBookingModal.room}
-            </div>
-            <button 
-              onClick={() => setSelectedScheduleBookingModal(null)}
-              className="p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
-              title="ปิด"
-              style={{ color: '#E5E7EB' }}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Solid White/Light Divider Line */}
-          <div className="h-[2px] w-full my-3 bg-[#3f3f46]" />
-
-          {/* Details List */}
-          <div className="flex flex-col gap-3 mb-4">
-            <div className="font-extrabold text-[15px] sm:text-[16px] leading-snug">
-              <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>วิชา / ช่วงเวลา</span>
-              <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.subject} / {selectedScheduleBookingModal.slot}</span>
-            </div>
-
-            <div className="font-extrabold text-[15px] leading-snug">
-              <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>รหัสนักศึกษา</span>
-              <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.studentId}</span>
-            </div>
-
-            {selectedScheduleBookingModal.studentName && (
-              <div className="font-extrabold text-[15px] leading-snug">
-                <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>ชื่อ-นามสกุล</span>
-                <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.studentName}</span>
-              </div>
-            )}
-
-            <div className="font-extrabold text-[15px] leading-snug">
-              <span className="font-semibold text-xs sm:text-sm block mb-0.5" style={{ color: '#9CA3AF' }}>เบอร์โทรศัพท์</span>
-              <span style={{ color: '#E5E7EB' }}>{selectedScheduleBookingModal.phone}</span>
-            </div>
-          </div>
-
-          {/* Bottom Purpose Box */}
-          <div className="rounded-xl p-3.5 shadow-sm min-h-[52px] flex flex-col justify-center bg-[#2a2a2e] border border-[#3f3f46]">
-            <span className="text-xs font-semibold mb-1" style={{ color: '#9CA3AF' }}>วัตถุประสงค์การใช้งาน</span>
-            <div className="font-extrabold text-[14px] leading-snug break-words" style={{ color: '#E5E7EB' }}>
-              {selectedScheduleBookingModal.purpose}
-            </div>
-          </div>
-
-          {/* Action Buttons: Edit & Delete (Protected by 4-digit PIN) */}
-          {selectedScheduleBookingModal.booking && (
-            <div className="flex gap-2.5 mt-4 pt-3 border-t border-[#3f3f46]">
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedScheduleBookingModal.booking) {
-                    setTargetBookingForPin(selectedScheduleBookingModal.booking);
-                    setPinActionType('edit');
-                    setIsVerifyPinModalOpen(true);
-                    setSelectedScheduleBookingModal(null);
-                  }
-                }}
-                className="flex-1 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 hover:text-orange-200 font-extrabold rounded-xl py-2 px-3 text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
-              >
-                <span>✏️</span>
-                <span>แก้ไข / ย้ายวันเวลา</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedScheduleBookingModal.booking) {
-                    setTargetBookingForPin(selectedScheduleBookingModal.booking);
-                    setPinActionType('delete');
-                    setIsVerifyPinModalOpen(true);
-                    setSelectedScheduleBookingModal(null);
-                  }
-                }}
-                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 hover:text-red-200 font-extrabold rounded-xl py-2 px-3 text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
-              >
-                <span>🗑️</span>
-                <span>ยกเลิกการจอง (ลบ)</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>,
-      document.body
-    )}
+    <BookingDetailModal
+      isOpen={!!selectedScheduleBookingModal}
+      onClose={() => setSelectedScheduleBookingModal(null)}
+      data={selectedScheduleBookingModal}
+      courses={courses}
+      onEditClick={(booking) => {
+        setTargetBookingForPin(booking);
+        setPinActionType('edit');
+        setIsVerifyPinModalOpen(true);
+        setSelectedScheduleBookingModal(null);
+      }}
+      onDeleteClick={(booking) => {
+        setTargetBookingForPin(booking);
+        setPinActionType('delete');
+        setIsVerifyPinModalOpen(true);
+        setSelectedScheduleBookingModal(null);
+      }}
+    />
 
     {/* Verify Booking PIN Modal */}
     <VerifyBookingPinModal
@@ -2522,7 +2684,7 @@ export default function AdminDashboard({
         setActiveScheduleRoom(newRoom);
         setScheduleBaseDate(newDate);
         setBookingDate(newDate);
-        alert(`✅ บันทึกการแก้ไขและย้ายเวลาสำเร็จ!\n\nห้อง: ${newRoom}\nวันที่: ${newDate}\n\nระบบอัปเดตตำแหน่งบนตารางและฐานข้อมูลเรียบร้อยแล้ว`);
+        setSuccessModalConfig({ isOpen: true, type: 'edit' });
       }}
     />
 
@@ -2538,6 +2700,13 @@ export default function AdminDashboard({
         await onDeleteBooking(id);
         alert("🗑️ ยกเลิกและลบรายการจองสำเร็จ คืนช่องเวลาว่างบนตารางเรียบร้อยแล้ว");
       }}
+    />
+
+    {/* Success Animation Pop-up Modal */}
+    <SuccessNotificationModal
+      isOpen={successModalConfig.isOpen}
+      onClose={() => setSuccessModalConfig(prev => ({ ...prev, isOpen: false }))}
+      type={successModalConfig.type}
     />
 
   </div>

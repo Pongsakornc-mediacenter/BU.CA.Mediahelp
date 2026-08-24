@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -22,7 +22,9 @@ import {
   Radio,
   Video,
   ShieldCheck,
-  Tag
+  Tag,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { RoomBooking, Course } from '../types';
 
@@ -55,6 +57,14 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   onDeleteClick,
   courses = []
 }) => {
+  const [showPhone, setShowPhone] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShowPhone(false);
+    }
+  }, [isOpen, data]);
+
   if (!isOpen || !data) return null;
 
   const booking = data.booking;
@@ -122,7 +132,7 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
     (booking?.purpose && booking.purpose.includes('สำหรับการเรียนการสอนอาจารย์')) ||
     (data.studentId === 'อาจารย์ผู้สอน');
 
-  // Format Thai Date
+  // Format Thai Date - Concise and short without long parentheses
   const rawDate = booking?.date || "";
   const formatThaiDate = (dateStr: string) => {
     if (!dateStr) return "ระบุตามตารางประจำสัปดาห์";
@@ -133,18 +143,13 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
       const d = parseInt(parts[2], 10);
       const dateObj = new Date(y, m, d);
       const dayNames = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-      const thaiMonths = [
-        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-      ];
       const thaiShortMonths = [
         "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
         "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
       ];
       const dayName = dayNames[dateObj.getDay()] || "";
-      const monthName = thaiMonths[m] || "";
       const shortMonth = thaiShortMonths[m] || "";
-      return `${dayName} ${d} ${shortMonth} ${y} (${d} ${monthName} ${y + 543})`;
+      return `${dayName} ${d} ${shortMonth} ${y}`;
     }
     return dateStr;
   };
@@ -172,6 +177,20 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
     booking?.phone && booking.phone !== "-"
       ? booking.phone
       : (data.phone && data.phone !== "-" && data.phone !== "อาจารย์ผู้สอน" ? data.phone : "-");
+
+  // Format masked phone number (064-***-****)
+  const maskPhoneNumber = (phoneStr: string) => {
+    if (!phoneStr || phoneStr === "-" || phoneStr === "ไม่ระบุ") return phoneStr;
+    const clean = phoneStr.trim();
+    const digits = clean.replace(/\D/g, '');
+    if (digits.length >= 3) {
+      return `${digits.slice(0, 3)}-***-****`;
+    }
+    if (clean.length > 0) {
+      return `${clean.slice(0, Math.min(3, clean.length))}-***-****`;
+    }
+    return '064-***-****';
+  };
 
   const displayEmail =
     booking?.email ||
@@ -201,17 +220,89 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
     instructorName = "อาจารย์ผู้สอนประจำวิชา";
   }
 
+  // Booking Title (ชื่อรายการ)
+  let displayBookingTitle = booking?.bookingTitle || "";
+  if (!displayBookingTitle && booking?.purpose) {
+    const headerMatch = booking.purpose.match(/หัวข้อ:\s*([^|)]+)/i);
+    if (headerMatch) {
+      displayBookingTitle = headerMatch[1].trim();
+    } else {
+      const parenMatch = booking.purpose.match(/\((.*?)\)/);
+      if (parenMatch) {
+        const cleanInside = parenMatch[1].replace(/วัตถุประสงค์:\s*[^|)]+/i, '').replace(/\|/g, '').trim();
+        if (cleanInside) {
+          displayBookingTitle = cleanInside;
+        }
+      }
+    }
+  }
+  if (!displayBookingTitle && !isTeacherBooking) {
+    // If not found, check data.subject / purpose
+    const rawP = data.purpose || "";
+    const headerMatch = rawP.match(/หัวข้อ:\s*([^|)]+)/i);
+    if (headerMatch) {
+      displayBookingTitle = headerMatch[1].trim();
+    }
+  }
+
   // Purpose Details
   let rawPurpose =
     booking?.bookingPurpose ||
     booking?.purpose ||
     data.purpose ||
-    (isTeacherBooking ? "สำหรับการเรียนการสอนอาจารย์" : "ฝึกจัดรายการวิทยุ");
+    (isTeacherBooking ? "สำหรับการเรียนการสอนอาจารย์" : "จัดรายการส่งในรายวิชา");
 
-  // Remove internal flags from purpose
-  const cleanPurpose = rawPurpose
-    .replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '')
-    .trim() || (isTeacherBooking ? "สำหรับการเรียนการสอนอาจารย์ในชั้นเรียน" : "ฝึกซ้อมจัดรายการวิทยุและสื่อเสียง");
+  // Extract pure purpose if formatted with หัวข้อ/วัตถุประสงค์
+  let cleanPurpose = rawPurpose;
+  const purposeFieldMatch = rawPurpose.match(/วัตถุประสงค์:\s*([^|)]+)/i);
+  if (purposeFieldMatch) {
+    cleanPurpose = purposeFieldMatch[1].trim();
+  } else {
+    cleanPurpose = rawPurpose
+      .replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '')
+      .replace(/หัวข้อ:\s*[^|)]+/gi, '')
+      .replace(/\|/g, '')
+      .replace(/^[A-Za-z]{2,4}\s*\d{3,4}[\s:-]*/i, '')
+      .replace(/^\((.*)\)$/, '$1')
+      .trim();
+  }
+
+  if (!cleanPurpose) {
+    cleanPurpose = isTeacherBooking ? "สำหรับการเรียนการสอนอาจารย์ในชั้นเรียน" : "จัดรายการส่งในรายวิชา";
+  }
+
+  // Activity Timestamp Logic (submittedAt vs updatedAt)
+  const submittedTime = booking?.submittedAt || booking?.createdAt || "";
+  const updatedTime = booking?.updatedAt || "";
+
+  let isEdited = false;
+  if (updatedTime && submittedTime) {
+    const diff = Math.abs(new Date(updatedTime).getTime() - new Date(submittedTime).getTime());
+    if (diff > 3000) {
+      isEdited = true;
+    }
+  }
+
+  const latestActivityTimestamp = updatedTime || submittedTime || "";
+  const timestampLabel = isEdited ? "แก้ไขล่าสุดเมื่อ" : "เวลาทำรายการล่าสุด";
+
+  const formatTimestampDisplay = (isoStr?: string) => {
+    if (!isoStr) return "-";
+    try {
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return isoStr;
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const day = pad(d.getDate());
+      const month = pad(d.getMonth() + 1);
+      const year = d.getFullYear();
+      const hours = pad(d.getHours());
+      const minutes = pad(d.getMinutes());
+      const seconds = pad(d.getSeconds());
+      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds} น.`;
+    } catch {
+      return isoStr;
+    }
+  };
 
   return createPortal(
     <AnimatePresence>
@@ -226,45 +317,47 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-[540px] bg-[#141417] border border-[#32323a] rounded-2xl sm:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] text-left flex flex-col my-auto overflow-hidden text-slate-100 cursor-default"
+          className="relative w-full max-w-6xl bg-[#141417] border border-[#2d2d34] rounded-2xl sm:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] text-left flex flex-col my-auto overflow-hidden text-slate-100 cursor-default"
           id="booking_detail_modal_content"
         >
-          {/* Top Decorative Color Line */}
-          <div className={`h-1.5 w-full ${isTeacherBooking ? 'bg-gradient-to-r from-purple-500 via-fuchsia-400 to-indigo-500' : 'bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-500'}`} />
-
-          {/* Modal Header */}
-          <div className="p-4 sm:p-5 pb-3 sm:pb-4 border-b border-[#25252d] flex items-start justify-between gap-3 bg-[#19191e]/80">
+          {/* Modal Header (Clean Dark, No Yellow Border) */}
+          <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-[#25252d] flex items-start justify-between gap-3 bg-[#18181d]">
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`p-2.5 rounded-xl border ${roomConfig.bg} ${roomConfig.border} shrink-0`}>
+              <div className={`p-3.5 rounded-xl border ${roomConfig.bg} ${roomConfig.border} shrink-0`}>
                 {roomConfig.icon}
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-extrabold text-[18px] sm:text-[20px] text-white tracking-tight leading-tight truncate font-display">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 
+                    className="font-extrabold text-[20px] sm:text-[23px] text-white tracking-tight leading-tight truncate font-display"
+                    style={{ color: '#ffffff' }}
+                  >
                     รายละเอียดการจองห้อง
                   </h3>
                   {/* Booking Type Pill */}
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border shrink-0 ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border shrink-0 ${
                       isTeacherBooking
-                        ? 'bg-purple-950/80 text-purple-300 border-purple-500/40 shadow-sm'
-                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 shadow-sm'
+                        ? 'bg-purple-950/80 text-purple-200 border-purple-500/40 shadow-sm'
+                        : 'bg-emerald-950/80 text-emerald-200 border-emerald-500/40 shadow-sm'
                     }`}
                   >
                     {isTeacherBooking ? (
                       <>
-                        <GraduationCap className="w-3 h-3 text-purple-300" />
-                        <span>คลาสเรียนอาจารย์</span>
+                        <GraduationCap className="w-4 h-4 text-purple-300" />
+                        <span style={{ color: '#e9d5ff' }}>คลาสเรียนอาจารย์</span>
                       </>
                     ) : (
                       <>
-                        <User className="w-3 h-3 text-emerald-300" />
-                        <span>นักศึกษา / ทั่วไป</span>
+                        <User className="w-4 h-4 text-emerald-300" />
+                        <span style={{ color: '#a7f3d0' }}>นักศึกษา / ทั่วไป</span>
                       </>
                     )}
                   </span>
                 </div>
-                <p className={`text-[13px] font-bold mt-1 truncate ${roomConfig.text}`}>
+                <p 
+                  className={`text-[14px] sm:text-[15px] font-bold mt-1 truncate ${roomConfig.text}`}
+                >
                   {roomName}
                 </p>
               </div>
@@ -274,160 +367,190 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+              className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+              style={{ color: '#cbd5e1' }}
               title="ปิดหน้าต่าง"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Modal Body: Organized Cards & Sections */}
-          <div className="p-4 sm:p-5 space-y-3.5 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          {/* Modal Body: 60/40 Split Grid Layout + Bottom Full-Width Security Badge */}
+          <div className="p-4 sm:p-6 sm:py-5 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
 
-            {/* Card 1: วันที่และเวลาการใช้งาน (Date & Time Schedule) */}
-            <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-3.5 sm:p-4 shadow-sm hover:border-slate-600/40 transition-colors">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
-                <Calendar className="w-4 h-4 text-orange-400" />
-                <span>วันและเวลาการใช้งานห้อง</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="bg-[#141417] p-2.5 rounded-xl border border-[#26262e] flex flex-col justify-center">
-                  <span className="text-[11px] font-semibold text-slate-400 mb-0.5">วันที่จองใช้งาน</span>
-                  <div className="font-extrabold text-[14px] text-white flex items-center gap-1.5 truncate">
-                    <span className="text-orange-400">📅</span>
-                    <span className="truncate">{displayDateText}</span>
+              {/* Left Column (~60% width) - Date & Time and Booker Info */}
+              <div className="lg:col-span-3 flex flex-col gap-4">
+                {/* Left Card 1: วันและเวลาการใช้งานห้อง */}
+                <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider mb-3" style={{ color: '#e2e8f0' }}>
+                    <Calendar className="w-4.5 h-4.5 text-orange-400 shrink-0" />
+                    <span style={{ color: '#ffffff' }}>วันและเวลาการใช้งานห้อง</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-[#141417] p-3.5 sm:p-4 rounded-xl border border-[#26262e] flex flex-col justify-center min-w-0">
+                      <span className="text-sm font-semibold mb-1 block" style={{ color: '#94a3b8' }}>วันที่จองใช้งาน</span>
+                      <div className="font-extrabold text-base sm:text-[17px] flex items-center gap-2 min-w-0" style={{ color: '#ffffff' }}>
+                        <span className="text-orange-400 shrink-0 text-lg">📅</span>
+                        <span className="font-bold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#ffffff' }} title={displayDateText}>
+                          {displayDateText}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#141417] p-3.5 sm:p-4 rounded-xl border border-[#26262e] flex flex-col justify-center min-w-0">
+                      <span className="text-sm font-semibold mb-1 block" style={{ color: '#94a3b8' }}>ช่วงเวลาที่เลือก</span>
+                      <div className="font-extrabold text-base sm:text-[17px] flex items-center gap-2 min-w-0" style={{ color: '#fde047' }}>
+                        <Clock className="w-4.5 h-4.5 text-amber-400 shrink-0" />
+                        <span className="font-bold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#fde047' }}>
+                          {displayTimeSlot}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-[#141417] p-2.5 rounded-xl border border-[#26262e] flex flex-col justify-center">
-                  <span className="text-[11px] font-semibold text-slate-400 mb-0.5">ช่วงเวลาที่เลือก</span>
-                  <div className="font-extrabold text-[14px] text-amber-300 flex items-center gap-1.5 truncate">
-                    <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span className="truncate">{displayTimeSlot}</span>
+                {/* Left Card 2: ข้อมูลผู้จองใช้งาน (4 ช่องย่อย) */}
+                <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-4 sm:p-5 shadow-sm flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider mb-3" style={{ color: '#e2e8f0' }}>
+                    <User className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+                    <span style={{ color: '#ffffff' }}>ข้อมูลผู้จองใช้งาน</span>
                   </div>
-                </div>
-              </div>
-            </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+                    <div className="bg-[#141417] p-3.5 sm:p-4 rounded-xl border border-[#26262e] flex flex-col justify-center min-w-0">
+                      <span className="text-sm font-semibold block mb-1" style={{ color: '#94a3b8' }}>ชื่อ-นามสกุล</span>
+                      <div className="font-extrabold text-base leading-snug break-words" style={{ color: '#ffffff' }}>
+                        {displayBookerName}
+                      </div>
+                    </div>
 
-            {/* Card 2: รายวิชา & อาจารย์ผู้สอน (Course & Instructor) */}
-            <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-3.5 sm:p-4 shadow-sm hover:border-slate-600/40 transition-colors">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
-                <BookOpen className="w-4 h-4 text-blue-400" />
-                <span>รายวิชา / ข้อมูลวิชาเรียน</span>
-              </div>
-              <div className="bg-[#141417] p-3 rounded-xl border border-[#26262e] space-y-2">
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">วิชา / กลุ่มการเรียน</span>
-                  <div className="font-extrabold text-[15px] text-white leading-snug break-words">
-                    {fullCourseName}
+                    <div className="bg-[#141417] p-3.5 sm:p-4 rounded-xl border border-[#26262e] flex flex-col justify-center min-w-0">
+                      <span className="text-sm font-semibold block mb-1" style={{ color: '#94a3b8' }}>
+                        {isTeacherBooking ? "สถานะ / ตำแหน่ง" : "รหัสนักศึกษา"}
+                      </span>
+                      <div className="font-extrabold text-base font-mono leading-snug break-words" style={{ color: '#ffffff' }}>
+                        {displayBookerId}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#141417] p-3.5 sm:p-4 rounded-xl border border-[#26262e] flex flex-col justify-center min-w-0">
+                      <span className="text-sm font-semibold block mb-1" style={{ color: '#94a3b8' }}>เบอร์โทรศัพท์ติดต่อ</span>
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div className="font-extrabold text-base flex items-center gap-2 min-w-0" style={{ color: '#ffffff' }}>
+                          <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="font-mono whitespace-nowrap overflow-hidden text-ellipsis select-all" style={{ color: '#ffffff' }}>
+                            {showPhone ? displayPhone : maskPhoneNumber(displayPhone)}
+                          </span>
+                        </div>
+                        {displayPhone && displayPhone !== "-" && displayPhone !== "ไม่ระบุ" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPhone(!showPhone)}
+                            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                            title={showPhone ? "ซ่อนเบอร์โทรศัพท์" : "แสดงเบอร์โทรศัพท์"}
+                          >
+                            {showPhone ? (
+                              <EyeOff className="w-4.5 h-4.5 text-emerald-400" />
+                            ) : (
+                              <Eye className="w-4.5 h-4.5 text-slate-400" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#141417] p-3.5 sm:p-4 rounded-xl border border-[#26262e] flex flex-col justify-center min-w-0">
+                      <span className="text-sm font-semibold block mb-1" style={{ color: '#94a3b8' }}>อีเมลผู้จอง</span>
+                      <div className="font-semibold text-base flex items-center gap-2 min-w-0" style={{ color: '#ffffff' }}>
+                        <Mail className="w-4 h-4 text-sky-400 shrink-0" />
+                        <span className="font-medium whitespace-nowrap overflow-x-auto select-all" style={{ color: '#ffffff' }} title={displayEmail}>
+                          {displayEmail}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                {isTeacherBooking && (
-                  <div className="pt-2 border-t border-[#26262e] flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-slate-400">อาจารย์ผู้สอน:</span>
-                    <span className="text-[13px] font-bold text-purple-300 truncate">{instructorName}</span>
+              </div>
+
+              {/* Right Column (~40% width) - 1. Course, 2. Booking Title, 3. Purpose */}
+              <div className="lg:col-span-2 flex flex-col gap-3.5">
+                {/* Right Card 1: รายวิชาเรียน (Course) */}
+                <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-4 sm:p-4.5 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider mb-2.5" style={{ color: '#e2e8f0' }}>
+                    <BookOpen className="w-4.5 h-4.5 text-sky-400 shrink-0" />
+                    <span style={{ color: '#ffffff' }}>รายวิชาเรียน</span>
+                  </div>
+                  <div className="bg-[#141417] p-3 sm:p-3.5 rounded-xl border border-[#26262e] space-y-2">
+                    <div>
+                      <span className="text-xs sm:text-sm font-semibold block mb-1" style={{ color: '#94a3b8' }}>รหัสและชื่อรายวิชา</span>
+                      <div className="font-extrabold text-base sm:text-[16px] leading-snug break-words text-sky-200" style={{ color: '#bae6fd' }}>
+                        {fullCourseName}
+                      </div>
+                    </div>
+                    {isTeacherBooking && (
+                      <div className="pt-2 border-t border-[#26262e] flex items-center gap-2">
+                        <span className="text-xs sm:text-sm font-semibold shrink-0" style={{ color: '#94a3b8' }}>อาจารย์ผู้สอน:</span>
+                        <span className="text-sm sm:text-base font-bold" style={{ color: '#ffffff' }}>{instructorName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Card 2: ชื่อรายการ (Booking Title) - Always shown or fallback for student */}
+                {!isTeacherBooking && (
+                  <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-4 sm:p-4.5 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider mb-2.5" style={{ color: '#e2e8f0' }}>
+                      <FileText className="w-4.5 h-4.5 text-orange-400 shrink-0" />
+                      <span style={{ color: '#ffffff' }}>ชื่อรายการ</span>
+                    </div>
+                    <div className="bg-[#141417] p-3 sm:p-3.5 rounded-xl border border-[#26262e]">
+                      <span className="text-xs sm:text-sm font-semibold block mb-1" style={{ color: '#94a3b8' }}>หัวข้อ / ชื่อรายการที่จัด</span>
+                      <div className="font-extrabold text-base sm:text-[16px] leading-snug break-words text-white" style={{ color: '#ffffff' }}>
+                        {displayBookingTitle || "ไม่ระบุชื่อรายการ"}
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Card 3: ข้อมูลผู้แจ้งจอง (Booker Information) */}
-            <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-3.5 sm:p-4 shadow-sm hover:border-slate-600/40 transition-colors">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
-                <User className="w-4 h-4 text-emerald-400" />
-                <span>ข้อมูลผู้แจ้งจองใช้งาน</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="bg-[#141417] p-2.5 rounded-xl border border-[#26262e]">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">ชื่อ-นามสกุล</span>
-                  <div className="font-extrabold text-[13px] sm:text-[14px] text-white truncate" title={displayBookerName}>
-                    {displayBookerName}
+                {/* Right Card 3: วัตถุประสงค์การใช้งาน (Purpose) */}
+                <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-4 sm:p-4.5 shadow-sm flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider mb-2.5" style={{ color: '#e2e8f0' }}>
+                    <FileText className="w-4.5 h-4.5 text-purple-400 shrink-0" />
+                    <span style={{ color: '#ffffff' }}>วัตถุประสงค์การใช้งาน</span>
+                  </div>
+                  <div className="bg-[#141417] p-3 sm:p-3.5 rounded-xl border border-[#26262e] flex-1 flex items-start">
+                    <p className="font-semibold text-sm sm:text-base leading-relaxed break-words w-full" style={{ color: '#ffffff' }}>
+                      {cleanPurpose}
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-[#141417] p-2.5 rounded-xl border border-[#26262e]">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">
-                    {isTeacherBooking ? "สถานะ / ตำแหน่ง" : "รหัสนักศึกษา"}
+            </div>
+
+            {/* Bottom Info Strip: Latest Activity Timestamp & Security Verification Badge */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              {/* Activity Timestamp Badge */}
+              <div className="flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl bg-[#1c1c22] border border-[#2b2b33] text-sm shadow-sm min-w-0">
+                <div className="flex items-center gap-2 text-slate-400 shrink-0">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold text-xs sm:text-sm" style={{ color: '#94a3b8' }}>
+                    {timestampLabel}:
                   </span>
-                  <div className="font-extrabold text-[13px] sm:text-[14px] text-white font-mono truncate">
-                    {displayBookerId}
-                  </div>
                 </div>
+                <span className="font-mono font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#fde047' }}>
+                  {formatTimestampDisplay(latestActivityTimestamp)}
+                </span>
+              </div>
 
-                <div className="bg-[#141417] p-2.5 rounded-xl border border-[#26262e]">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">เบอร์โทรศัพท์ติดต่อ</span>
-                  <div className="font-extrabold text-[13px] sm:text-[14px] text-white flex items-center gap-1.5 truncate">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="font-mono">{displayPhone}</span>
-                  </div>
-                </div>
-
-                <div className="bg-[#141417] p-2.5 rounded-xl border border-[#26262e]">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">อีเมลผู้แจ้งจอง</span>
-                  <div className="font-extrabold text-[13px] sm:text-[14px] text-white flex items-center gap-1.5 truncate" title={displayEmail}>
-                    <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    <span className="truncate">{displayEmail}</span>
-                  </div>
-                </div>
+              {/* Security & Verification Badge */}
+              <div className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-[#1c1c22] border border-[#2b2b33] text-xs sm:text-sm text-center shadow-sm">
+                <ShieldCheck className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+                <span className="font-medium" style={{ color: '#ffffff' }}>
+                  การจองนี้ได้รับการยืนยันและคุ้มครองด้วยรหัส PIN 4 หลัก
+                </span>
               </div>
             </div>
-
-            {/* Card 4: วัตถุประสงค์การใช้งาน (Purpose of Booking) */}
-            <div className="bg-[#1c1c22] border border-[#2b2b33] rounded-2xl p-3.5 sm:p-4 shadow-sm hover:border-slate-600/40 transition-colors">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                <FileText className="w-4 h-4 text-purple-400" />
-                <span>วัตถุประสงค์การใช้งาน</span>
-              </div>
-              <div className="bg-[#141417] p-3 rounded-xl border border-[#26262e] min-h-[48px] flex items-center">
-                <p className="font-bold text-[13px] sm:text-[14px] text-slate-200 leading-relaxed break-words w-full">
-                  {cleanPurpose}
-                </p>
-              </div>
-            </div>
-
-            {/* Security & Verification Hint */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>การจองนี้ได้รับการยืนยันและคุ้มครองความปลอดภัยด้วยรหัส PIN 4 หลัก</span>
-            </div>
-
-          </div>
-
-          {/* Modal Footer: Action Buttons */}
-          <div className="p-4 sm:p-5 pt-3 border-t border-[#25252d] bg-[#17171c] flex flex-col sm:flex-row gap-2.5">
-            {booking && onEditClick && (
-              <button
-                type="button"
-                onClick={() => {
-                  onEditClick(booking);
-                }}
-                className="flex-1 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 hover:text-orange-200 font-extrabold rounded-xl py-2.5 px-3 text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-95"
-              >
-                <Edit3 className="w-4 h-4 text-orange-400" />
-                <span>แก้ไข / ย้ายวันเวลา</span>
-              </button>
-            )}
-
-            {booking && onDeleteClick && (
-              <button
-                type="button"
-                onClick={() => {
-                  onDeleteClick(booking);
-                }}
-                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 hover:text-red-200 font-extrabold rounded-xl py-2.5 px-3 text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-95"
-              >
-                <Trash2 className="w-4 h-4 text-red-400" />
-                <span>ยกเลิกการจอง (ลบ)</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center"
-            >
-              ปิด
-            </button>
           </div>
 
         </motion.div>

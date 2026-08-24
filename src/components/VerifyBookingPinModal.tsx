@@ -142,16 +142,20 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
         date: booking.date,
         timeSlot: booking.timeSlot,
         subject: booking.subject || booking.purpose || 'BRS311',
+        bookingTitle: booking.bookingTitle,
+        title: booking.bookingTitle,
+        booking_title: booking.bookingTitle,
+        userType: booking.userType,
         pinCode: expectedPin
       });
 
       setForgotPinNotice(
-        `✉️ ${res.message || `ระบบได้ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว`} (รหัส PIN: ${expectedPin})`
+        `✉️ ${res.message || `ระบบได้ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว`} (กรุณาตรวจสอบในกล่องข้อความของท่าน)`
       );
     } catch (err: any) {
       console.error("Error sending PIN reminder email:", err);
       setForgotPinNotice(
-        `✉️ ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว (รหัส PIN: ${expectedPin})`
+        `✉️ ส่งรหัส PIN ไปยังอีเมล ${bookingEmail} เรียบร้อยแล้ว (กรุณาตรวจสอบในกล่องข้อความของท่าน)`
       );
     } finally {
       setIsSendingMail(false);
@@ -178,27 +182,27 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
           }}
           exit={{ opacity: 0, scale: 0.94, y: 15 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className={`relative w-full max-w-md bg-[#18181a] border ${
-            isEdit ? 'border-orange-500/40 ring-1 ring-orange-500/30' : 'border-red-500/40 ring-1 ring-red-500/30'
-          } rounded-2xl p-5 sm:p-6 shadow-[0_25px_70px_rgba(0,0,0,0.95)] cursor-default my-auto text-white`}
+          className={`relative w-full max-w-2xl sm:max-w-3xl bg-[#18181a] border ${
+            isEdit ? 'border-orange-500/50 ring-2 ring-orange-500/30' : 'border-red-500/50 ring-2 ring-red-500/30'
+          } rounded-2xl sm:rounded-3xl p-6 sm:p-9 shadow-[0_30px_90px_rgba(0,0,0,0.95)] cursor-default my-auto text-white`}
           onClick={(e) => e.stopPropagation()}
           id="verify_booking_pin_content"
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-[#2d2d34]">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
-                isEdit ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+          <div className="flex items-center justify-between pb-5 border-b border-[#3f3f46]">
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${
+                isEdit ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
               }`}>
-                <KeyRound className="w-5 h-5" />
+                <KeyRound className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
               <div>
-                <h3 className={`text-base font-extrabold font-display ${
+                <h3 className={`text-lg sm:text-2xl font-black font-display tracking-tight ${
                   isEdit ? 'text-orange-400' : 'text-red-400'
                 }`}>
                   {isEdit ? '🔐 ยืนยัน PIN เพื่อแก้ไข / ย้ายวันเวลา' : '🔐 ยืนยัน PIN เพื่อยกเลิก / ลบการจอง'}
                 </h3>
-                <p className="text-[11.5px] text-slate-400">
+                <p className="text-sm sm:text-base text-zinc-200 font-medium mt-0.5">
                   กรุณากรอกรหัส PIN กลุ่ม 4 หลักที่ระบุไว้ตอนจอง
                 </p>
               </div>
@@ -206,37 +210,37 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
             <button 
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-full hover:bg-white/10 text-zinc-300 hover:text-white transition-colors cursor-pointer"
               title="ปิด"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
           {/* Booking Summary Box */}
-          <div className="mt-4 p-3 bg-[#232328] border border-[#34343d] rounded-xl space-y-1.5 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">ห้องที่จอง:</span>
-              <span className="font-extrabold text-slate-200">{booking.roomName}</span>
+          <div className="mt-5 p-4 sm:p-5 bg-[#232328] border border-[#3f3f46] rounded-2xl space-y-2.5 sm:space-y-3 text-sm sm:text-base shadow-sm">
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-zinc-200 font-semibold">ห้องที่จอง:</span>
+              <span className="font-extrabold text-[#ffffff] text-base sm:text-lg">{booking.roomName}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">วันและเวลา:</span>
-              <span className="font-bold text-amber-300 font-mono">{booking.date} ({booking.timeSlot})</span>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-zinc-200 font-semibold">วันและเวลา:</span>
+              <span className="font-extrabold text-amber-300 font-mono text-base sm:text-lg">{booking.date} ({booking.timeSlot})</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">ผู้จอง / อีเมล:</span>
-              <span className="font-bold text-slate-300 truncate max-w-[200px]" title={bookingEmail}>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-zinc-200 font-semibold">ผู้จอง / อีเมล:</span>
+              <span className="font-bold text-[#fcfcfc] truncate max-w-[280px] sm:max-w-[450px]" title={bookingEmail}>
                 {booking.studentNameInput || booking.studentName} ({bookingEmail})
               </span>
             </div>
           </div>
 
           {/* PIN Input Digits */}
-          <div className="mt-5 space-y-3">
-            <label className="text-xs font-bold text-slate-300 text-center block">
+          <div className="mt-6 sm:mt-7 space-y-4">
+            <label className="text-base sm:text-lg font-black text-zinc-100 text-center block">
               🔑 กรอกรหัส PIN 4 หลัก
             </label>
-            <div className="flex justify-center items-center gap-3">
+            <div className="flex justify-center items-center gap-4 sm:gap-6 py-1">
               {pinDigits.map((digit, idx) => (
                 <input
                   key={idx}
@@ -248,12 +252,12 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
                   value={digit}
                   onChange={(e) => handleDigitChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
-                  className={`w-12 h-14 bg-[#0e0e11] border-2 rounded-xl text-center text-2xl font-black text-white focus:outline-none transition-all font-mono shadow-inner ${
+                  className={`w-16 h-20 sm:w-20 sm:h-24 bg-[#0e0e11] border-2 rounded-2xl text-center text-3xl sm:text-4xl font-black text-white focus:outline-none transition-all font-mono shadow-inner ${
                     errorMsg 
-                      ? 'border-red-500 bg-red-950/20 text-red-300 focus:border-red-400' 
+                      ? 'border-red-500 bg-red-950/30 text-red-300 focus:border-red-400' 
                       : digit 
-                        ? isEdit ? 'border-orange-500 bg-orange-950/20 focus:border-orange-400' : 'border-red-500 bg-red-950/20 focus:border-red-400'
-                        : 'border-[#3f3f46] focus:border-indigo-500 focus:bg-[#1a1a24]'
+                        ? isEdit ? 'border-orange-500 bg-orange-950/30 focus:border-orange-400 ring-2 ring-orange-500/30' : 'border-red-500 bg-red-950/30 focus:border-red-400 ring-2 ring-red-500/30'
+                        : 'border-[#4a4a55] focus:border-orange-500 focus:bg-[#1a1a24]'
                   }`}
                   autoComplete="off"
                 />
@@ -265,9 +269,9 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
               <motion.div 
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-center gap-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 py-2 px-3 rounded-lg text-center"
+                className="flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-rose-300 bg-rose-500/15 border border-rose-500/30 py-3 px-4 rounded-xl text-center"
               >
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400" />
                 <span>{errorMsg}</span>
               </motion.div>
             )}
@@ -277,37 +281,23 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
               <motion.div 
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 space-y-2"
+                className="p-4 sm:p-5 bg-emerald-950/50 border border-emerald-500/50 rounded-2xl text-sm sm:text-base text-emerald-200 shadow-sm"
               >
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-semibold leading-relaxed">{forgotPinNotice}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const digits = expectedPin.slice(0, 4).split('');
-                        setPinDigits(digits);
-                        setErrorMsg('');
-                        inputRefs[3].current?.focus();
-                      }}
-                      className="text-[11px] font-extrabold text-amber-300 hover:text-amber-200 underline cursor-pointer inline-block"
-                    >
-                      👉 คลิกที่นี่เพื่อกรอกรหัส {expectedPin} อัตโนมัติ
-                    </button>
-                  </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <p className="font-semibold leading-relaxed text-emerald-100 text-[20px]">{forgotPinNotice}</p>
                 </div>
               </motion.div>
             )}
           </div>
 
           {/* Action Footer */}
-          <div className="mt-5 space-y-3">
-            <div className="flex gap-2.5">
+          <div className="mt-7 sm:mt-8 space-y-4">
+            <div className="flex gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 bg-[#232328] hover:bg-[#2d2d34] text-slate-300 font-extrabold rounded-xl py-2.5 text-xs transition-colors cursor-pointer"
+                className="flex-1 bg-[#27272a] hover:bg-[#34343a] text-zinc-100 font-bold rounded-xl py-3.5 sm:py-4 text-base sm:text-lg transition-colors cursor-pointer border border-[#3f3f46]"
               >
                 ยกเลิก
               </button>
@@ -315,10 +305,10 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
                 type="button"
                 onClick={handleVerify}
                 disabled={currentEnteredPin.length < 4}
-                className={`flex-1 font-black rounded-xl py-2.5 text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`flex-1 font-black rounded-xl py-3.5 sm:py-4 text-base sm:text-lg transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
                   isEdit
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-orange-500/20'
-                    : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-red-600/20'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-orange-500/30'
+                    : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-red-600/30'
                 }`}
               >
                 <span>ยืนยันรหัส PIN</span>
@@ -326,22 +316,23 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
             </div>
 
             {/* Forgot PIN Trigger Button */}
-            <div className="pt-2 border-t border-[#2d2d34]/60 text-center">
+            <div className="pt-3 border-t border-[#3f3f46] text-center">
               <button
                 type="button"
                 onClick={handleForgotPin}
                 disabled={isSendingMail}
-                className="w-full py-2 px-3 bg-[#232328] hover:bg-[#2e2e36] text-slate-300 hover:text-amber-300 border border-[#3f3f46] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
+                className="w-full py-3 sm:py-3.5 px-4 bg-[#232328] hover:bg-[#2e2e36] text-zinc-200 hover:text-amber-300 border border-[#3f3f46] rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50 shadow-sm"
               >
                 {isSendingMail ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                    <span>กำลังส่งรหัส PIN ไปยัง {bookingEmail}...</span>
+                    <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-amber-400" />
+                    <span className="text-[18px]">กำลังส่งรหัส PIN ไปยัง {bookingEmail}...</span>
                   </>
                 ) : (
                   <>
-                    <span>📧 ส่งรหัส PIN เข้าอีเมล</span>
-                    <span className="text-[10px] text-slate-400 font-normal">({bookingEmail})</span>
+                    <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                    <span className="text-[18px]">📧 ส่งรหัส PIN เข้าอีเมล</span>
+                    <span className="text-xs sm:text-sm text-zinc-300 font-normal">({bookingEmail})</span>
                   </>
                 )}
               </button>

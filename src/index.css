@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import url('https://cdn.jsdelivr.net/gh/scriptex/netflix-sans@master/netflix-sans.css');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Netflix Sans", "IBM Plex Sans Thai", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: "Netflix Sans", "Space Grotesk", sans-serif;
+  --font-sans: "Noto Sans Thai", "Netflix Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Noto Sans Thai", "Netflix Sans", "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   /* Typographic Hierarchy Optimization (User's Specs) */
@@ -58,13 +58,13 @@
 
 /* Global Reset overrides for standard HTML controls in Dark Theme */
 html, body, button, input, select, textarea, table, th, td, div, span, p, h1, h2, h3, h4, h5, h6 {
-  font-family: "Netflix Sans", "IBM Plex Sans Thai", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: "Noto Sans Thai", "Netflix Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
   background-color: #050505 !important;
   color: #e0e0e0 !important;
-  font-family: "Netflix Sans", "IBM Plex Sans Thai", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: "Noto Sans Thai", "Netflix Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Form input adjustments to prevent styling leak in browsers */
@@ -93,6 +93,41 @@ input:focus, select:focus, textarea:focus {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Teacher Schedule Card: Luxury Gold & Solid White (Exact Match) */
+.teacher-schedule-card {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border: 3.5px solid #d8a735 !important;
+}
+
+.teacher-schedule-card .teacher-gold-badge {
+  background: linear-gradient(135deg, #ebd076 0%, #dca937 55%, #c58f18 100%) !important;
+  color: #261a00 !important;
+  box-shadow: -1px 2px 5px rgba(0, 0, 0, 0.08) !important;
+}
+
+.teacher-schedule-card .teacher-gold-badge * {
+  color: #261a00 !important;
+  stroke: #261a00 !important;
+}
+
+.teacher-schedule-card .teacher-gold-icon {
+  color: #c59324 !important;
+  stroke: #c59324 !important;
+}
+
+.teacher-schedule-card .teacher-gold-label {
+  color: #a57c1b !important;
+}
+
+.teacher-schedule-card .teacher-gold-value {
+  color: #111111 !important;
+}
+
+.teacher-schedule-card .teacher-gold-divider {
+  border-top: 1px solid rgba(226, 196, 116, 0.65) !important;
 }
 
 /* Force text to pure white #ffffff for popups */

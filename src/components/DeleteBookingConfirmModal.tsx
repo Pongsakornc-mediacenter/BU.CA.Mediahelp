@@ -57,20 +57,20 @@ export const DeleteBookingConfirmModal: React.FC<DeleteBookingConfirmModalProps>
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative w-full max-w-md bg-[#18181a] border border-red-500/40 rounded-2xl p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.95)] cursor-default my-auto text-white ring-1 ring-red-500/30"
+          className="relative w-full max-w-xl sm:max-w-2xl bg-[#18181a] border border-red-500/50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.95)] cursor-default my-auto text-white ring-2 ring-red-500/30"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-[#3f3f46]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center text-xl">
+          <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-[#3f3f46]">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center text-2xl shadow-sm">
                 🗑️
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-black text-red-400 font-display">
+                <h3 className="text-lg sm:text-xl font-black text-red-400 font-display tracking-tight">
                   ยืนยันการยกเลิกการจอง
                 </h3>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-sm sm:text-base text-zinc-200 font-medium mt-0.5">
                   ลบรายการจองออกจากระบบและคืนช่องเวลาบนตาราง
                 </p>
               </div>
@@ -78,52 +78,52 @@ export const DeleteBookingConfirmModal: React.FC<DeleteBookingConfirmModalProps>
             <button 
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-full hover:bg-white/10 text-zinc-300 hover:text-white transition-colors cursor-pointer"
               title="ปิด"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
           {/* Booking details preview */}
-          <div className="mt-4 p-3.5 bg-[#232328] border border-[#3f3f46] rounded-xl space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-slate-400">ห้อง:</span>
-              <span className="font-extrabold text-orange-400">{booking.roomName}</span>
+          <div className="mt-5 p-4 sm:p-5 bg-[#232328] border border-[#3f3f46] rounded-2xl space-y-2.5 sm:space-y-3 text-sm sm:text-base shadow-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-200 font-semibold">ห้อง:</span>
+              <span className="font-extrabold text-orange-400 text-base sm:text-lg">{booking.roomName}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">วันที่:</span>
-              <span className="font-bold text-slate-200">{booking.date}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-200 font-semibold">วันที่:</span>
+              <span className="font-bold text-white font-mono">{booking.date}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">ช่วงเวลา:</span>
-              <span className="font-bold text-slate-200">{booking.timeSlot}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-200 font-semibold">ช่วงเวลา:</span>
+              <span className="font-bold text-amber-300 font-mono">{booking.timeSlot}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">วิชา/หัวข้อ:</span>
-              <span className="font-bold text-slate-200 truncate max-w-[200px]">{displaySubject}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-200 font-semibold">วิชา/หัวข้อ:</span>
+              <span className="font-bold text-white truncate max-w-[240px] sm:max-w-[360px]">{displaySubject}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">ผู้จอง:</span>
-              <span className="font-bold text-slate-200">{displayName}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-200 font-semibold">ผู้จอง:</span>
+              <span className="font-bold text-white">{displayName}</span>
             </div>
           </div>
 
           {/* Warning Message */}
-          <div className="mt-3.5 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-red-300 font-medium leading-relaxed">
+          <div className="mt-4 p-3.5 sm:p-4 bg-red-500/15 border border-red-500/30 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm text-red-200 font-medium leading-relaxed">
               เมื่อกดยืนยัน รายการจองนี้จะถูกลบออกจากฐานข้อมูล Firestore ทันที และช่องเวลานี้จะเปลี่ยนเป็น <span className="font-bold text-white underline">"ว่าง"</span> เพื่อให้ผู้ใช้อื่นสามารถจองต่อได้
             </p>
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3 pt-4 mt-2 border-t border-[#3f3f46]">
+          <div className="flex gap-3.5 sm:gap-4 pt-5 mt-3 border-t border-[#3f3f46]">
             <button
               type="button"
               onClick={onClose}
               disabled={deleting}
-              className="flex-1 bg-[#27272a] hover:bg-[#323238] text-slate-300 font-bold rounded-xl py-2.5 text-xs transition-colors cursor-pointer"
+              className="flex-1 bg-[#27272a] hover:bg-[#323238] text-zinc-100 font-bold rounded-xl py-3.5 text-base sm:text-lg transition-colors cursor-pointer border border-[#3f3f46]"
             >
               ยกเลิก (ไม่ลบ)
             </button>
@@ -131,16 +131,16 @@ export const DeleteBookingConfirmModal: React.FC<DeleteBookingConfirmModalProps>
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="flex-1 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-extrabold rounded-xl py-2.5 text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold rounded-xl py-3.5 text-base sm:text-lg transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {deleting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>กำลังลบ...</span>
                 </>
               ) : (
                 <>
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5" />
                   <span>ยืนยันยกเลิกและลบ</span>
                 </>
               )}

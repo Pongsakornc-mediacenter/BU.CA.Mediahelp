@@ -95,8 +95,10 @@ export interface RoomBooking {
   phone?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string; // ISO String
-  updatedAt: string; // ISO String
+  submittedAt?: string; // ISO String - เวลาที่ส่งคำขอจองครั้งแรก
+  updatedAt: string; // ISO String - เวลาแก้ไข/ทำรายการล่าสุด
   subject?: string;
+  bookingTitle?: string;
   bookingPurpose?: string;
   userType?: string;
   studentNameInput?: string;
