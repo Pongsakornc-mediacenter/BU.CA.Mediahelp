@@ -90,18 +90,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Check connection to Firestore as requested by raw SDK instructions
+// Check connection to Firestore safely without throwing unhandled exceptions at module startup
 export async function testConnection() {
   if (!isFirebaseConfigured || !db) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Firebase client reports being offline. Please verify network access.");
+  } catch (error: any) {
+    // Gracefully ignore or log connection state without crashing or logging fatal errors
+    if (error?.code === 'unavailable' || error?.message?.includes('offline')) {
+      console.info("Firestore is currently operating with local cache/offline mode until backend connection is established.");
     }
   }
-}
-
-if (isFirebaseConfigured) {
-  testConnection();
 }

@@ -1240,11 +1240,11 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 2. MAIN CONTENT SECTION: Two-Column Layout (30% Form / 70% Table Ratio) */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start relative mt-6 pt-2" style={{ marginTop: '24px' }}>
+                {/* 2. MAIN CONTENT SECTION: Two-Column Layout (Form & Calendar Table) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-start relative mt-6 pt-2" style={{ marginTop: '24px' }}>
                   
-                  {/* LEFT COLUMN: Unified Booking Form (lg:col-span-3 - Reduced Width ~20-25%) */}
-                  <div className="lg:col-span-3 w-full relative">
+                  {/* LEFT COLUMN: Unified Booking Form */}
+                  <div className="lg:col-span-3 w-full relative m-0 p-0">
                     <UnifiedBookingForm
                       courses={courses}
                       bookings={bookings}
@@ -1268,7 +1268,7 @@ export default function App() {
 
                   {/* RIGHT COLUMN: Weekly Schedule Calendar Grid (lg:col-span-9 - Expanded Width +20-25%) */}
                   <div 
-                    className="lg:col-span-9 bg-[#111115] border border-[#2d2d34] p-3.5 sm:p-4 rounded-2xl shadow-2xl space-y-3 overflow-y-auto"
+                    className="lg:col-span-9 bg-[#111115] border border-[#2d2d34] lg:border-l-0 p-3.5 sm:p-4 rounded-2xl lg:rounded-l-none shadow-2xl space-y-3 overflow-y-auto m-0"
                     style={{ height: '880px' }}
                   >
                     {/* Navigation controls for weeks */}
@@ -2048,6 +2048,7 @@ export default function App() {
         onClose={() => setSelectedScheduleBookingModal(null)}
         data={selectedScheduleBookingModal}
         courses={courses}
+        readOnly={false}
         onEditClick={(booking) => {
           setTargetBookingForPin(booking);
           setPinActionType('edit');

@@ -49,10 +49,10 @@ const STANDARD_TIMESLOTS = [
 ];
 
 const STANDARD_PURPOSES = [
-  "จัดรายการส่งในรายวิชา",
-  "ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว",
+  "จัดรายการในรายวิชา / ซ้อมจัดรายการ",
   "งานกิจกรรมคณะ / มหาวิทยาลัย",
-  "สำหรับการเรียนการสอน"
+  "สำหรับการเรียนการสอน",
+  "อื่นๆ"
 ];
 
 export const EditBookingModal: React.FC<EditBookingModalProps> = ({
@@ -210,7 +210,7 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
       setStudentIdInput(booking.studentIdInput || booking.studentId || "");
       setPhone(booking.phone || "");
       
-      // Purpose extraction & dropdown mapping
+      // Purpose extraction & dropdown mapping to 4 standard options
       let cleanPurp = booking.bookingPurpose || "";
       if (!cleanPurp && booking.purpose) {
         const purposeFieldMatch = booking.purpose.match(/วัตถุประสงค์:\s*([^|)]+)/i);
@@ -227,18 +227,27 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
         }
       }
 
-      if (checkTeacher && (!cleanPurp || cleanPurp === 'จัดรายการ')) {
-        cleanPurp = 'สำหรับการเรียนการสอน';
-      }
-
-      if (cleanPurp && STANDARD_PURPOSES.includes(cleanPurp)) {
-        setPurposeDropdown(cleanPurp);
-      } else if (checkTeacher) {
-        setPurposeDropdown("สำหรับการเรียนการสอน");
+      // Map legacy or unstandardized purpose strings to the 4 official choices
+      if (checkTeacher) {
+        if (cleanPurp && STANDARD_PURPOSES.includes(cleanPurp)) {
+          setPurposeDropdown(cleanPurp);
+        } else {
+          setPurposeDropdown("สำหรับการเรียนการสอน");
+        }
       } else if (cleanPurp) {
-        setPurposeDropdown(cleanPurp);
+        if (STANDARD_PURPOSES.includes(cleanPurp)) {
+          setPurposeDropdown(cleanPurp);
+        } else if (cleanPurp.includes('วิชา') || cleanPurp.includes('ซ้อม') || cleanPurp.includes('จัดรายการ')) {
+          setPurposeDropdown("จัดรายการในรายวิชา / ซ้อมจัดรายการ");
+        } else if (cleanPurp.includes('กิจกรรม') || cleanPurp.includes('คณะ') || cleanPurp.includes('มหาวิทยาลัย')) {
+          setPurposeDropdown("งานกิจกรรมคณะ / มหาวิทยาลัย");
+        } else if (cleanPurp.includes('สอน') || cleanPurp.includes('เรียน')) {
+          setPurposeDropdown("สำหรับการเรียนการสอน");
+        } else {
+          setPurposeDropdown("อื่นๆ");
+        }
       } else {
-        setPurposeDropdown("จัดรายการส่งในรายวิชา");
+        setPurposeDropdown("จัดรายการในรายวิชา / ซ้อมจัดรายการ");
       }
 
       setErrorMessage("");
@@ -644,13 +653,10 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
                   onChange={(e) => setPurposeDropdown(e.target.value)}
                   className="w-full h-12 bg-[#27272a] border border-[#3f3f46] rounded-xl px-4 text-base text-white focus:outline-none focus:border-orange-500 font-semibold transition-colors cursor-pointer"
                 >
-                  <option value="จัดรายการส่งในรายวิชา">จัดรายการส่งในรายวิชา</option>
-                  <option value="ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว">ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว</option>
-                  <option value="งานกิจกรรมคณะ / มหาวิทยาลัย">งานกิจกรรมคณะ / มหาวิทยาลัย</option>
-                  <option value="สำหรับการเรียนการสอน">สำหรับการเรียนการสอน</option>
-                  {purposeDropdown && !STANDARD_PURPOSES.includes(purposeDropdown) && (
-                    <option value={purposeDropdown}>{purposeDropdown}</option>
-                  )}
+                  <option value="" className="text-slate-400">-- กรุณาเลือกวัตถุประสงค์ --</option>
+                  {STANDARD_PURPOSES.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
                 </select>
               </div>
             </div>

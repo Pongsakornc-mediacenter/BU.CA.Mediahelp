@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, CheckCircle2, Sparkles, X } from 'lucide-react';
 
@@ -30,6 +30,14 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
 }) => {
   const [phase, setPhase] = useState<'loading' | 'success'>('loading');
 
+  // Keep latest callbacks in refs so changing function references do not restart the animation timers
+  const onCloseRef = useRef(onClose);
+  const onCompletedRef = useRef(onCompleted);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onCompletedRef.current = onCompleted;
+  });
+
   useEffect(() => {
     let loadingTimer: NodeJS.Timeout;
     let autoCloseTimer: NodeJS.Timeout;
@@ -39,15 +47,15 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
       setPhase('loading');
 
       loadingTimer = setTimeout(() => {
-        // Phase 2: Smooth transition to Success State (2.5 seconds)
+        // Phase 2: Smooth transition to Success State
         setPhase('success');
 
-        // Auto close after 2.5s in success state
+        // Phase 3: Auto close after success state delay
         autoCloseTimer = setTimeout(() => {
-          if (onCompleted) {
-            onCompleted();
+          if (onCompletedRef.current) {
+            onCompletedRef.current();
           }
-          onClose();
+          onCloseRef.current();
         }, autoCloseDelay);
       }, 1500);
     } else {
@@ -58,7 +66,7 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
       clearTimeout(loadingTimer);
       clearTimeout(autoCloseTimer);
     };
-  }, [isOpen, autoCloseDelay, onClose, onCompleted]);
+  }, [isOpen, autoCloseDelay]);
 
   // Derived Title & Message
   const displayTitle = title || (type === 'booking' ? 'ทำรายการสำเร็จ!' : 'อัปเดตข้อมูลสำเร็จ!');
@@ -98,17 +106,17 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
               y: -15, 
               transition: { duration: 0.25, ease: 'easeInOut' } 
             }}
-            className="relative w-full max-w-sm bg-[#16161a] border border-[#2d2d34] rounded-2xl p-6 sm:p-7 text-center shadow-[0_25px_60px_rgba(0,0,0,0.9)] overflow-hidden cursor-default"
+            className="relative w-full max-w-[540px] bg-[#16161a] border border-[#2d2d34] rounded-2xl p-7 sm:p-9 text-center shadow-[0_25px_60px_rgba(0,0,0,0.9)] overflow-hidden cursor-default"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Ambient Background Glow */}
             <div 
-              className={`absolute -top-20 -left-20 w-40 h-40 rounded-full blur-3xl transition-all duration-700 pointer-events-none ${
+              className={`absolute -top-20 -left-20 w-48 h-48 rounded-full blur-3xl transition-all duration-700 pointer-events-none ${
                 phase === 'loading' ? 'bg-amber-500/15' : 'bg-emerald-500/25'
               }`} 
             />
             <div 
-              className={`absolute -bottom-20 -right-20 w-40 h-40 rounded-full blur-3xl transition-all duration-700 pointer-events-none ${
+              className={`absolute -bottom-20 -right-20 w-48 h-48 rounded-full blur-3xl transition-all duration-700 pointer-events-none ${
                 phase === 'loading' ? 'bg-blue-500/15' : 'bg-teal-500/20'
               }`} 
             />
@@ -119,15 +127,15 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                 type="button"
                 id="close-success-modal-btn"
                 onClick={handleManualClose}
-                className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
                 title="ปิด"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             )}
 
             {/* Micro-interaction Container */}
-            <div className="relative mx-auto mb-5 flex items-center justify-center h-20">
+            <div className="relative mx-auto mb-6 flex items-center justify-center h-24">
               <AnimatePresence mode="wait">
                 {phase === 'loading' ? (
                   <motion.div
@@ -137,22 +145,22 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                     exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.2 } }}
                     className="relative flex items-center justify-center"
                   >
-                    {/* Outer glowing spinner wheel */}
+                    {/* Outer glowing spinner wheel (scaled up 20% to w-20 h-20) */}
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      className="w-16 h-16 rounded-full border-4 border-slate-700/50 border-t-amber-400 border-r-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.25)]"
+                      className="w-20 h-20 rounded-full border-[5px] border-slate-700/50 border-t-amber-400 border-r-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.3)]"
                     />
 
                     {/* Inner counter-rotating ring for mechanical wheel feel */}
                     <motion.div
                       animate={{ rotate: -360 }}
                       transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-                      className="absolute w-10 h-10 rounded-full border-2 border-dashed border-amber-300/40"
+                      className="absolute w-12 h-12 rounded-full border-2 border-dashed border-amber-300/40"
                     />
 
                     {/* Center hub */}
-                    <div className="absolute w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.8)]" />
+                    <div className="absolute w-4 h-4 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.85)]" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -171,14 +179,14 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: [1, 1.4, 1.2], opacity: [0.6, 0, 0] }}
                       transition={{ duration: 1.2, ease: 'easeOut', repeat: Infinity }}
-                      className="absolute w-20 h-20 rounded-full bg-emerald-500/40 blur-md"
+                      className="absolute w-24 h-24 rounded-full bg-emerald-500/40 blur-md"
                     />
 
-                    {/* Green Success Badge */}
-                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.55)] border border-emerald-300/40">
+                    {/* Green Success Badge (scaled up 20% to w-20 h-20) */}
+                    <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.55)] border border-emerald-300/40">
                       {/* Animated SVG Checkmark */}
                       <svg 
-                        className="w-9 h-9 text-slate-950" 
+                        className="w-11 h-11 text-slate-950" 
                         viewBox="0 0 24 24" 
                         fill="none" 
                         stroke="currentColor" 
@@ -202,7 +210,7 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                       transition={{ delay: 0.35, duration: 0.3 }}
                       className="absolute -top-1 -right-1 text-emerald-300"
                     >
-                      <Sparkles className="w-5 h-5 fill-emerald-300 animate-pulse" />
+                      <Sparkles className="w-6 h-6 fill-emerald-300 animate-pulse" />
                     </motion.div>
                   </motion.div>
                 )}
@@ -218,12 +226,12 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.2 }}
-                  className="space-y-1"
+                  className="space-y-1.5"
                 >
-                  <h3 className="text-base font-bold text-slate-200">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-100">
                     กำลังบันทึกข้อมูล...
                   </h3>
-                  <p className="text-xs text-slate-400 font-normal">
+                  <p className="text-sm sm:text-base text-slate-400 font-normal">
                     กรุณารอสักครู่ ระบบกำลังประมวลผล
                   </p>
                 </motion.div>
@@ -234,12 +242,12 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.3, delay: 0.05 }}
-                  className="space-y-1.5"
+                  className="space-y-2"
                 >
-                  <h3 className="text-xl font-black text-emerald-400 tracking-tight">
+                  <h3 className="text-2xl sm:text-[26px] font-black text-emerald-400 tracking-tight">
                     {displayTitle}
                   </h3>
-                  <p className="text-xs text-slate-300 font-medium leading-relaxed max-w-[280px] mx-auto">
+                  <p className="text-sm sm:text-base text-slate-300 font-medium leading-relaxed max-w-[380px] mx-auto">
                     {displayMessage}
                   </p>
                 </motion.div>
@@ -252,20 +260,20 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.25 }}
-                className="mt-5 space-y-3"
+                className="mt-6 space-y-3.5"
               >
                 <button
                   type="button"
                   id="confirm-success-modal-btn"
                   onClick={handleManualClose}
-                  className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-bold rounded-xl transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] flex items-center justify-center gap-1.5 text-sm"
+                  className="w-full py-3 px-5 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-bold rounded-xl transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] flex items-center justify-center gap-2 text-base cursor-pointer"
                 >
-                  <Check className="w-4 h-4 stroke-[3]" />
+                  <Check className="w-5 h-5 stroke-[3]" />
                   <span>ตกลง</span>
                 </button>
 
                 {/* Auto close progress indicator */}
-                <div className="w-full bg-slate-800/80 h-1 rounded-full overflow-hidden border border-white/5">
+                <div className="w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden border border-white/5">
                   <motion.div
                     initial={{ width: '100%' }}
                     animate={{ width: '0%' }}
@@ -275,7 +283,7 @@ export const SuccessNotificationModal: React.FC<SuccessNotificationModalProps> =
                 </div>
               </motion.div>
             ) : (
-              <div className="mt-5 h-1 w-full bg-slate-800/40 rounded-full overflow-hidden">
+              <div className="mt-6 h-1.5 w-full bg-slate-800/40 rounded-full overflow-hidden">
                 <motion.div
                   animate={{ x: ['-100%', '100%'] }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}

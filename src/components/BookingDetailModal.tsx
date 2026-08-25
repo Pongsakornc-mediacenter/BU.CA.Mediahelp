@@ -47,6 +47,7 @@ interface BookingDetailModalProps {
   onEditClick?: (booking: RoomBooking) => void;
   onDeleteClick?: (booking: RoomBooking) => void;
   courses?: Course[];
+  readOnly?: boolean;
 }
 
 export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
@@ -55,7 +56,8 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   data,
   onEditClick,
   onDeleteClick,
-  courses = []
+  courses = [],
+  readOnly = false
 }) => {
   const [showPhone, setShowPhone] = useState<boolean>(false);
 
@@ -268,7 +270,7 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   }
 
   if (!cleanPurpose) {
-    cleanPurpose = isTeacherBooking ? "สำหรับการเรียนการสอนอาจารย์ในชั้นเรียน" : "จัดรายการส่งในรายวิชา";
+    cleanPurpose = isTeacherBooking ? "สำหรับการเรียนการสอนอาจารย์ในชั้นเรียน" : "จัดรายการในรายวิชา / ซ้อมจัดรายการ";
   }
 
   // Activity Timestamp Logic (submittedAt vs updatedAt)
@@ -552,6 +554,39 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Modal Footer: Action Buttons (Only shown when readOnly is false and action handlers exist) */}
+          {!readOnly && booking && (onEditClick || onDeleteClick) && (
+            <div className="p-4 sm:p-5 pt-3 border-t border-[#25252d] bg-[#17171c] flex flex-col sm:flex-row gap-2.5">
+              {onEditClick && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onEditClick(booking);
+                  }}
+                  className="flex-1 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 font-extrabold rounded-xl py-3 px-4 text-sm sm:text-base transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                  style={{ color: '#fdba74' }}
+                >
+                  <Edit3 className="w-4.5 h-4.5 text-orange-400" />
+                  <span style={{ color: '#fdba74' }}>แก้ไข / ย้ายวันเวลา</span>
+                </button>
+              )}
+
+              {onDeleteClick && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteClick(booking);
+                  }}
+                  className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 font-extrabold rounded-xl py-3 px-4 text-sm sm:text-base transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                  style={{ color: '#fca5a5' }}
+                >
+                  <Trash2 className="w-4.5 h-4.5 text-red-400" />
+                  <span style={{ color: '#fca5a5' }}>ยกเลิกการจอง</span>
+                </button>
+              )}
+            </div>
+          )}
 
         </motion.div>
       </div>

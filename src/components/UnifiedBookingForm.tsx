@@ -103,9 +103,9 @@ const TEACHER_SLOT_PRESETS = [
 ];
 
 const PURPOSE_OPTIONS = [
-  "จัดรายการส่งในรายวิชา",
-  "ซ้อมจัดรายการ / ฝึกซ้อมส่วนตัว",
+  "จัดรายการในรายวิชา / ซ้อมจัดรายการ",
   "งานกิจกรรมคณะ / มหาวิทยาลัย",
+  "สำหรับการเรียนการสอน",
   "อื่นๆ"
 ];
 
@@ -366,7 +366,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   return (
     <div 
       id="unified-booking-form-container" 
-      className="w-full max-w-full mx-auto bg-[#111115] border border-white rounded-2xl p-3.5 sm:p-4 shadow-2xl space-y-4 text-white relative overflow-y-auto"
+      className="w-full max-w-full mx-0 bg-[#111115] border border-[#2d2d34] rounded-2xl lg:rounded-r-none p-3.5 sm:p-4 shadow-2xl space-y-4 text-white relative overflow-y-auto"
       style={{ height: '880px' }}
     >
       
@@ -378,10 +378,10 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-extrabold text-[18px] sm:text-[20px] text-[#b8b8b8] tracking-tight">
+              <h3 className="font-extrabold text-[20px] sm:text-[22px] text-[#b8b8b8] tracking-tight">
                 แบบฟอร์มการจองห้องจัดรายการ
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[13px] text-slate-400">
                 ระบบส่วนกลางสำหรับนักศึกษาและคลาสเรียนอาจารย์
               </p>
             </div>
@@ -389,7 +389,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 bg-[#09090b] p-1.5 rounded-xl border border-[#27272a] shadow-inner gap-1.5 min-h-[52px] h-auto text-center items-center overflow-hidden">
+        <div className="grid grid-cols-2 bg-[#09090b] p-1.5 rounded-xl border border-[#27272a] shadow-inner gap-1.5 min-h-[54px] h-auto text-center items-center overflow-hidden">
           <button
             type="button"
             onClick={() => {
@@ -399,13 +399,13 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 setStudentTimeSlot("");
               }
             }}
-            className={`w-full h-[42px] py-2 px-2 sm:px-3 rounded-lg text-[13px] sm:text-[14px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer flex-1 ${
+            className={`w-full h-[46px] py-2 px-2 sm:px-3 rounded-lg text-[15px] sm:text-[16px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer flex-1 ${
               mode === 'student'
                 ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="text-[13px] sm:text-[14px] whitespace-nowrap truncate">👨‍🎓 สำหรับนักศึกษา</span>
+            <span className="text-[15px] sm:text-[16px] whitespace-nowrap truncate">👨‍🎓 สำหรับนักศึกษา</span>
           </button>
 
           <button
@@ -418,13 +418,13 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               }
             }}
             style={mode === 'teacher' ? { backgroundColor: '#ffffff' } : undefined}
-            className={`w-full h-[42px] py-2 px-2 sm:px-3 rounded-lg text-[13px] sm:text-[14px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer flex-1 ${
+            className={`w-full h-[46px] py-2 px-2 sm:px-3 rounded-lg text-[15px] sm:text-[16px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer flex-1 ${
               mode === 'teacher'
                 ? 'border-[2.5px] border-[#d8a735] shadow-[0_2px_12px_rgba(216,167,53,0.4)]'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className={`text-[13px] sm:text-[14px] whitespace-nowrap truncate font-extrabold ${mode === 'teacher' ? 'text-[#111111]' : ''}`}>
+            <span className={`text-[15px] sm:text-[16px] whitespace-nowrap truncate font-extrabold ${mode === 'teacher' ? 'text-[#111111]' : ''}`}>
               👨‍🏫 สำหรับอาจารย์
             </span>
           </button>
@@ -432,11 +432,11 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       </div>
 
       {/* 2. Main Form Fields */}
-      <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+      <form onSubmit={handleSubmit} className="space-y-4 text-sm">
         
         {/* Room Selection Zone with Card Wrapper, Stroke, and Glow Effect */}
         <div className="bg-amber-500/[0.04] border border-amber-500/50 rounded-xl p-3.5 shadow-[0_0_18px_rgba(245,158,11,0.18)] relative transition-all space-y-2">
-          <label className="text-[#ffb900] text-[16px] font-extrabold flex items-center gap-1.5 mb-1.5">
+          <label className="text-[#ffb900] text-[18px] font-extrabold flex items-center gap-1.5 mb-1.5">
             <span className="text-[#ffb900] flex items-center gap-1.5">
               <span>🎙️</span> เลือกห้องจัดรายการ <span className="text-red-400">*</span>
             </span>
@@ -449,15 +449,20 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   key={r.name}
                   type="button"
                   onClick={() => handleRoomSelect(r.name)}
-                  className={`py-2.5 px-3 rounded-xl border text-left font-bold transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                  className={`py-3 px-3.5 rounded-xl border text-left font-bold transition-all flex items-center justify-between gap-2 cursor-pointer ${
                     isSelected
                       ? `${r.activeBg} ${r.activeBorder} ${r.textClass} shadow-md ${r.activeRing} scale-[1.02]`
-                      : 'bg-[#16161a]/90 border-[#27272a] text-slate-300 hover:border-amber-500/40 hover:text-white hover:bg-white/5'
+                      : 'bg-[#16161a]/90 border-[#27272a] text-[#b8b8b8] hover:border-amber-500/40 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <span className="text-base">{r.icon}</span>
-                    <span className="truncate text-[16px]">{r.name}</span>
+                    <span className="text-lg">{r.icon}</span>
+                    <span 
+                      className="truncate text-[18px]"
+                      style={!isSelected ? { color: '#b8b8b8' } : undefined}
+                    >
+                      {r.name}
+                    </span>
                   </div>
                   {isSelected && (
                     <span className={`w-2.5 h-2.5 rounded-full ${r.badgeBg} shadow-sm shrink-0 animate-pulse`} />
@@ -472,8 +477,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {/* Date Picker */}
           <div>
-            <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-              <Calendar className="w-4 h-4 text-orange-400" />
+            <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+              <Calendar className="w-4.5 h-4.5 text-orange-400" />
               {mode === 'teacher' ? 'วันที่ต้องการสอน' : 'วันที่ต้องการจอง'} <span className="text-red-400">*</span>
             </label>
             <input
@@ -481,15 +486,15 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               required
               value={date}
               onChange={(e) => handleDateSelect(e.target.value)}
-              className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold"
-              style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+              className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[18px] text-white focus:outline-none focus:border-orange-500 font-semibold"
+              style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
             />
           </div>
 
           {/* Time Slot Picker with High Visibility Dropdown Styling */}
           <div>
-            <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-              <Clock className="w-4 h-4 text-orange-400" />
+            <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+              <Clock className="w-4.5 h-4.5 text-orange-400" />
               {mode === 'teacher' ? 'ช่วงเวลา / คาบเรียน' : 'ช่วงเวลาที่ต้องการ'} <span className="text-red-400">*</span>
             </label>
             <select
@@ -503,8 +508,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 }
                 setFormError("");
               }}
-              className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
-              style={{ height: '40px', color: timeSlot ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
+              className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[18px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
+              style={{ height: '44px', color: timeSlot ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
             >
               <option value="" style={{ color: '#9ca3af', backgroundColor: '#1a1d24' }} className="text-slate-400">
                 -- กรุณาเลือกช่วงเวลา --
@@ -515,7 +520,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                     key={slot.value} 
                     value={slot.value} 
                     style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
-                    className="bg-[#1a1d24] text-white py-1"
+                    className="bg-[#1a1d24] text-white py-1.5 text-[17px]"
                   >
                     {slot.label}
                   </option>
@@ -526,7 +531,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                     key={slot} 
                     value={slot} 
                     style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
-                    className="bg-[#1a1d24] text-white py-1"
+                    className="bg-[#1a1d24] text-white py-1.5 text-[17px]"
                   >
                     {slot}
                   </option>
@@ -538,8 +543,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
 
         {/* Subject / Course Selection with High Visibility Dropdown Styling */}
         <div>
-          <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-            <BookOpen className="w-4 h-4 text-orange-400" />
+          <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+            <BookOpen className="w-4.5 h-4.5 text-orange-400" />
             {mode === 'teacher' ? 'รายวิชาที่สอน / กลุ่มเรียน' : 'รายวิชาเรียน'} <span className="text-red-400">*</span>
           </label>
           <select
@@ -548,8 +553,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               setSubject(e.target.value);
               setFormError("");
             }}
-            className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[16px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
-            style={{ height: '40px', color: subject ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
+            className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[18px] text-white focus:outline-none focus:border-orange-500 font-semibold cursor-pointer"
+            style={{ height: '44px', color: subject ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
           >
             <option value="" style={{ color: '#9ca3af', backgroundColor: '#1a1d24' }} className="text-slate-400">
               -- กรุณาเลือกรายวิชา --
@@ -559,7 +564,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 key={c.id} 
                 value={c.code} 
                 style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
-                className="bg-[#1a1d24] text-white py-1"
+                className="bg-[#1a1d24] text-white py-1.5 text-[17px]"
               >
                 {getCourseLabel(c)}
               </option>
@@ -571,8 +576,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               value={customSubject}
               onChange={(e) => setCustomSubject(e.target.value)}
               placeholder=""
-              className="w-full h-10 mt-1.5 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500"
-              style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+              className="w-full h-11 mt-2 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium"
+              style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
             />
           )}
         </div>
@@ -582,8 +587,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           <>
             {/* Booking Title (ชื่อรายการ) - Only for Student Mode */}
             <div>
-              <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                <FileText className="w-4 h-4 text-orange-400" />
+              <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                <FileText className="w-4.5 h-4.5 text-orange-400" />
                 ชื่อรายการ
               </label>
               <input
@@ -591,8 +596,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 value={bookingTitle}
                 onChange={(e) => setBookingTitle(e.target.value)}
                 placeholder="ระบุชื่อรายการ (เช่น ช้างจำหนีข้าทำไม, ซ้อมจัดรายการกลุ่ม 1)"
-                className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium placeholder:text-gray-500"
-                style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium placeholder:text-gray-500"
+                style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
               />
             </div>
           </>
@@ -604,8 +609,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             {/* Student Name & Student ID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                  <User className="w-4 h-4 text-orange-400" />
+                <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                  <User className="w-4.5 h-4.5 text-orange-400" />
                   ชื่อ-นามสกุล <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -614,14 +619,14 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder=""
-                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                  style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
 
               <div>
-                <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                  <span className="text-orange-400 text-sm">#</span>
+                <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                  <span className="text-orange-400 text-base font-bold">#</span>
                   รหัสนักศึกษา <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -631,8 +636,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   placeholder=""
-                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                  style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
             </div>
@@ -640,8 +645,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             {/* Phone & PIN Code */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                  <Phone className="w-4 h-4 text-orange-400" />
+                <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                  <Phone className="w-4.5 h-4.5 text-orange-400" />
                   เบอร์โทรศัพท์ <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -650,14 +655,14 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder=""
-                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                  style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
 
               <div>
-                <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                  <KeyRound className="w-4 h-4 text-amber-400" />
+                <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                  <KeyRound className="w-4.5 h-4.5 text-amber-400" />
                   รหัส PIN 4 หลัก <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -667,16 +672,16 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={pinCode}
                   onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
                   placeholder=""
-                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-mono tracking-widest text-center"
-                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[18px] text-white focus:outline-none focus:border-orange-500 font-mono tracking-widest text-center font-bold"
+                  style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
             </div>
 
             {/* Email */}
             <div>
-              <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                <Mail className="w-4 h-4 text-orange-400" />
+              <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                <Mail className="w-4.5 h-4.5 text-orange-400" />
                 อีเมลผู้แจ้งจอง (รับใบยืนยัน) <span className="text-red-400">*</span>
               </label>
               <input
@@ -685,22 +690,22 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder=""
-                className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium"
-                style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium"
+                style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
               />
             </div>
 
             {/* Purpose */}
             <div>
-              <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                <FileText className="w-4 h-4 text-orange-400" />
+              <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                <FileText className="w-4.5 h-4.5 text-orange-400" />
                 วัตถุประสงค์การใช้งาน
               </label>
               <select
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[15px] text-white focus:outline-none focus:border-orange-500 font-medium cursor-pointer"
-                style={{ height: '40px', color: purpose ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
+                className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[17px] text-white focus:outline-none focus:border-orange-500 font-medium cursor-pointer"
+                style={{ height: '44px', color: purpose ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
               >
                 <option value="" style={{ color: '#9ca3af', backgroundColor: '#1a1d24' }} className="text-slate-400">
                   -- กรุณาเลือกวัตถุประสงค์ --
@@ -710,7 +715,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                     key={opt} 
                     value={opt} 
                     style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
-                    className="bg-[#1a1d24] text-white py-1"
+                    className="bg-[#1a1d24] text-white py-1.5 text-[17px]"
                   >
                     {opt}
                   </option>
@@ -726,8 +731,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             {/* Teacher Name & Email */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                  <User className="w-4 h-4 text-[#d8a735]" />
+                <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                  <User className="w-4.5 h-4.5 text-[#d8a735]" />
                   ชื่ออาจารย์ผู้สอน <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -736,14 +741,14 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={teacherName}
                   onChange={(e) => setTeacherName(e.target.value)}
                   placeholder=""
-                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-[#d8a735] font-medium"
-                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-[#d8a735] font-medium"
+                  style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
 
               <div>
-                <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                  <Mail className="w-4 h-4 text-[#d8a735]" />
+                <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                  <Mail className="w-4.5 h-4.5 text-[#d8a735]" />
                   อีเมลแจ้งเตือน <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -752,16 +757,16 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   value={teacherEmail}
                   onChange={(e) => setTeacherEmail(e.target.value)}
                   placeholder=""
-                  className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[15px] text-white focus:outline-none focus:border-[#d8a735] font-medium"
-                  style={{ height: '40px', color: '#ffffff', backgroundColor: '#1a1d24' }}
+                  className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3.5 text-[17px] text-white focus:outline-none focus:border-[#d8a735] font-medium"
+                  style={{ height: '44px', color: '#ffffff', backgroundColor: '#1a1d24' }}
                 />
               </div>
             </div>
 
             {/* Purpose / Notes Dropdown */}
             <div>
-              <label className="text-[#b8b8b8] text-[16px] font-bold flex items-center gap-1.5 mb-1">
-                <FileText className="w-4 h-4 text-[#d8a735]" />
+              <label className="text-[#b8b8b8] text-[18px] font-bold flex items-center gap-1.5 mb-1">
+                <FileText className="w-4.5 h-4.5 text-[#d8a735]" />
                 วัตถุประสงค์ / หมายเหตุ <span className="text-red-400">*</span>
               </label>
               <select
@@ -770,8 +775,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                   setTeacherPurpose(e.target.value);
                   setFormError("");
                 }}
-                className="w-full h-10 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-2.5 text-[15px] text-white focus:outline-none focus:border-[#d8a735] font-medium cursor-pointer"
-                style={{ height: '40px', color: teacherPurpose ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
+                className="w-full h-11 bg-[#1a1d24] border border-[#2d2d34] rounded-xl px-3 text-[17px] text-white focus:outline-none focus:border-[#d8a735] font-medium cursor-pointer"
+                style={{ height: '44px', color: teacherPurpose ? '#ffffff' : '#9ca3af', backgroundColor: '#1a1d24' }}
               >
                 <option value="" style={{ color: '#9ca3af', backgroundColor: '#1a1d24' }} className="text-slate-400">
                   -- กรุณาเลือกวัตถุประสงค์ --
@@ -781,7 +786,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
                     key={opt} 
                     value={opt} 
                     style={{ color: '#ffffff', backgroundColor: '#1a1d24' }}
-                    className="bg-[#1a1d24] text-white py-1"
+                    className="bg-[#1a1d24] text-white py-1.5 text-[17px]"
                   >
                     {opt}
                   </option>
@@ -795,15 +800,15 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         {isConflict && (
           <div 
             id="booking-conflict-alert-box"
-            className="p-3 bg-red-500/20 border-2 border-red-500 rounded-xl text-red-200 text-xs font-bold flex items-start gap-2.5 shadow-lg shadow-red-500/10 animate-in fade-in duration-200"
+            className="p-3.5 bg-red-500/20 border-2 border-red-500 rounded-xl text-red-200 text-sm font-bold flex items-start gap-2.5 shadow-lg shadow-red-500/10 animate-in fade-in duration-200"
           >
             <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div className="space-y-1 leading-snug">
-              <div className="text-red-300 font-extrabold text-[15px]">
+              <div className="text-red-300 font-extrabold text-[17px]">
                 ⚠️ ไม่สามารถจองได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น
               </div>
               {conflictingBooking && (
-                <div className="text-[12.5px] pl-2 text-red-300/90 font-medium">
+                <div className="text-[14.5px] pl-2 text-red-300/90 font-medium">
                   (ชนกับคิว: <span className="font-bold text-[#ddd100]">{conflictingBooking.subject || conflictingBooking.purpose}</span> • ผู้จอง: <span className="font-bold text-[#ddd100]">{conflictingBooking.studentName || conflictingBooking.studentIdInput || "มีผู้จองแล้ว"}</span> • เวลา: <span className="font-bold text-[#ddd100]">{conflictingBooking.timeSlot}</span>)
                 </div>
               )}
@@ -813,9 +818,9 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
 
         {/* General Form Error */}
         {formError && !isConflict && (
-          <div className="p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-300 text-xs font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>{formError}</span>
+          <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-300 text-sm font-bold flex items-center gap-2">
+            <AlertCircle className="w-4.5 h-4.5 text-rose-400 shrink-0" />
+            <span className="text-[15px]">{formError}</span>
           </div>
         )}
 
@@ -824,8 +829,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           type="submit"
           disabled={isConflict || isSubmitting}
           id="submit-unified-booking-btn"
-          style={{ height: '50px' }}
-          className={`w-full h-[50px] py-3 rounded-xl font-extrabold text-[16px] transition-all flex items-center justify-center gap-2 border-[3.11px] border-white ${
+          style={{ height: '54px' }}
+          className={`w-full h-[54px] py-3 rounded-xl font-extrabold text-[18px] transition-all flex items-center justify-center gap-2 border-[3.11px] border-white ${
             isConflict
               ? "bg-slate-800 text-slate-500 cursor-not-allowed shadow-none opacity-60 select-none"
               : mode === 'teacher'
@@ -834,13 +839,13 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           }`}
         >
           {isSubmitting ? (
-            <span className="text-[16px]">กำลังส่งข้อมูลคำขอ...</span>
+            <span className="text-[18px]">กำลังส่งข้อมูลคำขอ...</span>
           ) : isConflict ? (
-            <span className="text-[16px] text-[#ff5d5d]">⚠️ ช่วงเวลาซ้ำ (กรุณาเปลี่ยนเวลา)</span>
+            <span className="text-[18px] text-[#ff5d5d]">⚠️ ช่วงเวลาซ้ำ (กรุณาเปลี่ยนเวลา)</span>
           ) : (
             <>
-              <Send className={`w-5 h-5 ${mode === 'teacher' ? 'text-black stroke-[2.5]' : ''}`} />
-              <span className="text-[16px]">{mode === 'teacher' ? 'บันทึกการจองสำหรับคลาสเรียนอาจารย์' : 'ส่งคำขอจองห้องจัดรายการ'}</span>
+              <Send className={`w-5.5 h-5.5 ${mode === 'teacher' ? 'text-black stroke-[2.5]' : ''}`} />
+              <span className="text-[18px]">{mode === 'teacher' ? 'บันทึกการจองสำหรับคลาสเรียนอาจารย์' : 'ส่งคำขอจองห้องจัดรายการ'}</span>
             </>
           )}
         </button>

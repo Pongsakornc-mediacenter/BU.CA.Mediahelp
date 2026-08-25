@@ -88,24 +88,24 @@ export const DeleteBookingConfirmModal: React.FC<DeleteBookingConfirmModalProps>
           {/* Booking details preview */}
           <div className="mt-5 p-4 sm:p-5 bg-[#232328] border border-[#3f3f46] rounded-2xl space-y-2.5 sm:space-y-3 text-sm sm:text-base shadow-sm">
             <div className="flex justify-between items-center">
-              <span className="text-zinc-200 font-semibold">ห้อง:</span>
+              <span className="text-zinc-200 font-semibold" style={{ color: '#e4e4e7' }}>ห้อง:</span>
               <span className="font-extrabold text-orange-400 text-base sm:text-lg">{booking.roomName}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-200 font-semibold">วันที่:</span>
-              <span className="font-bold text-white font-mono">{booking.date}</span>
+              <span className="text-zinc-200 font-semibold" style={{ color: '#e4e4e7' }}>วันที่:</span>
+              <span className="font-bold text-white font-mono" style={{ color: '#ffffff' }}>{booking.date}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-200 font-semibold">ช่วงเวลา:</span>
+              <span className="text-zinc-200 font-semibold" style={{ color: '#e4e4e7' }}>ช่วงเวลา:</span>
               <span className="font-bold text-amber-300 font-mono">{booking.timeSlot}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-200 font-semibold">วิชา/หัวข้อ:</span>
-              <span className="font-bold text-white truncate max-w-[240px] sm:max-w-[360px]">{displaySubject}</span>
+              <span className="text-zinc-200 font-semibold" style={{ color: '#e4e4e7' }}>วิชา/หัวข้อ:</span>
+              <span className="font-bold text-white truncate max-w-[240px] sm:max-w-[360px]" style={{ color: '#ffffff' }}>{displaySubject}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-200 font-semibold">ผู้จอง:</span>
-              <span className="font-bold text-white">{displayName}</span>
+              <span className="text-zinc-200 font-semibold" style={{ color: '#e4e4e7' }}>ผู้จอง:</span>
+              <span className="font-bold text-white" style={{ color: '#ffffff' }}>{displayName}</span>
             </div>
           </div>
 
@@ -113,7 +113,7 @@ export const DeleteBookingConfirmModal: React.FC<DeleteBookingConfirmModalProps>
           <div className="mt-4 p-3.5 sm:p-4 bg-red-500/15 border border-red-500/30 rounded-xl flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <p className="text-xs sm:text-sm text-red-200 font-medium leading-relaxed">
-              เมื่อกดยืนยัน รายการจองนี้จะถูกลบออกจากฐานข้อมูล Firestore ทันที และช่องเวลานี้จะเปลี่ยนเป็น <span className="font-bold text-white underline">"ว่าง"</span> เพื่อให้ผู้ใช้อื่นสามารถจองต่อได้
+              เมื่อกดยืนยัน รายการจองนี้จะถูกลบออกจากฐานข้อมูล Firestore ทันที และช่องเวลานี้จะเปลี่ยนเป็น <span className="font-bold text-white underline" style={{ color: '#ffffff' }}>"ว่าง"</span> เพื่อให้ผู้ใช้อื่นสามารถจองต่อได้
             </p>
           </div>
 

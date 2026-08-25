@@ -17,7 +17,9 @@ import {
   PieChart as PieChartIcon,
   CheckCircle,
   ListFilter,
-  FolderOpen
+  FolderOpen,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import {
   PieChart as RechartsPieChart,
@@ -55,6 +57,78 @@ export function DataSummaryDashboard({
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedRoom, setSelectedRoom] = useState<string>('all');
 
+  // Helper to format today's date as YYYY-MM-DD
+  const getTodayDateString = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // Daily Date Filter state for the All-Rooms overview table (Defaults to today)
+  const [selectedTableDate, setSelectedTableDate] = useState<string>(getTodayDateString);
+
+  // Normalize any date string to YYYY-MM-DD for accurate comparison
+  const normalizeToYYYYMMDD = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const trimmed = dateStr.trim();
+    const parts = trimmed.split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD or YYYY/MM/DD
+        const year = parts[0];
+        const month = parts[1].padStart(2, '0');
+        const day = parts[2].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } else if (parts[2].length === 4) {
+        // DD-MM-YYYY or DD/MM/YYYY
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
+      }
+    }
+    return dateStr;
+  };
+
+  // Format date for badge display (DD/MM/YYYY)
+  const formatDateBadgeDisplay = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  // Daily filter control handlers
+  const handlePrevDay = () => {
+    setSelectedTableDate(prev => {
+      const base = prev ? new Date(prev) : new Date();
+      base.setDate(base.getDate() - 1);
+      const y = base.getFullYear();
+      const m = String(base.getMonth() + 1).padStart(2, '0');
+      const d = String(base.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    });
+  };
+
+  const handleNextDay = () => {
+    setSelectedTableDate(prev => {
+      const base = prev ? new Date(prev) : new Date();
+      base.setDate(base.getDate() + 1);
+      const y = base.getFullYear();
+      const m = String(base.getMonth() + 1).padStart(2, '0');
+      const d = String(base.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    });
+  };
+
+  const handleToday = () => {
+    setSelectedTableDate(getTodayDateString());
+  };
+
   // Selected booking for Read-Only Detail Modal
   const [selectedBookingDetail, setSelectedBookingDetail] = useState<BookingModalData | null>(null);
 
@@ -77,9 +151,9 @@ export function DataSummaryDashboard({
     return DEFAULT_COURSES;
   }, [courses]);
 
-  // Filtered Bookings logic with useMemo
+  // Filtered and Sorted Bookings logic with useMemo
   const filteredBookings = useMemo(() => {
-    return bookings.filter(b => {
+    const list = bookings.filter(b => {
       if (!b) return false;
       
       // Filter by room
@@ -98,7 +172,23 @@ export function DataSummaryDashboard({
 
       return true;
     });
+
+    // Sort all bookings from newest to oldest (by updatedAt, submittedAt, createdAt, or date)
+    return list.sort((a, b) => {
+      const timeB = new Date(b.updatedAt || b.submittedAt || b.createdAt || b.date || 0).getTime();
+      const timeA = new Date(a.updatedAt || a.submittedAt || a.createdAt || a.date || 0).getTime();
+      return timeB - timeA;
+    });
   }, [bookings, selectedRoom, selectedSubject]);
+
+  // Daily filtered bookings specifically for the overview summary table
+  const dailyFilteredBookings = useMemo(() => {
+    if (!selectedTableDate) return filteredBookings;
+    return filteredBookings.filter(b => {
+      const bDate = normalizeToYYYYMMDD(b.date);
+      return bDate === selectedTableDate;
+    });
+  }, [filteredBookings, selectedTableDate]);
 
   // Top booked subject helper
   const getTopSubject = (list: RoomBooking[]) => {
@@ -661,254 +751,516 @@ export function DataSummaryDashboard({
 
       {/* 3. MAIN DETAILED CONTENT BASED ON ACTIVE SUB-TAB */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="space-y-6">
           
-          {/* Left Column: Room Share & Usage Visual Progress Bars (7 Cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* Visual Usage Proportion - Semi-Circular Pie Chart & Dynamic Legend */}
-            <div className="bg-[#121218] border border-[#2b2b36] rounded-2xl p-5 shadow-sm space-y-4 text-white">
-              <div className="flex justify-between items-center border-b border-[#242430] pb-3">
-                <h3 className="font-extrabold font-display flex items-center gap-2" style={{ color: '#ffffff', fontSize: '16px' }}>
-                  <PieChartIcon className="w-4 h-4 text-purple-400" />
-                  สัดส่วนการเข้าใช้งานแยกตามห้องจัดรายการ (4 ห้อง)
-                </h3>
-                <span className="text-[11px] text-purple-300/70 font-mono font-semibold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
-                  REAL-TIME STATS
+          {/* A. OVERVIEW SECTION - COMBINED 4 ROOMS (ภาพรวมสถิติทั่วไป รวมทั้ง 4 ห้อง) */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-2xl">
+                  🏢
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 font-display">ภาพรวมสถิติทั่วไป (รวมทั้ง 4 ห้อง)</h2>
+                  <p className="text-xs text-slate-500">ศูนย์สรุปข้อมูลและรายงานสถิติภาพรวมการใช้งานห้องจัดรายการและห้องปฏิบัติการทั้ง 4 ห้อง</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="bg-slate-100 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-200">
+                  ห้องจัดรายการ 1 &bull; ห้องจัดรายการ 2 &bull; ห้องยูทูป 1 &bull; ห้องยูทูป 2
                 </span>
-              </div>
-
-              {/* Semi-Circular Pie Chart in Center */}
-              <div className="relative flex flex-col items-center justify-center pt-2">
-                <div className="w-full h-[180px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height={180}>
-                    <RechartsPieChart>
-                      <Pie
-                        data={roomUsageStats.chartData}
-                        cx="50%"
-                        cy="85%"
-                        startAngle={180}
-                        endAngle={0}
-                        innerRadius={70}
-                        outerRadius={105}
-                        paddingAngle={roomUsageStats.chartData.length > 1 ? 3 : 0}
-                        dataKey="value"
-                        isAnimationActive={true}
-                      >
-                        {roomUsageStats.chartData.map((entry, index) => (
-                          <Cell
-                            key={`room-cell-${index}`}
-                            fill={entry.color}
-                            stroke="#121218"
-                            strokeWidth={2}
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            if (data.isEmpty) {
-                              return (
-                                <div className="bg-[#1a1a24] border border-[#37374a] p-2.5 rounded-xl shadow-xl text-xs text-slate-300">
-                                  <span>ยังไม่มีข้อมูลการจอง</span>
-                                </div>
-                              );
-                            }
-                            return (
-                              <div className="bg-[#181822] border border-[#353548] p-2.5 rounded-xl shadow-2xl text-xs text-white">
-                                <p className="font-bold flex items-center gap-1.5" style={{ color: data.color }}>
-                                  <span>{data.emoji}</span>
-                                  <span>{data.name}</span>
-                                </p>
-                                <p className="text-slate-200 mt-1 font-semibold">
-                                  จำนวน: <span className="font-black text-white">{data.value} คิว</span> ({data.percent}%)
-                                </p>
-                                <p className="text-slate-400 text-[11px] mt-0.5">
-                                  ⏱️ รวมเวลา: {formatHoursDisplay(data.hours)} ชม.
-                                </p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Center label inside the semi-circle */}
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-2 text-center pointer-events-none select-none">
-                  <span className="text-[11px] text-slate-400 font-semibold block">การจองรวม</span>
-                  <span className="text-2xl font-black text-white font-display block leading-tight">
-                    {totalBookings} คิว
-                  </span>
-                  <span className="text-[10px] text-purple-400 font-bold block">
-                    {formatHoursDisplay(totalHours)} ชม.
-                  </span>
-                </div>
-              </div>
-
-              {/* Dynamic Legend Grid with Bright Contrast Labels */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                {/* Room 1 */}
-                <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5" style={{ fontSize: '16px' }}>
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: '#ef8840' }}
-                    />
-                    <span className="font-bold truncate" style={{ color: '#ef8840', fontSize: '14px' }} title="ห้องจัดรายการ 1">
-                      ห้องจัดรายการ 1
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
-                    <span className="text-sm font-black tracking-tight" style={{ color: '#ef8840' }}>
-                      {roomUsageStats.legendItems[0]?.percent ?? 0}%
-                    </span>
-                    <span className="text-[11px] font-semibold font-mono" style={{ color: '#a9a9a9' }}>
-                      {roomUsageStats.legendItems[0]?.count ?? 0} คิว
-                    </span>
-                  </div>
-                </div>
-
-                {/* Room 2 */}
-                <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: '#4a90e2' }}
-                    />
-                    <span className="font-bold truncate" style={{ color: '#4a90e2', fontSize: '14px' }} title="ห้องจัดรายการ 2">
-                      ห้องจัดรายการ 2
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
-                    <span className="text-sm font-black tracking-tight" style={{ color: '#4a90e2' }}>
-                      {roomUsageStats.legendItems[1]?.percent ?? 0}%
-                    </span>
-                    <span className="text-[11px] font-semibold font-mono" style={{ color: '#c5c5c5' }}>
-                      {roomUsageStats.legendItems[1]?.count ?? 0} คิว
-                    </span>
-                  </div>
-                </div>
-
-                {/* Youtube 1 */}
-                <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: '#ec003f' }}
-                    />
-                    <span className="font-bold truncate" style={{ color: '#ec003f', fontSize: '14px' }} title="ห้องยูทูป 1">
-                      ห้องยูทูป 1
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
-                    <span className="text-sm font-black tracking-tight" style={{ color: '#ec003f' }}>
-                      {roomUsageStats.legendItems[2]?.percent ?? 0}%
-                    </span>
-                    <span className="text-[11px] font-semibold font-mono" style={{ color: '#c5c5c5' }}>
-                      {roomUsageStats.legendItems[2]?.count ?? 0} คิว
-                    </span>
-                  </div>
-                </div>
-
-                {/* Youtube 2 */}
-                <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: '#9810fa' }}
-                    />
-                    <span className="font-bold truncate" style={{ color: '#9810fa', fontSize: '14px' }} title="ห้องยูทูป 2">
-                      ห้องยูทูป 2
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
-                    <span className="text-sm font-black tracking-tight" style={{ color: '#9810fa' }}>
-                      {roomUsageStats.legendItems[3]?.percent ?? 0}%
-                    </span>
-                    <span className="text-[11px] font-semibold font-mono" style={{ color: '#c5c5c5' }}>
-                      {roomUsageStats.legendItems[3]?.count ?? 0} คิว
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dynamic Summary Note Filtered from Real Data */}
-              <div className="rounded-xl p-3 bg-[#181822] border border-[#2b2b3c] text-xs leading-relaxed text-slate-200">
-                <p className="font-semibold flex items-start gap-1.5" style={{ color: '#ffffff' }}>
-                  <span style={{ color: '#ffffff', fontSize: '14px' }}>{dynamicRoomSummary}</span>
-                </p>
               </div>
             </div>
 
-            {/* Popular Time Slots Summary */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
-              <h3 className="font-extrabold text-slate-900 font-display flex items-center gap-2" style={{ fontSize: '20px' }}>
-                <Clock className="w-4 h-4 text-indigo-600" />
-                สถิติช่วงเวลายอดนิยมในการจองห้อง (Peak Time Slots)
-              </h3>
+            {/* 3 Key Metric Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl flex flex-col justify-between" style={{ backgroundColor: '#050505', width: '100%', maxWidth: '100%', minHeight: '90px', borderColor: '#10b981', borderWidth: '1px', borderStyle: 'solid', borderRadius: '12px' }}>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold block" style={{ color: '#34d399', fontSize: '16px' }}>รายการจองทั้งหมด (คิวรวม 4 ห้อง)</span>
+                  <Calendar className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-3xl font-black font-display" style={{ color: '#34d399' }}>{totalBookings}</span>
+                  <span className="text-emerald-400/80 font-medium text-sm">คิวจอง</span>
+                </div>
+              </div>
 
-              <div className="space-y-3">
-                {[
-                  { time: '08:30 - 10:30 น.', label: 'ช่วงเช้า 1', count: Math.ceil(totalBookings * 0.35), color: 'bg-emerald-500' },
-                  { time: '10:30 - 12:30 น.', label: 'ช่วงเช้า 2', count: Math.ceil(totalBookings * 0.25), color: 'bg-teal-500' },
-                  { time: '13:00 - 15:00 น.', label: 'ช่วงบ่าย 1 (Peak High)', count: Math.ceil(totalBookings * 0.45), color: 'bg-indigo-500' },
-                  { time: '15:00 - 17:00 น.', label: 'ช่วงบ่าย 2', count: Math.ceil(totalBookings * 0.20), color: 'bg-violet-500' }
-                ].map((slot, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <p className="flex justify-between font-semibold" style={{ fontSize: '14px', paddingTop: '8px' }}>
-                      <span className="text-slate-700 font-mono">{slot.time} <span className="text-slate-400 font-sans text-[11px]">({slot.label})</span></span>
-                      <span className="text-slate-900 font-bold">{slot.count} ครั้ง</span>
-                    </p>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${slot.color} rounded-full`}
-                        style={{ width: `${Math.min(100, Math.max(15, (slot.count / (totalBookings || 1)) * 100))}%` }}
+              <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl flex flex-col justify-between" style={{ width: '100%', maxWidth: '100%', minHeight: '90px', borderRadius: '12px' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-bold block" style={{ fontSize: '16px' }}>จำนวนชั่วโมงเปิดใช้งานรวม</span>
+                  <Clock className="w-5 h-5 text-slate-500" />
+                </div>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-3xl font-black text-slate-800 font-display">{formatHoursDisplay(totalHours)}</span>
+                  <span className="text-slate-500 font-medium text-sm">ชั่วโมง</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl flex flex-col justify-between" style={{ width: '100%', maxWidth: '100%', minHeight: '90px', borderRadius: '12px' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-bold block" style={{ fontSize: '16px' }}>รายวิชาที่มีการจองมากที่สุด</span>
+                  <BookOpen className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div className="mt-2">
+                  <span className="text-lg sm:text-xl font-extrabold text-indigo-600 font-display block truncate" title={getTopSubject(filteredBookings)}>
+                    {getTopSubject(filteredBookings)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* B. CHARTS & STATS SECTION (2-Column Grid: Left Donut vs Right Course & Peak Time Slots) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            
+            {/* Left Column: Room Share Visual Progress Bars & Donut (7 Cols) */}
+            <div className="lg:col-span-7 space-y-4">
+              
+              {/* Visual Usage Proportion - Semi-Circular Pie Chart & Dynamic Legend */}
+              <div className="bg-[#121218] border border-[#2b2b36] rounded-2xl p-5 shadow-sm space-y-4 text-white">
+                <div className="flex justify-between items-center border-b border-[#242430] pb-3">
+                  <h3 className="font-extrabold font-display flex items-center gap-2" style={{ color: '#ffffff', fontSize: '16px' }}>
+                    <PieChartIcon className="w-4 h-4 text-purple-400" />
+                    สัดส่วนการเข้าใช้งานแยกตามห้องจัดรายการ (รวม 4 ห้อง)
+                  </h3>
+                  <span className="text-[11px] text-purple-300/70 font-mono font-semibold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                    REAL-TIME STATS
+                  </span>
+                </div>
+
+                {/* Semi-Circular Pie Chart in Center */}
+                <div className="relative flex flex-col items-center justify-center pt-2">
+                  <div className="w-full h-[180px] flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height={180}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={roomUsageStats.chartData}
+                          cx="50%"
+                          cy="85%"
+                          startAngle={180}
+                          endAngle={0}
+                          innerRadius={70}
+                          outerRadius={105}
+                          paddingAngle={roomUsageStats.chartData.length > 1 ? 3 : 0}
+                          dataKey="value"
+                          isAnimationActive={true}
+                        >
+                          {roomUsageStats.chartData.map((entry, index) => (
+                            <Cell
+                              key={`room-cell-${index}`}
+                              fill={entry.color}
+                              stroke="#121218"
+                              strokeWidth={2}
+                            />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              if (data.isEmpty) {
+                                return (
+                                  <div className="bg-[#1a1a24] border border-[#37374a] p-2.5 rounded-xl shadow-xl text-xs text-slate-300">
+                                    <span>ยังไม่มีข้อมูลการจอง</span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="bg-[#181822] border border-[#353548] p-2.5 rounded-xl shadow-2xl text-xs text-white">
+                                  <p className="font-bold flex items-center gap-1.5" style={{ color: data.color }}>
+                                    <span>{data.emoji}</span>
+                                    <span>{data.name}</span>
+                                  </p>
+                                  <p className="text-slate-200 mt-1 font-semibold">
+                                    จำนวน: <span className="font-black text-white">{data.value} คิว</span> ({data.percent}%)
+                                  </p>
+                                  <p className="text-slate-400 text-[11px] mt-0.5">
+                                    ⏱️ รวมเวลา: {formatHoursDisplay(data.hours)} ชม.
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Center label inside the semi-circle */}
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-2 text-center pointer-events-none select-none">
+                    <span className="text-[11px] text-slate-400 font-semibold block">การจองรวม</span>
+                    <span className="text-2xl font-black text-white font-display block leading-tight">
+                      {totalBookings} คิว
+                    </span>
+                    <span className="text-[10px] text-purple-400 font-bold block">
+                      {formatHoursDisplay(totalHours)} ชม.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dynamic Legend Grid with Bright Contrast Labels */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                  {/* Room 1 */}
+                  <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
+                    <div className="flex items-center gap-1.5 mb-1.5" style={{ fontSize: '16px' }}>
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                        style={{ backgroundColor: '#ef8840' }}
                       />
+                      <span className="font-bold truncate" style={{ color: '#ef8840', fontSize: '14px' }} title="ห้องจัดรายการ 1">
+                        ห้องจัดรายการ 1
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
+                      <span className="text-sm font-black tracking-tight" style={{ color: '#ef8840' }}>
+                        {roomUsageStats.legendItems[0]?.percent ?? 0}%
+                      </span>
+                      <span className="text-[11px] font-semibold font-mono" style={{ color: '#a9a9a9' }}>
+                        {roomUsageStats.legendItems[0]?.count ?? 0} คิว
+                      </span>
                     </div>
                   </div>
-                ))}
+
+                  {/* Room 2 */}
+                  <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                        style={{ backgroundColor: '#4a90e2' }}
+                      />
+                      <span className="font-bold truncate" style={{ color: '#4a90e2', fontSize: '14px' }} title="ห้องจัดรายการ 2">
+                        ห้องจัดรายการ 2
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
+                      <span className="text-sm font-black tracking-tight" style={{ color: '#4a90e2' }}>
+                        {roomUsageStats.legendItems[1]?.percent ?? 0}%
+                      </span>
+                      <span className="text-[11px] font-semibold font-mono" style={{ color: '#c5c5c5' }}>
+                        {roomUsageStats.legendItems[1]?.count ?? 0} คิว
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Youtube 1 */}
+                  <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                        style={{ backgroundColor: '#ec003f' }}
+                      />
+                      <span className="font-bold truncate" style={{ color: '#ec003f', fontSize: '14px' }} title="ห้องยูทูป 1">
+                        ห้องยูทูป 1
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
+                      <span className="text-sm font-black tracking-tight" style={{ color: '#ec003f' }}>
+                        {roomUsageStats.legendItems[2]?.percent ?? 0}%
+                      </span>
+                      <span className="text-[11px] font-semibold font-mono" style={{ color: '#c5c5c5' }}>
+                        {roomUsageStats.legendItems[2]?.count ?? 0} คิว
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Youtube 2 */}
+                  <div className="bg-[#181822] border border-[#2b2b3c] rounded-xl p-2.5 flex flex-col justify-between hover:border-slate-500/40 transition-colors">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                        style={{ backgroundColor: '#9810fa' }}
+                      />
+                      <span className="font-bold truncate" style={{ color: '#9810fa', fontSize: '14px' }} title="ห้องยูทูป 2">
+                        ห้องยูทูป 2
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-[#232332]">
+                      <span className="text-sm font-black tracking-tight" style={{ color: '#9810fa' }}>
+                        {roomUsageStats.legendItems[3]?.percent ?? 0}%
+                      </span>
+                      <span className="text-[11px] font-semibold font-mono" style={{ color: '#c5c5c5' }}>
+                        {roomUsageStats.legendItems[3]?.count ?? 0} คิว
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Summary Note Filtered from Real Data */}
+                <div className="rounded-xl p-3 bg-[#181822] border border-[#2b2b3c] text-xs leading-relaxed text-slate-200">
+                  <p className="font-semibold flex items-start gap-1.5" style={{ color: '#ffffff' }}>
+                    <span style={{ color: '#ffffff', fontSize: '14px' }}>{dynamicRoomSummary}</span>
+                  </p>
+                </div>
               </div>
+
+            </div>
+
+            {/* Right Column: Course Summary & Popular Time Slots Stacked (5 Cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-4">
+              
+              {/* Block 1 (Top): Course Summary Breakdown Table */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-extrabold text-slate-900 text-sm font-display flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-indigo-600" />
+                    สรุปการใช้งานแยกตามรายวิชา (รวม 4 ห้อง)
+                  </h3>
+                  <span className="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded border border-indigo-100">
+                    {courseStats.length} รายวิชา
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto pr-1">
+                  {courseStats.map((item, idx) => (
+                    <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block">{item.subject}</span>
+                        <span className="text-[11px] text-slate-400 font-medium block">
+                          จำนวน {item.groupsCount} กลุ่ม
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-black text-indigo-600 block">{item.count} ครั้ง</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{formatHoursDisplay(item.hours)} ชม.</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {courseStats.length === 0 && (
+                    <p className="text-slate-400 text-xs py-4 text-center">ไม่มีข้อมูลการจองตามเงื่อนไขที่เลือก</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Block 2 (Bottom): Popular Time Slots Summary */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+                <h3 className="font-extrabold text-slate-900 font-display flex items-center gap-2" style={{ fontSize: '15px' }}>
+                  <Clock className="w-4 h-4 text-indigo-600" />
+                  สถิติช่วงเวลายอดนิยมในการจองห้อง (Peak Time Slots รวม 4 ห้อง)
+                </h3>
+
+                <div className="space-y-2.5">
+                  {[
+                    { time: '08:30 - 10:30 น.', label: 'ช่วงเช้า 1', count: Math.ceil(totalBookings * 0.35), color: 'bg-emerald-500' },
+                    { time: '10:30 - 12:30 น.', label: 'ช่วงเช้า 2', count: Math.ceil(totalBookings * 0.25), color: 'bg-teal-500' },
+                    { time: '13:00 - 15:00 น.', label: 'ช่วงบ่าย 1 (Peak High)', count: Math.ceil(totalBookings * 0.45), color: 'bg-indigo-500' },
+                    { time: '15:00 - 17:00 น.', label: 'ช่วงบ่าย 2', count: Math.ceil(totalBookings * 0.20), color: 'bg-violet-500' }
+                  ].map((slot, idx) => (
+                    <div key={idx} className="space-y-1">
+                      <p className="flex justify-between font-semibold text-xs" style={{ paddingTop: '2px' }}>
+                        <span className="text-slate-700 font-mono">{slot.time} <span className="text-slate-400 font-sans text-[11px]">({slot.label})</span></span>
+                        <span className="text-slate-900 font-bold">{slot.count} ครั้ง</span>
+                      </p>
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${slot.color} rounded-full`}
+                          style={{ width: `${Math.min(100, Math.max(15, (slot.count / (totalBookings || 1)) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
           </div>
 
-          {/* Right Column: Course Summary Breakdown Table (5 Cols) */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="font-extrabold text-slate-900 text-sm font-display flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-indigo-600" />
-                  สรุปการใช้งานแยกตามรายวิชา
-                </h3>
-                <span className="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded border border-indigo-100">
-                  {courseStats.length} รายวิชา
+          {/* C. ALL ROOMS SUMMARY TABLE (ตารางรายการจองห้องจัดรายการทั้งหมด รวม 4 ห้อง ล่าสุด) */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 border-b border-slate-100 pb-3.5">
+              <div>
+                <h4 className="font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2" style={{ fontSize: '18px' }}>
+                  <Building2 className="w-5 h-5 text-emerald-600" />
+                  รายการจองห้องจัดรายการทั้งหมด (รวม 4 ห้อง) ล่าสุด
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  แสดงรายการจองทั้งหมดที่เกิดขึ้นในระบบ พร้อมระบุห้องและรายละเอียดครบถ้วน
+                </p>
+              </div>
+
+              {/* Header Actions Row: Daily Date Filter Controls & Item Count Badge */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-start lg:justify-end">
+                {/* Daily Filter Controls Group */}
+                <div className="inline-flex items-center bg-slate-50 border border-slate-200/90 rounded-xl p-1 shadow-2xs gap-1" style={{ fontSize: '16px' }}>
+                  {/* 1. Prev Day Button */}
+                  <button
+                    type="button"
+                    onClick={handlePrevDay}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 hover:text-indigo-600 hover:bg-white transition-all cursor-pointer border border-transparent hover:border-slate-200 active:scale-95"
+                    title="วันก่อนหน้า (-1 วัน)"
+                  >
+                    <ChevronLeft className="w-4 h-4" style={{ width: '16px', height: '16px' }} />
+                    <span className="hidden sm:inline" style={{ fontSize: '14px' }}>วันก่อนหน้า</span>
+                  </button>
+
+                  {/* 2. Today Button */}
+                  <button
+                    type="button"
+                    onClick={handleToday}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all cursor-pointer border active:scale-95 ${
+                      selectedTableDate === getTodayDateString()
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        : 'text-slate-700 hover:text-indigo-600 hover:bg-white border-transparent hover:border-slate-200'
+                    }`}
+                    style={{ fontSize: '14px' }}
+                    title="รีเซ็ตกลับมาเป็นวันที่ปัจจุบัน"
+                  >
+                    วันนี้
+                  </button>
+
+                  {/* 3. Next Day Button */}
+                  <button
+                    type="button"
+                    onClick={handleNextDay}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 hover:text-indigo-600 hover:bg-white transition-all cursor-pointer border border-transparent hover:border-slate-200 active:scale-95"
+                    title="วันถัดไป (+1 วัน)"
+                  >
+                    <span className="hidden sm:inline" style={{ fontSize: '14px' }}>วันถัดไป</span>
+                    <ChevronRight className="w-4 h-4" style={{ width: '15px', height: '15px' }} />
+                  </button>
+
+                  {/* 4. Date Picker Input */}
+                  <div className="h-5 w-px bg-slate-200 mx-0.5" />
+                  <div className="relative flex items-center">
+                    <input
+                      type="date"
+                      value={selectedTableDate}
+                      onChange={(e) => setSelectedTableDate(e.target.value)}
+                      className="bg-white text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-2xs font-mono"
+                      style={{ fontSize: '14px' }}
+                      title="เลือกวันที่ต้องการดูย้อนหลังหรือล่วงหน้า"
+                    />
+                  </div>
+                </div>
+
+                {/* Count Badge for the selected date */}
+                <span
+                  className="text-emerald-800 border border-emerald-300 font-bold text-sm px-3.5 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 shadow-2xs"
+                  style={{ fontSize: '14px', backgroundColor: '#cef8e7' }}
+                >
+                  <Calendar className="w-4 h-4 text-emerald-700" />
+                  ทั้งหมด {dailyFilteredBookings.length} รายการ (วันที่ {formatDateBadgeDisplay(selectedTableDate)})
                 </span>
               </div>
+            </div>
 
-              <div className="divide-y divide-slate-100">
-                {courseStats.map((item, idx) => (
-                  <div key={idx} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block">{item.subject}</span>
-                      <span className="text-[11px] text-slate-400 font-medium block">
-                        จำนวน {item.groupsCount} กลุ่ม
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-black text-indigo-600 block">{item.count} ครั้ง</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{formatHoursDisplay(item.hours)} ชม.</span>
-                    </div>
-                  </div>
-                ))}
+            <div className="overflow-x-auto border border-slate-200/80 rounded-xl">
+              <table className="w-full text-left min-w-[1180px]">
+                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200/80">
+                  <tr>
+                    <th className="p-3 w-[12%] min-w-[130px]" style={{ fontSize: '16px' }}>ห้องจัดรายการ</th>
+                    <th className="p-3 w-[12%] min-w-[125px]" style={{ fontSize: '16px' }}>ชื่อผู้จอง</th>
+                    <th className="p-3 w-[11%] min-w-[110px]" style={{ fontSize: '16px' }}>รหัสนักศึกษา / อาจารย์</th>
+                    <th className="p-3 w-[17%] min-w-[170px]" style={{ fontSize: '16px' }}>รายวิชา</th>
+                    <th className="p-3 w-[12%] min-w-[115px]" style={{ fontSize: '16px' }}>ชื่อรายการ</th>
+                    <th className="p-3 w-[14%] min-w-[130px]" style={{ fontSize: '16px' }}>วัตถุประสงค์</th>
+                    <th className="p-3 w-[12%] min-w-[125px]" style={{ fontSize: '16px' }}>วันที่และเวลา</th>
+                    <th className="p-3 w-[10%] min-w-[110px]" style={{ fontSize: '16px' }}>เวลาทำรายการล่าสุด</th>
+                    <th className="p-3 w-[7%] min-w-[80px] text-center" style={{ fontSize: '16px' }}>รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {dailyFilteredBookings.map((b, idx) => {
+                    const info = getBookingRowData(b);
 
-                {courseStats.length === 0 && (
-                  <p className="text-slate-400 text-xs py-4 text-center">ไม่มีข้อมูลการจองตามเงื่อนไขที่เลือก</p>
-                )}
-              </div>
+                    // Room Badge styling
+                    let roomBadgeClass = "bg-orange-500/15 text-[#ef8840] border-[#ef8840]/30";
+                    let roomIcon = "🎙️";
+                    if (b.roomName === 'ห้องจัดรายการ 2') {
+                      roomBadgeClass = "bg-blue-500/15 text-[#4a90e2] border-[#4a90e2]/30";
+                      roomIcon = "🎧";
+                    } else if (b.roomName === 'ห้องยูทูป 1') {
+                      roomBadgeClass = "bg-rose-500/15 text-[#ec003f] border-[#ec003f]/30";
+                      roomIcon = "📹";
+                    } else if (b.roomName === 'ห้องยูทูป 2') {
+                      roomBadgeClass = "bg-purple-500/15 text-[#9810fa] border-[#9810fa]/30";
+                      roomIcon = "🎬";
+                    }
+
+                    return (
+                      <tr key={b.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                        {/* 1. Room Name Badge */}
+                        <td className="p-3 align-middle">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${roomBadgeClass}`}>
+                            <span>{roomIcon}</span>
+                            <span className="truncate max-w-[100px]">{b.roomName || 'ห้องจัดรายการ 1'}</span>
+                          </span>
+                        </td>
+
+                        {/* 2. Booker Name */}
+                        <td className="p-3 font-bold text-slate-800 align-middle">
+                          <div className="text-sm font-bold text-slate-800 whitespace-normal break-words leading-snug" title={info.bookerName}>
+                            {info.bookerName}
+                          </div>
+                        </td>
+
+                        {/* 3. Student ID / Teacher ID */}
+                        <td className="p-3 font-mono text-slate-500 align-middle">
+                          <span className={info.isTeacher ? "bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded text-sm" : "text-sm"}>
+                            {info.idDisplay}
+                          </span>
+                        </td>
+
+                        {/* 4. Subject / Course */}
+                        <td className="p-3 font-semibold align-middle">
+                          <div className="text-sm font-semibold whitespace-normal break-words leading-snug" title={info.subjectDisplay} style={{ color: '#e0e0e0' }}>
+                            {info.subjectDisplay}
+                          </div>
+                        </td>
+
+                        {/* 5. Booking Title */}
+                        <td className="p-3 font-bold text-slate-800 align-middle">
+                          <div className="text-sm font-bold text-slate-800 whitespace-normal break-words leading-snug" title={info.titleDisplay}>
+                            {info.titleDisplay}
+                          </div>
+                        </td>
+
+                        {/* 6. Purpose */}
+                        <td className="p-3 text-slate-600 font-medium align-middle">
+                          <div className="text-sm font-medium text-slate-600 whitespace-normal break-words leading-snug" title={info.purposeDisplay}>
+                            {info.purposeDisplay}
+                          </div>
+                        </td>
+
+                        {/* 7. Date & Time */}
+                        <td className="p-3 font-mono text-slate-800 font-semibold whitespace-nowrap text-sm align-middle">
+                          {formatDateDisplay(b.date)} ({b.timeSlot})
+                        </td>
+
+                        {/* 8. Timestamp */}
+                        <td className="p-3 font-mono text-slate-500 font-medium text-sm whitespace-nowrap align-middle">
+                          {formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt)}
+                        </td>
+
+                        {/* 9. Read-only Detail Modal Trigger */}
+                        <td className="p-3 text-center align-middle">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBookingDetail(b)}
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/80 hover:border-indigo-600 transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95 cursor-pointer group/detail-btn"
+                            title="ดูรายละเอียดการจอง"
+                          >
+                            <FolderOpen className="w-4.5 h-4.5 transition-transform duration-200 group-hover/detail-btn:scale-110" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {dailyFilteredBookings.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="p-12 text-center text-slate-400">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Calendar className="w-8 h-8 text-slate-300 stroke-[1.5]" />
+                          <span className="text-sm font-medium text-slate-500">ไม่มีรายการจองในวันที่เลือก</span>
+                          <span className="text-xs text-slate-400">พร้อมรองรับรายการจองใหม่ของวันที่ {formatDateBadgeDisplay(selectedTableDate)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -963,7 +1315,7 @@ export function DataSummaryDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {room1Bookings.slice(0, 8).map((b, idx) => {
+                  {room1Bookings.map((b, idx) => {
                     const info = getBookingRowData(b);
                     return (
                       <tr key={idx} className="hover:bg-slate-50/80">
@@ -1071,7 +1423,7 @@ export function DataSummaryDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {room2Bookings.slice(0, 8).map((b, idx) => {
+                  {room2Bookings.map((b, idx) => {
                     const info = getBookingRowData(b);
                     return (
                       <tr key={idx} className="hover:bg-slate-50/80">
@@ -1179,7 +1531,7 @@ export function DataSummaryDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {youtube1Bookings.slice(0, 8).map((b, idx) => {
+                  {youtube1Bookings.map((b, idx) => {
                     const info = getBookingRowData(b);
                     return (
                       <tr key={idx} className="hover:bg-slate-50/80">
@@ -1287,7 +1639,7 @@ export function DataSummaryDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {youtube2Bookings.slice(0, 8).map((b, idx) => {
+                  {youtube2Bookings.map((b, idx) => {
                     const info = getBookingRowData(b);
                     return (
                       <tr key={idx} className="hover:bg-slate-50/80">
@@ -1391,6 +1743,7 @@ export function DataSummaryDashboard({
         onClose={() => setSelectedBookingDetail(null)}
         data={selectedBookingDetail}
         courses={allCoursesList}
+        readOnly={true}
       />
 
     </div>
