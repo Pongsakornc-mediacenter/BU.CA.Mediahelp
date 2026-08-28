@@ -19,7 +19,9 @@ import {
   ListFilter,
   FolderOpen,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import {
   PieChart as RechartsPieChart,
@@ -37,7 +39,7 @@ interface DataSummaryDashboardProps {
   tickets: Ticket[];
   attendance: AttendanceRecord[];
   courses?: Course[];
-  onDownloadReport: () => void;
+  onDownloadReport?: () => void;
   onBack?: () => void;
 }
 
@@ -56,6 +58,10 @@ export function DataSummaryDashboard({
   const [selectedSemester, setSelectedSemester] = useState<string>('all');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedRoom, setSelectedRoom] = useState<string>('all');
+
+  // Export Loading & Notification States
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [sheetsNotification, setSheetsNotification] = useState<string | null>(null);
 
   // Helper to format today's date as YYYY-MM-DD
   const getTodayDateString = () => {
@@ -337,6 +343,114 @@ export function DataSummaryDashboard({
     });
   };
 
+  // Open Google Sheets with All Bookings Data
+  const handleOpenGoogleSheets = async () => {
+    if (isExporting) return;
+    try {
+      setIsExporting(true);
+
+      // Brief asynchronous delay so user gets visual feedback of the export operation
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      const allBookings = bookings || [];
+      if (allBookings.length === 0) {
+        alert("ไม่พบข้อมูลการจองสำหรับส่งออกไปยัง Google Sheets");
+        setIsExporting(false);
+        return;
+      }
+
+      // Sort bookings chronologically: by date (newest first), then room name, then time slot
+      const sortedBookings = [...allBookings].sort((a, b) => {
+        const dateA = normalizeToYYYYMMDD(a.date);
+        const dateB = normalizeToYYYYMMDD(b.date);
+        if (dateA !== dateB) {
+          return dateB.localeCompare(dateA);
+        }
+        if (a.roomName !== b.roomName) {
+          return (a.roomName || '').localeCompare(b.roomName || '');
+        }
+        return (a.timeSlot || '').localeCompare(b.timeSlot || '');
+      });
+
+      // Header columns formatted cleanly for Google Sheets
+      const headers = [
+        "ลำดับ",
+        "วันที่จอง",
+        "ช่วงเวลา",
+        "ห้องจัดรายการ",
+        "ชื่อผู้จอง",
+        "รหัสนักศึกษา/อาจารย์",
+        "ชื่อรายวิชา",
+        "วัตถุประสงค์",
+        "เวลาทำรายการล่าสุด"
+      ];
+
+      // Prepare Tab-Separated Values (TSV) which is the native clipboard standard for Google Sheets
+      const tsvRows: string[] = [];
+      tsvRows.push(headers.join("\t"));
+
+      sortedBookings.forEach((b, idx) => {
+        const info = getBookingRowData(b);
+        const bookingDate = formatDateDisplay(b.date) || b.date || "-";
+        const timeSlot = b.timeSlot || "-";
+        const roomName = b.roomName || "-";
+        const bookerName = (info.bookerName || "-").replace(/[\t\n\r]/g, " ");
+        const studentOrTeacherId = (info.idDisplay || "-").replace(/[\t\n\r]/g, " ");
+        const subjectName = (info.subjectDisplay || "-").replace(/[\t\n\r]/g, " ");
+        const rawPurpose = info.purposeDisplay || b.bookingPurpose || b.purpose || "-";
+        const purpose = rawPurpose.replace(/[\t\n\r]/g, " ");
+        const lastUpdated = (formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt) || "-").replace(/[\t\n\r]/g, " ");
+
+        const row = [
+          idx + 1,
+          bookingDate,
+          timeSlot,
+          roomName,
+          bookerName,
+          studentOrTeacherId,
+          subjectName,
+          purpose,
+          lastUpdated
+        ];
+
+        tsvRows.push(row.join("\t"));
+      });
+
+      const tsvData = tsvRows.join("\n");
+
+      // Copy formatted table to clipboard for instant pasting (Ctrl+V) directly on the newly opened Google Sheet
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(tsvData);
+        } catch {
+          // Fallback if clipboard permission is restricted in iframe
+        }
+      }
+
+      // Open a fresh Google Spreadsheet in a new tab
+      window.open("https://sheets.new", "_blank");
+
+      // Show friendly confirmation toast on UI
+      setSheetsNotification("เปิด Google Sheets บนแท็บใหม่แล้ว! คัดลอกข้อมูลตารางลง Clipboard พร้อมกดวาง (Ctrl+V) ได้ทันที");
+      setTimeout(() => {
+        setSheetsNotification(null);
+      }, 7000);
+
+      if (onDownloadReport) {
+        try {
+          onDownloadReport();
+        } catch {
+          // Ignore if callback error
+        }
+      }
+    } catch (err) {
+      console.error("Failed to open Google Sheets:", err);
+      alert("เกิดข้อผิดพลาดในการเปิด Google Sheets กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Statistics calculation with useMemo to completely prevent re-renders & layout shifts
   const stats = useMemo(() => {
     const totalBookings = filteredBookings.length;
@@ -513,14 +627,45 @@ export function DataSummaryDashboard({
 
           <button
             type="button"
-            onClick={onDownloadReport}
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-900/30 transition-all cursor-pointer w-full sm:w-auto justify-center"
+            onClick={handleOpenGoogleSheets}
+            disabled={isExporting}
+            className={`flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-xs px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-900/30 transition-all cursor-pointer w-full sm:w-auto justify-center ${
+              isExporting ? 'opacity-75 cursor-wait pointer-events-none' : ''
+            }`}
             id="download_excel_summary_btn"
+            title="เปิด Google Sheets แท็บใหม่พร้อมโหลดข้อมูลตารางภาษาไทย"
           >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>ส่งออกรายงาน Excel / CSV (Feature 6)</span>
+            {isExporting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>กำลังสร้างไฟล์ Google Sheets...</span>
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>เปิดใน Google Sheets</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </>
+            )}
           </button>
         </div>
+
+        {/* Floating / Inline Notification after opening Google Sheets */}
+        {sheetsNotification && (
+          <div className="mb-4 bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 px-4 py-3 rounded-xl flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3 text-xs sm:text-sm font-medium">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{sheetsNotification}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSheetsNotification(null)}
+              className="text-emerald-400 hover:text-white text-xs px-2 py-1 rounded bg-emerald-900/50 hover:bg-emerald-800 transition-colors"
+            >
+              ปิด
+            </button>
+          </div>
+        )}
 
         {/* Room / Category Tab Selectors inside Dark Header */}
         <div className="flex flex-wrap gap-2 bg-[#0a0a0c] p-1.5 rounded-2xl border border-[#2d2d34]" id="summary_sub_tabs">
@@ -871,11 +1016,11 @@ export function DataSummaryDashboard({
                                     <span>{data.emoji}</span>
                                     <span>{data.name}</span>
                                   </p>
-                                  <p className="text-slate-200 mt-1 font-semibold">
+                                  <p className="text-white mt-1 font-semibold" style={{ color: '#ffffff' }}>
                                     จำนวน: <span className="font-black text-white">{data.value} คิว</span> ({data.percent}%)
                                   </p>
-                                  <p className="text-slate-400 text-[11px] mt-0.5">
-                                    ⏱️ รวมเวลา: {formatHoursDisplay(data.hours)} ชม.
+                                  <p className="text-white text-xs mt-1 font-medium" style={{ color: '#ffffff' }}>
+                                    ⏱️ รวมเวลา: <span className="font-bold text-white">{formatHoursDisplay(data.hours)}</span> ชม.
                                   </p>
                                 </div>
                               );

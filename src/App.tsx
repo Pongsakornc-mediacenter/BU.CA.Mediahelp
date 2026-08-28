@@ -184,6 +184,7 @@ export default function App() {
     sendTicketMessage,
     checkInToClass,
     downloadAttendanceReportCSV,
+    downloadAllBookingsReportCSV,
     bookings,
     createBooking,
     updateBooking,
@@ -822,7 +823,7 @@ export default function App() {
                               type="button"
                               onClick={() => {
                                 setIsProfileDropdownOpen(false);
-                                downloadAttendanceReportCSV();
+                                downloadAllBookingsReportCSV();
                               }}
                               id="profile_dropdown_export_excel_btn"
                               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/80 rounded-xl transition-all text-left cursor-pointer group"
@@ -971,7 +972,7 @@ export default function App() {
             attendance={attendance}
             bookings={bookings}
             onSubmitReply={submitTicketReply}
-            onDownloadReport={downloadAttendanceReportCSV}
+            onDownloadReport={downloadAllBookingsReportCSV}
             currentUserEmail={currentUser.email}
             onUpdateBookingStatus={updateBookingStatus}
             onUpdateBooking={updateBooking}
@@ -1045,7 +1046,7 @@ export default function App() {
                   tickets={tickets}
                   attendance={attendance}
                   courses={courses}
-                  onDownloadReport={downloadAttendanceReportCSV}
+                  onDownloadReport={downloadAllBookingsReportCSV}
                   onBack={() => setStudentTab('booking')}
                 />
               </motion.div>
@@ -1182,12 +1183,6 @@ export default function App() {
                               referrerPolicy="no-referrer"
                               className="absolute inset-0 w-full h-full object-contain mx-auto transition-transform duration-700 hover:scale-105"
                             />
-                            {/* Overlay gradient at bottom */}
-                            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none flex items-end justify-center pb-2.5">
-                              <p className="text-white text-xs sm:text-sm font-extrabold tracking-wide drop-shadow-md">
-                                📷 บรรยากาศ {activeScheduleRoom} (Atmospheric Preview)
-                              </p>
-                            </div>
                             
                             {/* Navigation Arrows */}
                             {images.length > 1 && (

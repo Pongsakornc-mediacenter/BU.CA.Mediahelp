@@ -1009,6 +1009,58 @@ export function useData() {
     document.body.removeChild(link);
   };
 
+  // Generate CSV for All Room Bookings (Feature 6) compatible with Google Sheets & Excel
+  const downloadAllBookingsReportCSV = () => {
+    if (bookings.length === 0) {
+      alert("ไม่มีข้อมูลการจองห้องสำหรับการออกรายงาน");
+      return;
+    }
+
+    // UTF-8 BOM for Thai language support
+    let csvContent = "\uFEFF";
+    csvContent += "ลำดับ,วันที่จอง,ช่วงเวลา,ห้องจัดรายการ,ชื่อผู้จอง,รหัสนักศึกษา/อาจารย์,ชื่อรายวิชา,วัตถุประสงค์,เวลาทำรายการล่าสุด\n";
+
+    const sorted = [...bookings].sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      return (a.roomName || '').localeCompare(b.roomName || '');
+    });
+
+    sorted.forEach((b, idx) => {
+      const isTeacher =
+        b.userType === 'teacher' ||
+        b.studentId === 'TEACHER' ||
+        b.studentIdInput === 'TEACHER' ||
+        (b.purpose && b.purpose.includes('สำหรับการเรียนการสอนอาจารย์')) ||
+        b.studentName === 'อาจารย์ผู้สอน' ||
+        b.studentIdInput === 'อาจารย์ประจำวิชา';
+
+      let bookerName = b.studentName || b.studentNameInput || (isTeacher ? 'อาจารย์ผู้สอน' : '-');
+      let idDisplay = b.studentIdInput || b.studentId || (isTeacher ? 'อาจารย์ประจำวิชา' : '-');
+      let subjectDisplay = b.subject || 'BRS311';
+      subjectDisplay = subjectDisplay.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').trim();
+
+      let purposeDisplay = b.bookingPurpose || b.purpose || (isTeacher ? 'สำหรับการเรียนการสอน' : 'ฝึกปฏิบัติการจัดรายการ');
+      purposeDisplay = purposeDisplay.replace(/\(สำหรับการเรียนการสอนอาจารย์\)/g, '').replace(/\|/g, '').trim();
+
+      const lastUpdated = formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt);
+
+      const clean = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
+
+      csvContent += `${idx + 1},${clean(b.date)},${clean(b.timeSlot)},${clean(b.roomName)},${clean(bookerName)},${clean(idDisplay)},${clean(subjectDisplay)},${clean(purposeDisplay)},${clean(lastUpdated)}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `รายงานการจองห้องจัดรายการ_BU_CA_AllRooms_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Clear demo data
   const seedDemoData = () => {
     saveLocalStorageItem('bu_ca_tickets', []);
@@ -1471,6 +1523,7 @@ export function useData() {
     sendTicketMessage,
     checkInToClass,
     downloadAttendanceReportCSV: downloadTicketsReportCSV,
+    downloadAllBookingsReportCSV,
     seedDemoData,
     isFirebaseConfigured,
     bookings,
