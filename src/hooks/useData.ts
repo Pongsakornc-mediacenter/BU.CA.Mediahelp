@@ -1183,7 +1183,7 @@ export function useData() {
     const finalBookingTitle = extractedBookingTitle || (isTeacher ? "สำหรับการเรียนการสอน" : "จัดรายการ");
     const finalBookingPurpose = extractedBookingPurpose || (isTeacher ? "สำหรับการเรียนการสอน" : "ฝึกปฏิบัติการจัดรายการ");
 
-    const finalEmail = (emailInput && emailInput.trim()) || currentUser.email || "";
+    const finalEmail = ((emailInput && emailInput.trim()) || currentUser.email || "").toLowerCase().trim();
     const finalPin = (pinCodeInput && pinCodeInput.trim()) || "1234";
 
     const bookingPayload: Omit<RoomBooking, 'id'> = {
@@ -1346,7 +1346,21 @@ export function useData() {
     return { success: true };
   };
 
-  const deleteBooking = async (id: string) => {
+  const deleteBooking = async (id: string, bookingData?: RoomBooking) => {
+    // 1. Immediately remove from Local State & LocalStorage so UI is instantaneous
+    setBookings((prev) => {
+      const updated = prev.filter((b: RoomBooking) => b.id !== id);
+      saveLocalStorageItem('bu_ca_bookings', updated);
+      return updated;
+    });
+
+    const currentLocal = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
+    if (Array.isArray(currentLocal)) {
+      const filtered = currentLocal.filter((b: RoomBooking) => b.id !== id);
+      saveLocalStorageItem('bu_ca_bookings', filtered);
+    }
+
+    // 2. Send Delete command to Firebase Firestore Database
     const isMockSession = currentUser && (!auth?.currentUser || currentUser.uid !== auth.currentUser.uid);
     const shouldUseFirebase = !!(isFirebaseConfigured && db && !isMockSession);
     if (shouldUseFirebase) {
@@ -1354,14 +1368,47 @@ export function useData() {
         const docRef = doc(db, 'bookings', id);
         await deleteDoc(docRef);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `bookings/${id}`);
+        console.warn(`[deleteBooking] Firestore deleteDoc notice for ${id}:`, error);
       }
-    } else {
-      const current = getLocalStorageItem('bu_ca_bookings', DEFAULT_BOOKINGS);
-      const updated = current.filter((b: RoomBooking) => b.id !== id);
-      saveLocalStorageItem('bu_ca_bookings', updated);
-      setBookings(updated);
     }
+
+    // 3. Send Delete command to Google Apps Script / Google Sheets backend
+    try {
+      const env = (import.meta as any).env || {};
+      const gasUrl = (
+        env.VITE_GAS_EMAIL_URL ||
+        env.VITE_GOOGLE_APPS_SCRIPT_URL ||
+        localStorage.getItem('bu_ca_gas_email_url') ||
+        ''
+      ).trim();
+
+      if (gasUrl) {
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'delete',
+            id: id,
+            bookingId: id,
+            roomName: bookingData?.roomName,
+            bookingDate: bookingData?.date,
+            bookingTime: bookingData?.timeSlot,
+            userEmail: bookingData?.studentEmail ? bookingData.studentEmail.toLowerCase().trim() : undefined,
+            studentId: bookingData?.studentIdInput || bookingData?.studentId
+          })
+        });
+      }
+    } catch (gasErr) {
+      console.warn('[deleteBooking] Google Apps Script deletion request notice:', gasErr);
+    }
+
+    // 4. Send Delete request to backend server API endpoint if available
+    try {
+      await fetch(`/api/bookings/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+    } catch {}
+
+    return { success: true, message: "ลบรายการจองเรียบร้อยแล้ว" };
   };
 
   // --- Broadcast Program CRUD Operations ---

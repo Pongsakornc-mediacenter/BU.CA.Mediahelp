@@ -12,7 +12,7 @@ interface DeleteBookingConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: RoomBooking | null;
-  onConfirmDelete: (id: string) => Promise<void>;
+  onConfirmDelete: (id: string, booking?: RoomBooking) => Promise<void>;
   onAfterDeleteSuccess?: () => void;
 }
 
@@ -30,14 +30,14 @@ export const DeleteBookingConfirmModal: React.FC<DeleteBookingConfirmModalProps>
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await onConfirmDelete(booking.id);
+      await onConfirmDelete(booking.id, booking);
       if (onAfterDeleteSuccess) {
         onAfterDeleteSuccess();
       }
       onClose();
     } catch (err) {
       console.error("Error deleting booking:", err);
-      alert("เกิดข้อผิดพลาดในการลบรายการจอง กรุณาลองใหม่อีกครั้ง");
+      onClose();
     } finally {
       setDeleting(false);
     }

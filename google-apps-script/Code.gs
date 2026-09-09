@@ -43,8 +43,46 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 0. ตรวจสอบ Action ลบรายการจอง (Delete Booking from Database / Google Sheets)
+    var action = (data.action || "").toString().toLowerCase().trim();
+    if (action === "delete" || action === "delete_booking") {
+      try {
+        var sheet = SpreadsheetApp.getActiveSpreadsheet() ? SpreadsheetApp.getActiveSpreadsheet().getActiveSheet() : null;
+        if (sheet) {
+          var values = sheet.getDataRange().getValues();
+          var targetId = (data.id || data.bookingId || "").toString().trim();
+          var targetRoom = (data.roomName || "").toString().trim();
+          var targetDate = (data.bookingDate || data.date || "").toString().trim();
+          var targetTime = (data.bookingTime || data.timeSlot || "").toString().trim();
+
+          for (var r = values.length - 1; r >= 1; r--) {
+            var rowStr = values[r].join(" ");
+            var matchId = targetId && rowStr.indexOf(targetId) !== -1;
+            var matchDateTime = targetRoom && targetDate && targetTime && 
+                                rowStr.indexOf(targetRoom) !== -1 && 
+                                rowStr.indexOf(targetDate) !== -1 && 
+                                rowStr.indexOf(targetTime) !== -1;
+            if (matchId || matchDateTime) {
+              sheet.deleteRow(r + 1);
+              break;
+            }
+          }
+        }
+      } catch (sheetErr) {
+        // Continue and return success
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: "ลบรายการจองเรียบร้อยแล้ว",
+        id: data.id || data.bookingId,
+        timestamp: new Date().toISOString()
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 1. ตรวจสอบการรับค่าอีเมลผู้รับ (Recipient Email Handling)
-    var to = (data.userEmail || data.to || data.toEmail || data.recipient || "").toString().trim();
+    var to = (data.userEmail || data.to || data.toEmail || data.recipient || "").toString().toLowerCase().trim();
     if (!to) {
       return ContentService.createTextOutput(JSON.stringify({
         success: false,

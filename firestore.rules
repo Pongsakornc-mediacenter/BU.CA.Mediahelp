@@ -150,7 +150,7 @@ service cloud.firestore {
         (existing().studentId == request.auth.uid && incoming().studentId == request.auth.uid && incoming().status == existing().status) ||
         isAdmin()
       );
-      allow delete: if isAdmin();
+      allow delete: if isSignedIn() || isAdmin();
     }
 
     // Configs Collection (e.g. room preview images)

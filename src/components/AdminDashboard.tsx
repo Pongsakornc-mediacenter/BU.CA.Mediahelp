@@ -283,7 +283,7 @@ interface AdminDashboardProps {
   programs?: BroadcastProgram[];
   onUpdateBookingStatus?: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   onUpdateBooking?: (id: string, updates: Partial<RoomBooking>) => Promise<{ success: boolean; message?: string } | void>;
-  onDeleteBooking: (id: string) => Promise<void>;
+  onDeleteBooking: (id: string, booking?: RoomBooking) => Promise<any>;
   onCreateProgram?: (
     programName: string, 
     hosts: string, 
@@ -2620,17 +2620,16 @@ export default function AdminDashboard({
       data={selectedScheduleBookingModal}
       courses={courses}
       readOnly={false}
+      currentUser={currentUserEmail ? { email: currentUserEmail, role: 'admin' } : { role: 'admin' }}
       onEditClick={(booking) => {
-        setTargetBookingForPin(booking);
-        setPinActionType('edit');
-        setIsVerifyPinModalOpen(true);
         setSelectedScheduleBookingModal(null);
+        setBookingToEdit(booking);
+        setIsEditModalOpen(true);
       }}
       onDeleteClick={(booking) => {
-        setTargetBookingForPin(booking);
-        setPinActionType('delete');
-        setIsVerifyPinModalOpen(true);
         setSelectedScheduleBookingModal(null);
+        setBookingToDelete(booking);
+        setIsDeleteModalOpen(true);
       }}
     />
 
@@ -2643,6 +2642,13 @@ export default function AdminDashboard({
       }}
       booking={targetBookingForPin}
       actionType={pinActionType}
+      currentUser={{
+        uid: 'admin',
+        name: currentUserEmail ? currentUserEmail.split('@')[0] : 'Admin',
+        email: currentUserEmail || 'admin@bu.ac.th',
+        role: 'admin',
+        joinedAt: new Date().toISOString()
+      }}
       onSuccess={() => {
         setIsVerifyPinModalOpen(false);
         if (pinActionType === 'edit') {
@@ -2696,9 +2702,9 @@ export default function AdminDashboard({
         setBookingToDelete(null);
       }}
       booking={bookingToDelete}
-      onConfirmDelete={async (id) => {
-        await onDeleteBooking(id);
-        alert("🗑️ ยกเลิกและลบรายการจองสำเร็จ คืนช่องเวลาว่างบนตารางเรียบร้อยแล้ว");
+      onConfirmDelete={async (id, booking) => {
+        await onDeleteBooking(id, booking || bookingToDelete || undefined);
+        alert("ลบรายการจองเรียบร้อยแล้ว");
       }}
     />
 

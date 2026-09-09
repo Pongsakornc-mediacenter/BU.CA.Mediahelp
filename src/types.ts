@@ -9,7 +9,7 @@ export interface ChatMessage {
   id: string;
   senderId: string;
   senderName: string;
-  senderRole: 'student' | 'admin' | 'staff';
+  senderRole: 'student' | 'admin' | 'staff' | 'teacher';
   text: string;
   createdAt: string;
 }
@@ -64,7 +64,7 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
-  role: 'student' | 'admin' | 'staff';
+  role: 'student' | 'admin' | 'staff' | 'teacher';
   joinedAt: string;
 }
 

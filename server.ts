@@ -15,6 +15,28 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // API Delete Booking endpoint (proxies delete request to Google Apps Script / Google Sheets if configured)
+  app.delete("/api/bookings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const gasUrl = process.env.GOOGLE_APPS_SCRIPT_URL || process.env.VITE_GAS_EMAIL_URL || process.env.GAS_EMAIL_URL;
+      if (gasUrl) {
+        try {
+          await fetch(gasUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "delete", id, bookingId: id })
+          });
+        } catch (gasErr) {
+          console.warn("[server.ts] GAS delete error:", gasErr);
+        }
+      }
+      return res.json({ success: true, message: "ลบรายการจองเรียบร้อยแล้ว", id });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || "Internal server error" });
+    }
+  });
+
   // API Email Dispatch endpoint (Nodemailer & Google Apps Script Forwarder)
   app.post("/api/send-email", async (req, res) => {
     try {

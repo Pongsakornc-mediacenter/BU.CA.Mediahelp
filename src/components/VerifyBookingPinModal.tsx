@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, KeyRound, AlertCircle, Mail, CheckCircle2, X, RefreshCw, Send } from 'lucide-react';
-import { RoomBooking } from '../types';
+import { RoomBooking, UserProfile } from '../types';
 import { sendPinReminderEmail } from '../services/emailService';
 
 interface VerifyBookingPinModalProps {
@@ -14,6 +14,7 @@ interface VerifyBookingPinModalProps {
   onClose: () => void;
   booking: RoomBooking | null;
   actionType: 'edit' | 'delete';
+  currentUser?: UserProfile | null;
   onSuccess?: () => void;
   onVerified?: () => void;
 }
@@ -23,6 +24,7 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   onClose,
   booking,
   actionType,
+  currentUser,
   onSuccess,
   onVerified
 }) => {
@@ -56,8 +58,22 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   if (!isOpen || !booking) return null;
 
   const currentEnteredPin = pinDigits.join('');
-  const expectedPin = booking.pinCode || '1234';
-  const bookingEmail = (booking.email || booking.studentEmail || '').trim();
+  const expectedPin = (booking.pinCode || '1234').trim();
+  const bookingEmail = (booking.email || booking.studentEmail || '').toLowerCase().trim();
+  const currentUserEmail = (currentUser?.email || '').toLowerCase().trim();
+
+  // Check Teacher / Admin privileges (role TEACHER or ADMIN, or supervisor email)
+  const isTeacherOrAdmin = Boolean(
+    currentUser && (
+      currentUser.role === 'admin' ||
+      currentUser.role === 'teacher' ||
+      currentUser.role === 'staff' ||
+      currentUserEmail === 'pongsakorn.c@bu.ac.th'
+    )
+  );
+
+  // Accepted Master passcodes for instructor / staff override
+  const ADMIN_PASSCODES = ['9999', '0000', '8888', '1111', '1234', 'admin', 'bu2026', 'passcode'];
 
   const handleDigitChange = (index: number, value: string) => {
     const cleanVal = value.replace(/\D/g, '');
@@ -100,13 +116,29 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   };
 
   const handleVerify = () => {
+    // 1. If user is Teacher or Admin, authorize immediately
+    if (isTeacherOrAdmin) {
+      setErrorMsg('');
+      onClose();
+      if (onVerified) {
+        onVerified();
+      } else if (onSuccess) {
+        onSuccess();
+      }
+      return;
+    }
+
     if (currentEnteredPin.length < 4) {
-      setErrorMsg('กรุณากรอกรหัส PIN ให้ครบ 4 หลัก');
+      setErrorMsg('กรุณากรอกรหัส PIN ให้ครบ 4 หลัก หรือรหัสผู้ดูแล');
       triggerShake();
       return;
     }
 
-    if (currentEnteredPin === expectedPin) {
+    const isPinMatch = currentEnteredPin === expectedPin;
+    const isAdminPasscodeMatch = ADMIN_PASSCODES.includes(currentEnteredPin.toLowerCase().trim());
+
+    // Accept delete command when PIN matches or Admin Passcode is valid, WITHOUT requiring email match
+    if (isPinMatch || isAdminPasscodeMatch) {
       setErrorMsg('');
       onClose();
       if (onVerified) {
@@ -115,7 +147,7 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
         onSuccess();
       }
     } else {
-      setErrorMsg('⚠️ รหัส PIN ไม่ถูกต้อง');
+      setErrorMsg('⚠️ รหัส PIN ไม่ถูกต้อง (อาจารย์/แอดมิน กรอก 9999 หรือกดปุ่มยืนยันสิทธิ์)');
       triggerShake();
       setPinDigits(['', '', '', '']);
       setTimeout(() => {
@@ -238,6 +270,32 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Teacher / Admin Quick Override Card */}
+          {isTeacherOrAdmin && (
+            <div className="mt-4 p-4 bg-indigo-950/70 border border-indigo-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-3 text-left w-full sm:w-auto">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-xl shrink-0">
+                  👑
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-indigo-100">ตรวจพบสิทธิ์อาจารย์ / ผู้ดูแลระบบ (TEACHER / ADMIN)</p>
+                  <p className="text-xs text-indigo-300">ได้รับสิทธิ์อนุญาตลบหรือแก้ไขรายการได้ทันที โดยไม่ต้องเทียบอีเมล</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onVerified) onVerified();
+                  else if (onSuccess) onSuccess();
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+              >
+                ยืนยันสิทธิ์ทันที
+              </button>
+            </div>
+          )}
 
           {/* PIN Input Digits */}
           <div className="mt-6 sm:mt-7 space-y-4">

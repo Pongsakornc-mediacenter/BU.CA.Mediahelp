@@ -1098,7 +1098,9 @@ export default function App() {
                   tickets={tickets}
                   attendance={attendance}
                   courses={courses}
+                  currentUser={currentUser}
                   onDownloadReport={downloadAllBookingsReportCSV}
+                  onDeleteBooking={deleteBooking}
                   onBack={() => setStudentTab('booking')}
                 />
               </motion.div>
@@ -2096,17 +2098,44 @@ export default function App() {
         data={selectedScheduleBookingModal}
         courses={courses}
         readOnly={false}
+        currentUser={currentUser}
         onEditClick={(booking) => {
-          setTargetBookingForPin(booking);
-          setPinActionType('edit');
-          setIsVerifyPinModalOpen(true);
+          const isTeacher = Boolean(
+            currentUser && (
+              currentUser.role === 'admin' ||
+              currentUser.role === 'teacher' ||
+              currentUser.role === 'staff' ||
+              currentUser.email?.toLowerCase().trim() === 'pongsakorn.c@bu.ac.th'
+            )
+          );
           setSelectedScheduleBookingModal(null);
+          if (isTeacher) {
+            setBookingToEdit(booking);
+            setIsEditModalOpen(true);
+          } else {
+            setTargetBookingForPin(booking);
+            setPinActionType('edit');
+            setIsVerifyPinModalOpen(true);
+          }
         }}
         onDeleteClick={(booking) => {
-          setTargetBookingForPin(booking);
-          setPinActionType('delete');
-          setIsVerifyPinModalOpen(true);
+          const isTeacher = Boolean(
+            currentUser && (
+              currentUser.role === 'admin' ||
+              currentUser.role === 'teacher' ||
+              currentUser.role === 'staff' ||
+              currentUser.email?.toLowerCase().trim() === 'pongsakorn.c@bu.ac.th'
+            )
+          );
           setSelectedScheduleBookingModal(null);
+          if (isTeacher) {
+            setBookingToDelete(booking);
+            setIsDeleteModalOpen(true);
+          } else {
+            setTargetBookingForPin(booking);
+            setPinActionType('delete');
+            setIsVerifyPinModalOpen(true);
+          }
         }}
       />
 
@@ -2119,6 +2148,7 @@ export default function App() {
         }}
         booking={targetBookingForPin}
         actionType={pinActionType}
+        currentUser={currentUser}
         onSuccess={() => {
           setIsVerifyPinModalOpen(false);
           if (pinActionType === 'edit') {
@@ -2169,9 +2199,10 @@ export default function App() {
           setBookingToDelete(null);
         }}
         booking={bookingToDelete}
-        onConfirmDelete={async (id) => {
-          await deleteBooking(id);
-          alert("🗑️ ยกเลิกและลบรายการจองสำเร็จ คืนช่องเวลาว่างบนตารางเรียบร้อยแล้ว");
+        onConfirmDelete={async (id, booking) => {
+          await deleteBooking(id, booking || bookingToDelete || undefined);
+          setLastNotification("ลบรายการจองเรียบร้อยแล้ว คืนช่องเวลาว่างบนตารางเรียบร้อยแล้ว");
+          alert("ลบรายการจองเรียบร้อยแล้ว");
         }}
       />
 

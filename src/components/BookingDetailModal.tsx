@@ -48,6 +48,7 @@ interface BookingDetailModalProps {
   onDeleteClick?: (booking: RoomBooking) => void;
   courses?: Course[];
   readOnly?: boolean;
+  currentUser?: any;
 }
 
 export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
@@ -57,7 +58,8 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
   onEditClick,
   onDeleteClick,
   courses = [],
-  readOnly = false
+  readOnly = false,
+  currentUser
 }) => {
   const [showPhone, setShowPhone] = useState<boolean>(false);
 
