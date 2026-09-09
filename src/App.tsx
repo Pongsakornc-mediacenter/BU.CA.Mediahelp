@@ -44,6 +44,7 @@ import { UnifiedBookingForm } from './components/UnifiedBookingForm';
 import { BookingDetailModal } from './components/BookingDetailModal';
 import { SuccessNotificationModal, SuccessModalType } from './components/SuccessNotificationModal';
 import { RoomBooking, HelpCategory } from './types';
+import { sendGasBookingEmail } from './services/emailService';
 
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -324,6 +325,57 @@ export default function App() {
   const isSameRoom = (roomA?: string, roomB?: string) => {
     if (!roomA || !roomB) return false;
     return roomA.replace(/\s+/g, ' ').trim().toLowerCase() === roomB.replace(/\s+/g, ' ').trim().toLowerCase();
+  };
+
+  // Wrapper for booking creation that coordinates Google Apps Script Email dispatch
+  const handleCreateBookingWithGas = async (
+    roomName: string,
+    date: string,
+    timeSlot: string,
+    purpose: string,
+    studentIdInput?: string,
+    phone?: string,
+    studentNameInput?: string,
+    emailInput?: string,
+    pinCodeInput?: string
+  ) => {
+    const res = await createBooking(
+      roomName,
+      date,
+      timeSlot,
+      purpose,
+      studentIdInput,
+      phone,
+      studentNameInput,
+      emailInput,
+      pinCodeInput
+    );
+
+    // If booking was placed successfully and user provided an email, dispatch to Google Apps Script Web App
+    if (res.success && emailInput && emailInput.trim()) {
+      const isTeacher = studentIdInput === 'TEACHER' || (purpose && purpose.includes('สำหรับการเรียนการสอน'));
+      const displayName = studentNameInput?.trim() || (isTeacher ? 'อาจารย์ผู้สอน' : (currentUser?.name || 'ผู้ใช้บริการ'));
+      const effectivePin = pinCodeInput?.trim() || '1234';
+      const formattedDate = date || new Date().toISOString().split('T')[0];
+
+      // Dispatch to Google Apps Script Web App (POST, mode: 'no-cors', headers: { 'Content-Type': 'text/plain' })
+      sendGasBookingEmail({
+        userEmail: emailInput.trim(),
+        userName: displayName,
+        roomName: roomName || 'ห้องจัดรายการ 1',
+        bookingDate: formattedDate,
+        bookingTime: timeSlot || '08:30 - 09:30',
+        subject: `ยืนยันการจองห้องจัดรายการ - ${roomName || 'ห้องจัดรายการ 1'}`,
+        pinCode: effectivePin,
+        studentId: studentIdInput || (isTeacher ? 'อาจารย์ประจำวิชา' : '-'),
+        phone: phone || '-',
+        purpose: purpose || 'ฝึกปฏิบัติการจัดรายการ'
+      }).catch((gasErr) => {
+        console.error('[App.tsx] sendGasBookingEmail error:', gasErr);
+      });
+    }
+
+    return res;
   };
 
   const myBookings = bookings.filter(b => {
@@ -977,7 +1029,7 @@ export default function App() {
             onUpdateBookingStatus={updateBookingStatus}
             onUpdateBooking={updateBooking}
             onDeleteBooking={deleteBooking}
-            onCreateBooking={createBooking}
+            onCreateBooking={handleCreateBookingWithGas}
             roomImages={roomImages}
             courses={courses}
             activeTabProp={adminTab}
@@ -1255,7 +1307,7 @@ export default function App() {
                       onBookingSuccess={() => {
                         setSuccessModalConfig({ isOpen: true, type: 'booking' });
                       }}
-                      createBooking={createBooking}
+                      createBooking={handleCreateBookingWithGas}
                       isSameDate={isSameDate}
                       isSameRoom={isSameRoom}
                     />

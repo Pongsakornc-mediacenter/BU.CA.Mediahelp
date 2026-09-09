@@ -464,7 +464,11 @@ export default function AdminDashboard({
       alert("กรุณาระบุรหัสวิชา / กลุ่มเรียน (Section)");
       return;
     }
-    const finalEmail = teacherEmail.trim() || currentUserEmail || "pongsakorn.c@bu.ac.th";
+    const finalEmail = teacherEmail.trim() || currentUserEmail || "";
+    if (!finalEmail) {
+      alert("⚠️ กรุณาระบุอีเมลผู้สอนสำหรับรับการแจ้งเตือนยืนยันการจอง");
+      return;
+    }
     const finalPin = teacherPinCode.trim() || "1234";
 
     if (finalPin.length !== 4 || !/^\d{4}$/.test(finalPin)) {

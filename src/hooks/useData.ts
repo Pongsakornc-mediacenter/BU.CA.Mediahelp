@@ -26,7 +26,7 @@ import {
 } from 'firebase/auth';
 import { db, auth, isFirebaseConfigured, googleProvider, handleFirestoreError, OperationType } from '../firebase';
 import { Ticket, AttendanceRecord, ClassSession, UserProfile, HelpCategory, RoomBooking, BroadcastProgram, Course } from '../types';
-import { sendBookingEmail, sendPinReminderEmail } from '../services/emailService';
+import { sendBookingEmail, sendPinReminderEmail, sendGasBookingEmail } from '../services/emailService';
 
 export const OVERLAP_ERROR_MESSAGE = "⚠️ ไม่สามารถจอง/ย้ายได้ เนื่องจากช่วงเวลานี้ถูกจองไว้แล้ว กรุณาเลือกช่วงเวลาอื่น";
 
@@ -1227,17 +1227,41 @@ export function useData() {
       setBookings(updated);
     }
 
-    // Automatically trigger booking confirmation email safely
+    // Automatically trigger booking confirmation email safely (Google Apps Script Web App & Multi-transport)
     if (finalEmail) {
+      const formattedBookingDate = date || new Date().toISOString().split('T')[0];
+      const effectivePin = finalPin;
+      const roomDisplayName = roomName || "ห้องจัดรายการ 1";
+      const userDisplayName = bookingPayload.studentName;
+
+      // 1. ส่งตรงไปยัง Google Apps Script Web App (VITE_GAS_EMAIL_URL) ตามโครงสร้างที่กำหนด:
+      // userEmail, userName, roomName, bookingDate, bookingTime, subject, pinCode
+      sendGasBookingEmail({
+        userEmail: finalEmail,
+        userName: userDisplayName,
+        roomName: roomDisplayName,
+        bookingDate: formattedBookingDate,
+        bookingTime: timeSlot || "08:30 - 09:30",
+        subject: `ยืนยันการจองห้องจัดรายการ - ${roomDisplayName}`,
+        pinCode: effectivePin,
+        studentId: studentIdInput || (isTeacher ? "อาจารย์ประจำวิชา" : "-"),
+        phone: phone || "-",
+        purpose: finalBookingPurpose,
+        bookingTitle: finalBookingTitle
+      }).catch((err) => {
+        console.error("[useData] GAS Email Dispatch Error:", err);
+      });
+
+      // 2. เรียกใช้ sendBookingEmail สำหรับ server api fallback หรือ EmailJS
       sendBookingEmail({
         toEmail: finalEmail,
-        studentName: bookingPayload.studentName,
-        userName: bookingPayload.studentName,
-        name: bookingPayload.studentName,
+        studentName: userDisplayName,
+        userName: userDisplayName,
+        name: userDisplayName,
         studentId: studentIdInput || (isTeacher ? "อาจารย์ประจำวิชา" : "-"),
-        roomName: roomName || "ห้องจัดรายการ 1",
-        date: date || new Date().toISOString().split('T')[0],
-        bookingDate: date || new Date().toISOString().split('T')[0],
+        roomName: roomDisplayName,
+        date: formattedBookingDate,
+        bookingDate: formattedBookingDate,
         timeSlot: timeSlot || "08:30 - 09:30",
         course_name: subject || 'BRS311',
         courseName: subject || 'BRS311',
@@ -1248,7 +1272,7 @@ export function useData() {
         purpose: finalBookingPurpose,
         bookingPurpose: finalBookingPurpose,
         phone: phone || "-",
-        pinCode: finalPin,
+        pinCode: effectivePin,
         userType: isTeacher ? 'teacher' : 'student',
         isTeacher
       }).catch(() => {

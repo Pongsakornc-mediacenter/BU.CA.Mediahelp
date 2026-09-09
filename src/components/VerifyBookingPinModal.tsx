@@ -57,7 +57,7 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
 
   const currentEnteredPin = pinDigits.join('');
   const expectedPin = booking.pinCode || '1234';
-  const bookingEmail = booking.email || booking.studentEmail || 'pongsakorn.c@bu.ac.th';
+  const bookingEmail = (booking.email || booking.studentEmail || '').trim();
 
   const handleDigitChange = (index: number, value: string) => {
     const cleanVal = value.replace(/\D/g, '');
@@ -130,6 +130,10 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   };
 
   const handleForgotPin = async () => {
+    if (!bookingEmail) {
+      setForgotPinNotice("⚠️ ไม่พบข้อมูลอีเมลที่ผูกไว้กับรายการจองนี้ กรุณาติดต่ออาจารย์หรือเจ้าหน้าที่ดูแลห้อง");
+      return;
+    }
     setIsSendingMail(true);
     setForgotPinNotice(null);
     setErrorMsg('');
