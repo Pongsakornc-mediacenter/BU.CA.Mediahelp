@@ -548,7 +548,7 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({
               </div>
 
               {/* Security & Verification Badge */}
-              <div className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-[#1c1c22] border border-[#2b2b33] text-xs sm:text-sm text-center shadow-sm">
+              <div className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-[#1c1c22] border border-[#2b2b33] text-xs sm:text-sm text-center shadow-sm">
                 <ShieldCheck className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
                 <span className="font-medium" style={{ color: '#ffffff' }}>
                   การจองนี้ได้รับการยืนยันและคุ้มครองด้วยรหัส PIN 4 หลัก

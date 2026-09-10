@@ -32,7 +32,7 @@ import {
   X 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useData, getCourseLabel, isTimeOverlapping } from './hooks/useData';
+import { useData, getCourseLabel, isTimeOverlapping, isTeacherAccount } from './hooks/useData';
 import CameraWorkbench from './components/CameraWorkbench';
 import AdminDashboard from './components/AdminDashboard';
 import { DataSummaryDashboard } from './components/DataSummaryDashboard';
@@ -2100,35 +2100,18 @@ export default function App() {
         readOnly={false}
         currentUser={currentUser}
         onEditClick={(booking) => {
-          const isTeacher = Boolean(
-            currentUser && (
-              currentUser.role === 'admin' ||
-              currentUser.role === 'teacher' ||
-              currentUser.role === 'staff' ||
-              currentUser.email?.toLowerCase().trim() === 'pongsakorn.c@bu.ac.th'
-            )
-          );
           setSelectedScheduleBookingModal(null);
-          if (isTeacher) {
-            setBookingToEdit(booking);
-            setIsEditModalOpen(true);
-          } else {
-            setTargetBookingForPin(booking);
-            setPinActionType('edit');
-            setIsVerifyPinModalOpen(true);
-          }
+          // สิทธิ์การแก้ไข / ย้ายวันเวลา:
+          // ไม่ว่าจะล็อกอินด้วยบัญชีใดก็ตาม (แม้จะเป็นอาจารย์) ให้บังคับเปิด Modal ถามรหัส PIN 4 หลักของนักศึกษา (ผู้จองเดิม) เสมอ
+          setTargetBookingForPin(booking);
+          setPinActionType('edit');
+          setIsVerifyPinModalOpen(true);
         }}
         onDeleteClick={(booking) => {
-          const isTeacher = Boolean(
-            currentUser && (
-              currentUser.role === 'admin' ||
-              currentUser.role === 'teacher' ||
-              currentUser.role === 'staff' ||
-              currentUser.email?.toLowerCase().trim() === 'pongsakorn.c@bu.ac.th'
-            )
-          );
           setSelectedScheduleBookingModal(null);
-          if (isTeacher) {
+          // สิทธิ์การลบรายการจอง:
+          // หากผู้ใช้งานปัจจุบันล็อกอินด้วยบัญชีอาจารย์ (ตรวจสอบจากอีเมลที่ลงท้ายด้วย @bu.ac.th) ให้รับสิทธิ์ลบรายการได้ทันทีโดยไม่ต้องถาม PIN
+          if (isTeacherAccount(currentUser?.email)) {
             setBookingToDelete(booking);
             setIsDeleteModalOpen(true);
           } else {

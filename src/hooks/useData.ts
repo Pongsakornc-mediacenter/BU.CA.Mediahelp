@@ -48,6 +48,13 @@ export function parseTimeSlotRange(timeStr: string): { startMin: number; endMin:
   return { startMin, endMin };
 }
 
+export const MASTER_DELETE_PIN = '2396';
+
+export function isTeacherAccount(email?: string | null): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase().endsWith('@bu.ac.th');
+}
+
 export function calculateBookingDurationHours(timeSlot: string): number {
   if (!timeSlot) return 1.0;
   const range = parseTimeSlotRange(timeSlot);

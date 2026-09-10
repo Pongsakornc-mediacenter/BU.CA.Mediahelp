@@ -47,7 +47,7 @@ import {
   X
 } from 'lucide-react';
 import { Ticket, AttendanceRecord, HelpCategory, RoomBooking, BroadcastProgram, Course } from '../types';
-import { AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCourseLabel } from '../hooks/useData';
+import { AVAILABLE_STUDIO_ROOMS, AVAILABLE_TIMESLOTS, getCourseLabel, isTeacherAccount } from '../hooks/useData';
 import { DataSummaryDashboard } from './DataSummaryDashboard';
 import { EditBookingModal } from './EditBookingModal';
 import { DeleteBookingConfirmModal } from './DeleteBookingConfirmModal';
@@ -2620,16 +2620,27 @@ export default function AdminDashboard({
       data={selectedScheduleBookingModal}
       courses={courses}
       readOnly={false}
-      currentUser={currentUserEmail ? { email: currentUserEmail, role: 'admin' } : { role: 'admin' }}
+      currentUser={currentUserEmail ? { email: currentUserEmail, role: isTeacherAccount(currentUserEmail) ? 'teacher' : 'admin' } : { role: 'admin' }}
       onEditClick={(booking) => {
         setSelectedScheduleBookingModal(null);
-        setBookingToEdit(booking);
-        setIsEditModalOpen(true);
+        // สิทธิ์การแก้ไข / ย้ายวันเวลา:
+        // ไม่ว่าจะล็อกอินด้วยบัญชีใดก็ตาม (แม้จะเป็นอาจารย์) ให้บังคับเปิด Modal ถามรหัส PIN 4 หลักของนักศึกษา (ผู้จองเดิม) เสมอ
+        setTargetBookingForPin(booking);
+        setPinActionType('edit');
+        setIsVerifyPinModalOpen(true);
       }}
       onDeleteClick={(booking) => {
         setSelectedScheduleBookingModal(null);
-        setBookingToDelete(booking);
-        setIsDeleteModalOpen(true);
+        // สิทธิ์การลบรายการจอง:
+        // หากผู้ใช้งานปัจจุบันล็อกอินด้วยบัญชีอาจารย์ (ตรวจสอบจากอีเมลที่ลงท้ายด้วย @bu.ac.th) ให้รับสิทธิ์ลบรายการได้ทันทีโดยไม่ต้องถาม PIN
+        if (isTeacherAccount(currentUserEmail)) {
+          setBookingToDelete(booking);
+          setIsDeleteModalOpen(true);
+        } else {
+          setTargetBookingForPin(booking);
+          setPinActionType('delete');
+          setIsVerifyPinModalOpen(true);
+        }
       }}
     />
 
@@ -2643,10 +2654,10 @@ export default function AdminDashboard({
       booking={targetBookingForPin}
       actionType={pinActionType}
       currentUser={{
-        uid: 'admin',
-        name: currentUserEmail ? currentUserEmail.split('@')[0] : 'Admin',
-        email: currentUserEmail || 'admin@bu.ac.th',
-        role: 'admin',
+        uid: 'current-user',
+        name: currentUserEmail ? currentUserEmail.split('@')[0] : 'User',
+        email: currentUserEmail || '',
+        role: isTeacherAccount(currentUserEmail) ? 'teacher' : 'admin',
         joinedAt: new Date().toISOString()
       }}
       onSuccess={() => {

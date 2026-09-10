@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, KeyRound, AlertCircle, Mail, CheckCircle2, X, RefreshCw, Send } from 'lucide-react';
 import { RoomBooking, UserProfile } from '../types';
 import { sendPinReminderEmail } from '../services/emailService';
+import { MASTER_DELETE_PIN, isTeacherAccount } from '../hooks/useData';
 
 interface VerifyBookingPinModalProps {
   isOpen: boolean;
@@ -62,18 +63,10 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   const bookingEmail = (booking.email || booking.studentEmail || '').toLowerCase().trim();
   const currentUserEmail = (currentUser?.email || '').toLowerCase().trim();
 
-  // Check Teacher / Admin privileges (role TEACHER or ADMIN, or supervisor email)
-  const isTeacherOrAdmin = Boolean(
-    currentUser && (
-      currentUser.role === 'admin' ||
-      currentUser.role === 'teacher' ||
-      currentUser.role === 'staff' ||
-      currentUserEmail === 'pongsakorn.c@bu.ac.th'
-    )
-  );
-
-  // Accepted Master passcodes for instructor / staff override
-  const ADMIN_PASSCODES = ['9999', '0000', '8888', '1111', '1234', 'admin', 'bu2026', 'passcode'];
+  // Check Teacher privileges (account email ending with @bu.ac.th)
+  const isTeacher = isTeacherAccount(currentUserEmail);
+  const isEdit = actionType === 'edit';
+  const isDelete = actionType === 'delete';
 
   const handleDigitChange = (index: number, value: string) => {
     const cleanVal = value.replace(/\D/g, '');
@@ -116,43 +109,74 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
   };
 
   const handleVerify = () => {
-    // 1. If user is Teacher or Admin, authorize immediately
-    if (isTeacherOrAdmin) {
-      setErrorMsg('');
-      onClose();
-      if (onVerified) {
-        onVerified();
-      } else if (onSuccess) {
-        onSuccess();
+    // 1. Edit / Reschedule Authorization:
+    // ไม่ว่าจะล็อกอินด้วยบัญชีใดก็ตาม (แม้จะเป็นอาจารย์) ให้บังคับเปิด Modal ถามรหัส PIN 4 หลักของนักศึกษา (ผู้จองเดิม) เสมอ
+    // ต้องกรอก PIN 4 หลักของนักศึกษาถูกต้องเท่านั้น จึงจะอนุญาตให้เข้าสู่หน้าแก้ไขข้อมูลหรือย้ายวันเวลาได้
+    if (isEdit) {
+      if (currentEnteredPin.length < 4) {
+        setErrorMsg('กรุณากรอกรหัส PIN 4 หลักของนักศึกษา (ผู้จองเดิม) ให้ครบ');
+        triggerShake();
+        return;
+      }
+
+      if (currentEnteredPin === expectedPin) {
+        setErrorMsg('');
+        onClose();
+        if (onVerified) {
+          onVerified();
+        } else if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        setErrorMsg('⚠️ รหัส PIN ไม่ถูกต้อง (ต้องใช้รหัส PIN 4 หลักของนักศึกษาผู้จองเดิมเท่านั้น)');
+        triggerShake();
+        setPinDigits(['', '', '', '']);
+        setTimeout(() => {
+          inputRefs[0].current?.focus();
+        }, 50);
       }
       return;
     }
 
-    if (currentEnteredPin.length < 4) {
-      setErrorMsg('กรุณากรอกรหัส PIN ให้ครบ 4 หลัก หรือรหัสผู้ดูแล');
-      triggerShake();
-      return;
-    }
-
-    const isPinMatch = currentEnteredPin === expectedPin;
-    const isAdminPasscodeMatch = ADMIN_PASSCODES.includes(currentEnteredPin.toLowerCase().trim());
-
-    // Accept delete command when PIN matches or Admin Passcode is valid, WITHOUT requiring email match
-    if (isPinMatch || isAdminPasscodeMatch) {
-      setErrorMsg('');
-      onClose();
-      if (onVerified) {
-        onVerified();
-      } else if (onSuccess) {
-        onSuccess();
+    // 2. Delete Authorization:
+    // ตั้งค่า Master PIN แบบฟิกค่าไว้ที่ 2396 สำหรับใช้ยืนยันการลบรายการ
+    // หากผู้ใช้งานปัจจุบันล็อกอินด้วยบัญชีอาจารย์ (ตรวจสอบจากอีเมลที่ลงท้ายด้วย @bu.ac.th) ให้รับสิทธิ์ลบรายการได้ทันทีโดยไม่ต้องถาม PIN
+    if (isDelete) {
+      if (isTeacher) {
+        setErrorMsg('');
+        onClose();
+        if (onVerified) {
+          onVerified();
+        } else if (onSuccess) {
+          onSuccess();
+        }
+        return;
       }
-    } else {
-      setErrorMsg('⚠️ รหัส PIN ไม่ถูกต้อง (อาจารย์/แอดมิน กรอก 9999 หรือกดปุ่มยืนยันสิทธิ์)');
-      triggerShake();
-      setPinDigits(['', '', '', '']);
-      setTimeout(() => {
-        inputRefs[0].current?.focus();
-      }, 50);
+
+      if (currentEnteredPin.length < 4) {
+        setErrorMsg(`กรุณากรอกรหัส PIN 4 หลักของผู้จอง หรือ Master PIN (${MASTER_DELETE_PIN})`);
+        triggerShake();
+        return;
+      }
+
+      const isMatch = currentEnteredPin === expectedPin || currentEnteredPin === MASTER_DELETE_PIN;
+      if (isMatch) {
+        setErrorMsg('');
+        onClose();
+        if (onVerified) {
+          onVerified();
+        } else if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        setErrorMsg(`⚠️ รหัส PIN ไม่ถูกต้อง (สามารถใช้รหัส PIN ของผู้จอง หรือ Master PIN ${MASTER_DELETE_PIN})`);
+        triggerShake();
+        setPinDigits(['', '', '', '']);
+        setTimeout(() => {
+          inputRefs[0].current?.focus();
+        }, 50);
+      }
+      return;
     }
   };
 
@@ -198,7 +222,6 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
     }
   };
 
-  const isEdit = actionType === 'edit';
   const themeColor = isEdit ? 'orange' : 'red';
 
   return (
@@ -239,7 +262,9 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
                   {isEdit ? '🔐 ยืนยัน PIN เพื่อแก้ไข / ย้ายวันเวลา' : '🔐 ยืนยัน PIN เพื่อยกเลิก / ลบการจอง'}
                 </h3>
                 <p className="text-sm sm:text-base text-zinc-200 font-medium mt-0.5">
-                  กรุณากรอกรหัส PIN กลุ่ม 4 หลักที่ระบุไว้ตอนจอง
+                  {isEdit 
+                    ? 'กรุณากรอกรหัส PIN 4 หลักของนักศึกษา (ผู้จองเดิม)' 
+                    : `กรุณากรอกรหัส PIN ของผู้จอง หรือ Master PIN (${MASTER_DELETE_PIN})`}
                 </p>
               </div>
             </div>
@@ -271,16 +296,16 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
             </div>
           </div>
 
-          {/* Teacher / Admin Quick Override Card */}
-          {isTeacherOrAdmin && (
+          {/* Teacher Quick Override Card (ONLY FOR DELETE, NEVER FOR EDIT) */}
+          {isDelete && isTeacher && (
             <div className="mt-4 p-4 bg-indigo-950/70 border border-indigo-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
               <div className="flex items-center gap-3 text-left w-full sm:w-auto">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-xl shrink-0">
                   👑
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-indigo-100">ตรวจพบสิทธิ์อาจารย์ / ผู้ดูแลระบบ (TEACHER / ADMIN)</p>
-                  <p className="text-xs text-indigo-300">ได้รับสิทธิ์อนุญาตลบหรือแก้ไขรายการได้ทันที โดยไม่ต้องเทียบอีเมล</p>
+                  <p className="text-sm font-bold text-indigo-100">ตรวจพบสิทธิ์อาจารย์ (@bu.ac.th)</p>
+                  <p className="text-xs text-indigo-300">ได้รับสิทธิ์ยกเลิกและลบรายการจองทันทีโดยไม่ต้องใช้ PIN</p>
                 </div>
               </div>
               <button
@@ -300,7 +325,9 @@ export const VerifyBookingPinModal: React.FC<VerifyBookingPinModalProps> = ({
           {/* PIN Input Digits */}
           <div className="mt-6 sm:mt-7 space-y-4">
             <label className="text-base sm:text-lg font-black text-zinc-100 text-center block">
-              🔑 กรอกรหัส PIN 4 หลัก
+              {isEdit 
+                ? '🔑 กรอกรหัส PIN 4 หลักของนักศึกษา (ผู้จองเดิม)' 
+                : `🔑 กรอกรหัส PIN 4 หลัก (หรือ Master PIN ${MASTER_DELETE_PIN})`}
             </label>
             <div className="flex justify-center items-center gap-4 sm:gap-6 py-1">
               {pinDigits.map((digit, idx) => (

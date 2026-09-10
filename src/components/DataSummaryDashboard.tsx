@@ -21,8 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  ExternalLink,
-  Trash2
+  ExternalLink
 } from 'lucide-react';
 import {
   PieChart as RechartsPieChart,
@@ -32,7 +31,7 @@ import {
   Tooltip as RechartsTooltip
 } from 'recharts';
 import { RoomBooking, Ticket, AttendanceRecord, Course, UserProfile } from '../types';
-import { calculateBookingDurationHours, formatHoursDisplay, formatTimestampDisplay, getCourseLabel, DEFAULT_COURSES } from '../hooks/useData';
+import { calculateBookingDurationHours, formatHoursDisplay, formatTimestampDisplay, getCourseLabel, DEFAULT_COURSES, isTeacherAccount } from '../hooks/useData';
 import { BookingDetailModal, BookingModalData } from './BookingDetailModal';
 import { VerifyBookingPinModal } from './VerifyBookingPinModal';
 import { DeleteBookingConfirmModal } from './DeleteBookingConfirmModal';
@@ -76,25 +75,18 @@ export function DataSummaryDashboard({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
   const [deleteToastMessage, setDeleteToastMessage] = useState<string | null>(null);
 
-  // Check Teacher / Admin privileges
-  const isTeacherOrAdmin = Boolean(
-    currentUser && (
-      currentUser.role === 'admin' ||
-      currentUser.role === 'teacher' ||
-      currentUser.role === 'staff' ||
-      currentUser.email?.toLowerCase().trim() === 'pongsakorn.c@bu.ac.th'
-    )
-  );
+  // Check Teacher privileges (account email ending with @bu.ac.th)
+  const isTeacher = isTeacherAccount(currentUser?.email);
 
   const handleTriggerDelete = (booking: RoomBooking) => {
     setSelectedBookingDetail(null);
     setTargetBookingForDelete(booking);
 
-    if (isTeacherOrAdmin) {
-      // Teacher / Admin: Bypass email comparison, accept delete command directly
+    if (isTeacher) {
+      // Teacher: Bypass PIN, accept delete command directly
       setIsDeleteConfirmOpen(true);
     } else {
-      // User: Verify PIN Code or Admin Passcode
+      // User: Verify PIN Code or Master PIN (2396)
       setIsVerifyPinOpen(true);
     }
   };
@@ -1432,26 +1424,16 @@ export function DataSummaryDashboard({
                           {formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt)}
                         </td>
 
-                        {/* 9. Read-only Detail Modal Trigger & Delete Trigger */}
+                        {/* 9. Detail Modal Trigger */}
                         <td className="p-3 text-center align-middle">
-                          <div className="inline-flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBookingDetail(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/80 hover:border-indigo-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
-                              title="ดูรายละเอียดการจอง"
-                            >
-                              <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTriggerDelete(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200/80 hover:border-red-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/delete-btn"
-                              title="ลบรายการจองนี้"
-                            >
-                              <Trash2 className="w-4 h-4 transition-transform duration-200 group-hover/delete-btn:scale-110" />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBookingDetail(b)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/80 hover:border-indigo-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
+                            title="ดูรายละเอียดการจอง"
+                          >
+                            <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1559,24 +1541,14 @@ export function DataSummaryDashboard({
                           {formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt)}
                         </td>
                         <td className="p-3 text-center align-middle">
-                          <div className="inline-flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBookingDetail(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/80 hover:border-indigo-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
-                              title="ดูรายละเอียดการจอง"
-                            >
-                              <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTriggerDelete(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200/80 hover:border-red-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/delete-btn"
-                              title="ลบรายการจองนี้"
-                            >
-                              <Trash2 className="w-4 h-4 transition-transform duration-200 group-hover/delete-btn:scale-110" />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBookingDetail(b)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/80 hover:border-indigo-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
+                            title="ดูรายละเอียดการจอง"
+                          >
+                            <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1677,24 +1649,14 @@ export function DataSummaryDashboard({
                           {formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt)}
                         </td>
                         <td className="p-3 text-center align-middle">
-                          <div className="inline-flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBookingDetail(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200/80 hover:border-blue-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
-                              title="ดูรายละเอียดการจอง"
-                            >
-                              <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTriggerDelete(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200/80 hover:border-red-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/delete-btn"
-                              title="ลบรายการจองนี้"
-                            >
-                              <Trash2 className="w-4 h-4 transition-transform duration-200 group-hover/delete-btn:scale-110" />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBookingDetail(b)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200/80 hover:border-blue-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
+                            title="ดูรายละเอียดการจอง"
+                          >
+                            <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1795,24 +1757,14 @@ export function DataSummaryDashboard({
                           {formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt)}
                         </td>
                         <td className="p-3 text-center align-middle">
-                          <div className="inline-flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBookingDetail(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/80 hover:border-rose-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
-                              title="ดูรายละเอียดการจอง"
-                            >
-                              <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTriggerDelete(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200/80 hover:border-red-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/delete-btn"
-                              title="ลบรายการจองนี้"
-                            >
-                              <Trash2 className="w-4 h-4 transition-transform duration-200 group-hover/delete-btn:scale-110" />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBookingDetail(b)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/80 hover:border-rose-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
+                            title="ดูรายละเอียดการจอง"
+                          >
+                            <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1913,24 +1865,14 @@ export function DataSummaryDashboard({
                           {formatTimestampDisplay(b.updatedAt || b.submittedAt || b.createdAt)}
                         </td>
                         <td className="p-3 text-center align-middle">
-                          <div className="inline-flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBookingDetail(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200/80 hover:border-purple-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
-                              title="ดูรายละเอียดการจอง"
-                            >
-                              <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTriggerDelete(b)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200/80 hover:border-red-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/delete-btn"
-                              title="ลบรายการจองนี้"
-                            >
-                              <Trash2 className="w-4 h-4 transition-transform duration-200 group-hover/delete-btn:scale-110" />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBookingDetail(b)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200/80 hover:border-purple-600 transition-all duration-200 shadow-2xs hover:scale-105 active:scale-95 cursor-pointer group/detail-btn"
+                            title="ดูรายละเอียดการจอง"
+                          >
+                            <FolderOpen className="w-4 h-4 transition-transform duration-200 group-hover/detail-btn:scale-110" />
+                          </button>
                         </td>
                       </tr>
                     );
